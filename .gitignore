@@ -1,0 +1,35 @@
+# Environment files — contain secrets, never commit
+app/pilot/.env
+app/cockpit/.env
+app/cockpit/.env.local
+*.env.local
+
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+.venv/
+venv/
+dist/
+build/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+htmlcov/
+.coverage
+
+# Node
+app/cockpit/node_modules/
+app/cockpit/.next/
+app/cockpit/out/
+
+# macOS
+.DS_Store
+.idea/
+
+# Alembic auto-generated (keep migrations, not pycache)
+app/pilot/migrations/__pycache__/
+app/pilot/migrations/versions/__pycache__/
+
+# Docker volumes / local data
+*.log

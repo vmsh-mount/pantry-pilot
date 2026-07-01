@@ -1,0 +1,1668 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>PantryPilot — UI Wireframes</title>
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap');
+
+    :root {
+      --green:      #2D6A4F;
+      --green-light:#52B788;
+      --green-pale: #D8F3DC;
+      --orange:     #F4845F;
+      --orange-pale:#FFF0EB;
+      --bg:         #F7F8F5;
+      --card:       #FFFFFF;
+      --text:       #1A1A1A;
+      --muted:      #6B7280;
+      --border:     #E5E7EB;
+      --radius:     16px;
+      --shadow:     0 4px 24px rgba(0,0,0,0.08);
+    }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: 'Inter', sans-serif;
+      background: #1A1A2E;
+      color: var(--text);
+      min-height: 100vh;
+      padding: 32px 16px;
+    }
+
+    /* ── Nav ── */
+    .nav {
+      position: fixed;
+      top: 0; left: 0; right: 0;
+      background: #0F0F1A;
+      border-bottom: 1px solid #2D2D44;
+      padding: 12px 24px;
+      display: flex;
+      gap: 8px;
+      flex-wrap: wrap;
+      z-index: 100;
+    }
+    .nav-btn {
+      padding: 6px 14px;
+      border-radius: 20px;
+      border: 1px solid #3D3D5C;
+      background: transparent;
+      color: #9CA3AF;
+      font-size: 12px;
+      font-family: 'Inter', sans-serif;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+    .nav-btn:hover, .nav-btn.active {
+      background: var(--green);
+      border-color: var(--green);
+      color: white;
+    }
+
+    /* ── Layout ── */
+    .stage { display: none; padding-top: 72px; }
+    .stage.active { display: block; }
+
+    .stage-title {
+      text-align: center;
+      color: #9CA3AF;
+      font-size: 11px;
+      letter-spacing: 2px;
+      text-transform: uppercase;
+      margin-bottom: 24px;
+      font-weight: 500;
+    }
+
+    /* ── Phone frame ── */
+    .phone {
+      width: 375px;
+      margin: 0 auto;
+      background: var(--card);
+      border-radius: 40px;
+      overflow: hidden;
+      box-shadow: 0 32px 80px rgba(0,0,0,0.5), 0 0 0 1px rgba(255,255,255,0.1);
+      position: relative;
+    }
+
+    .phone-status {
+      background: var(--text);
+      color: white;
+      padding: 12px 24px 8px;
+      display: flex;
+      justify-content: space-between;
+      font-size: 12px;
+      font-weight: 600;
+    }
+
+    .phone-content { padding: 0; }
+
+    /* ── Screen: Landing ── */
+    .landing-hero {
+      background: linear-gradient(160deg, #1B4332 0%, #2D6A4F 50%, #40916C 100%);
+      padding: 56px 28px 48px;
+      text-align: center;
+      position: relative;
+      overflow: hidden;
+    }
+    .landing-hero::before {
+      content: '';
+      position: absolute;
+      width: 300px; height: 300px;
+      background: rgba(255,255,255,0.04);
+      border-radius: 50%;
+      top: -80px; right: -80px;
+    }
+    .landing-logo {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      margin-bottom: 32px;
+    }
+    .logo-icon {
+      width: 40px; height: 40px;
+      background: var(--orange);
+      border-radius: 12px;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 20px;
+    }
+    .logo-text {
+      color: white;
+      font-size: 18px;
+      font-weight: 700;
+      letter-spacing: -0.5px;
+    }
+    .hero-headline {
+      color: white;
+      font-size: 26px;
+      font-weight: 800;
+      line-height: 1.2;
+      margin-bottom: 12px;
+      letter-spacing: -0.5px;
+    }
+    .hero-sub {
+      color: rgba(255,255,255,0.7);
+      font-size: 14px;
+      line-height: 1.5;
+    }
+
+    .landing-body { padding: 28px; }
+
+    .trust-row {
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+      margin-bottom: 28px;
+    }
+    .trust-item {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      background: var(--bg);
+      border-radius: 12px;
+      padding: 12px 14px;
+    }
+    .trust-icon {
+      font-size: 18px;
+      width: 32px;
+      text-align: center;
+      flex-shrink: 0;
+    }
+    .trust-text {
+      font-size: 13px;
+      color: var(--text);
+      font-weight: 500;
+    }
+    .trust-sub {
+      font-size: 11px;
+      color: var(--muted);
+      margin-top: 2px;
+    }
+
+    .cta-btn {
+      width: 100%;
+      padding: 16px;
+      background: var(--green);
+      color: white;
+      border: none;
+      border-radius: 14px;
+      font-size: 15px;
+      font-weight: 700;
+      font-family: 'Inter', sans-serif;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 10px;
+      transition: all 0.2s;
+    }
+    .cta-btn:hover { background: #1B4332; }
+
+    .swiggy-badge {
+      text-align: center;
+      margin-top: 14px;
+      font-size: 11px;
+      color: var(--muted);
+    }
+    .swiggy-badge span {
+      color: var(--orange);
+      font-weight: 600;
+    }
+
+    /* ── Screen: Questionnaire ── */
+    .q-header {
+      background: var(--green);
+      padding: 24px 24px 20px;
+    }
+    .q-progress {
+      display: flex;
+      gap: 6px;
+      margin-bottom: 16px;
+    }
+    .q-progress-bar {
+      height: 4px;
+      flex: 1;
+      background: rgba(255,255,255,0.3);
+      border-radius: 2px;
+    }
+    .q-progress-bar.done { background: white; }
+    .q-header-text {
+      color: white;
+      font-size: 18px;
+      font-weight: 700;
+      margin-bottom: 4px;
+    }
+    .q-header-sub {
+      color: rgba(255,255,255,0.7);
+      font-size: 13px;
+    }
+
+    .q-body { padding: 28px; }
+    .q-label {
+      font-size: 11px;
+      font-weight: 600;
+      color: var(--muted);
+      text-transform: uppercase;
+      letter-spacing: 1px;
+      margin-bottom: 16px;
+    }
+    .q-question {
+      font-size: 20px;
+      font-weight: 700;
+      color: var(--text);
+      margin-bottom: 24px;
+      line-height: 1.3;
+    }
+
+    .option-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 10px;
+      margin-bottom: 28px;
+    }
+    .option-card {
+      border: 2px solid var(--border);
+      border-radius: 14px;
+      padding: 16px 12px;
+      text-align: center;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+    .option-card:hover { border-color: var(--green-light); }
+    .option-card.selected {
+      border-color: var(--green);
+      background: var(--green-pale);
+    }
+    .option-emoji { font-size: 28px; margin-bottom: 8px; }
+    .option-label {
+      font-size: 13px;
+      font-weight: 600;
+      color: var(--text);
+    }
+    .option-sub {
+      font-size: 11px;
+      color: var(--muted);
+      margin-top: 3px;
+    }
+
+    .option-list {
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+      margin-bottom: 28px;
+    }
+    .option-row {
+      border: 2px solid var(--border);
+      border-radius: 14px;
+      padding: 14px 16px;
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+    .option-row:hover { border-color: var(--green-light); }
+    .option-row.selected {
+      border-color: var(--green);
+      background: var(--green-pale);
+    }
+    .option-row-icon { font-size: 22px; }
+    .option-row-label { font-size: 14px; font-weight: 600; flex: 1; }
+    .option-row-check {
+      width: 20px; height: 20px;
+      border-radius: 50%;
+      border: 2px solid var(--border);
+      display: flex; align-items: center; justify-content: center;
+    }
+    .option-row.selected .option-row-check {
+      background: var(--green);
+      border-color: var(--green);
+      color: white;
+      font-size: 11px;
+    }
+
+    .budget-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 10px;
+      margin-bottom: 28px;
+    }
+    .budget-card {
+      border: 2px solid var(--border);
+      border-radius: 14px;
+      padding: 14px 12px;
+      text-align: center;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+    .budget-card:hover { border-color: var(--green-light); }
+    .budget-card.selected {
+      border-color: var(--green);
+      background: var(--green-pale);
+    }
+    .budget-amount {
+      font-size: 15px;
+      font-weight: 700;
+      color: var(--text);
+    }
+    .budget-sub {
+      font-size: 11px;
+      color: var(--muted);
+      margin-top: 4px;
+    }
+
+    .next-btn {
+      width: 100%;
+      padding: 15px;
+      background: var(--green);
+      color: white;
+      border: none;
+      border-radius: 14px;
+      font-size: 15px;
+      font-weight: 700;
+      font-family: 'Inter', sans-serif;
+      cursor: pointer;
+    }
+    .skip-link {
+      text-align: center;
+      margin-top: 12px;
+      font-size: 13px;
+      color: var(--muted);
+      cursor: pointer;
+    }
+
+    /* ── Screen: Inference ── */
+    .inf-header {
+      background: linear-gradient(135deg, #1B4332, #2D6A4F);
+      padding: 28px;
+      text-align: center;
+    }
+    .inf-title {
+      color: white;
+      font-size: 20px;
+      font-weight: 700;
+      margin-bottom: 6px;
+    }
+    .inf-sub {
+      color: rgba(255,255,255,0.7);
+      font-size: 13px;
+    }
+
+    .inf-body { padding: 20px; }
+    .inf-card {
+      background: var(--bg);
+      border-radius: 16px;
+      padding: 20px;
+      margin-bottom: 12px;
+    }
+    .inf-card-title {
+      font-size: 11px;
+      font-weight: 600;
+      color: var(--muted);
+      text-transform: uppercase;
+      letter-spacing: 1px;
+      margin-bottom: 14px;
+    }
+    .inf-row {
+      display: flex;
+      align-items: flex-start;
+      gap: 10px;
+      margin-bottom: 10px;
+    }
+    .inf-row:last-child { margin-bottom: 0; }
+    .inf-dot {
+      width: 8px; height: 8px;
+      border-radius: 50%;
+      background: var(--green-light);
+      margin-top: 5px;
+      flex-shrink: 0;
+    }
+    .inf-row-label {
+      font-size: 13px;
+      font-weight: 500;
+      color: var(--text);
+      flex: 1;
+    }
+    .inf-row-value {
+      font-size: 13px;
+      font-weight: 600;
+      color: var(--green);
+    }
+
+    .inf-items {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 6px;
+      margin-top: 8px;
+    }
+    .inf-tag {
+      background: white;
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 4px 10px;
+      font-size: 12px;
+      font-weight: 500;
+      color: var(--text);
+    }
+
+    .confirm-row {
+      display: flex;
+      gap: 10px;
+      margin-top: 8px;
+    }
+    .btn-confirm {
+      flex: 1;
+      padding: 14px;
+      background: var(--green);
+      color: white;
+      border: none;
+      border-radius: 12px;
+      font-size: 14px;
+      font-weight: 700;
+      font-family: 'Inter', sans-serif;
+      cursor: pointer;
+    }
+    .btn-adjust {
+      flex: 1;
+      padding: 14px;
+      background: white;
+      color: var(--text);
+      border: 1.5px solid var(--border);
+      border-radius: 12px;
+      font-size: 14px;
+      font-weight: 600;
+      font-family: 'Inter', sans-serif;
+      cursor: pointer;
+    }
+
+    /* ── Screen: WhatsApp verify ── */
+    .wa-header {
+      background: #25D366;
+      padding: 28px;
+      text-align: center;
+    }
+    .wa-icon { font-size: 48px; margin-bottom: 12px; }
+    .wa-title { color: white; font-size: 20px; font-weight: 700; margin-bottom: 6px; }
+    .wa-sub { color: rgba(255,255,255,0.85); font-size: 13px; }
+
+    .wa-body { padding: 28px; }
+    .input-label {
+      font-size: 12px;
+      font-weight: 600;
+      color: var(--muted);
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      margin-bottom: 8px;
+    }
+    .input-field {
+      width: 100%;
+      border: 2px solid var(--border);
+      border-radius: 12px;
+      padding: 14px 16px;
+      font-size: 15px;
+      font-family: 'Inter', sans-serif;
+      color: var(--text);
+      margin-bottom: 20px;
+      outline: none;
+    }
+    .input-field:focus { border-color: var(--green); }
+
+    .otp-row {
+      display: flex;
+      gap: 8px;
+      margin-bottom: 20px;
+    }
+    .otp-box {
+      flex: 1;
+      border: 2px solid var(--border);
+      border-radius: 12px;
+      padding: 14px 8px;
+      text-align: center;
+      font-size: 20px;
+      font-weight: 700;
+      font-family: 'Inter', sans-serif;
+      color: var(--green);
+    }
+    .otp-box:first-child { border-color: var(--green); background: var(--green-pale); }
+
+    .resend-text {
+      text-align: center;
+      font-size: 13px;
+      color: var(--muted);
+      margin-top: -10px;
+      margin-bottom: 20px;
+    }
+    .resend-text span { color: var(--green); font-weight: 600; cursor: pointer; }
+
+    /* ── Screen: Basket Preview ── */
+    .basket-header {
+      background: linear-gradient(135deg, #1B4332, #2D6A4F);
+      padding: 24px;
+    }
+    .basket-header-top {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 16px;
+    }
+    .basket-title { color: white; font-size: 18px; font-weight: 700; }
+    .basket-badge {
+      background: rgba(255,255,255,0.2);
+      color: white;
+      font-size: 11px;
+      font-weight: 600;
+      padding: 4px 10px;
+      border-radius: 20px;
+    }
+    .budget-bar-wrap { margin-top: 4px; }
+    .budget-bar-label {
+      display: flex;
+      justify-content: space-between;
+      color: rgba(255,255,255,0.8);
+      font-size: 12px;
+      margin-bottom: 6px;
+    }
+    .budget-bar-track {
+      background: rgba(255,255,255,0.2);
+      border-radius: 4px;
+      height: 6px;
+    }
+    .budget-bar-fill {
+      background: #74C69D;
+      border-radius: 4px;
+      height: 6px;
+      width: 88%;
+    }
+
+    .basket-body { padding: 16px; }
+    .basket-section-title {
+      font-size: 11px;
+      font-weight: 600;
+      color: var(--muted);
+      text-transform: uppercase;
+      letter-spacing: 1px;
+      margin-bottom: 10px;
+    }
+
+    .basket-item {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      padding: 12px 0;
+      border-bottom: 1px solid var(--border);
+    }
+    .basket-item:last-child { border-bottom: none; }
+    .basket-item-icon {
+      width: 40px; height: 40px;
+      background: var(--bg);
+      border-radius: 10px;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 20px;
+      flex-shrink: 0;
+    }
+    .basket-item-info { flex: 1; }
+    .basket-item-name { font-size: 13px; font-weight: 600; color: var(--text); }
+    .basket-item-meta { font-size: 11px; color: var(--muted); margin-top: 2px; }
+    .basket-item-price { font-size: 14px; font-weight: 700; color: var(--text); }
+
+    .substitution-banner {
+      background: var(--orange-pale);
+      border: 1px solid #FECBA1;
+      border-radius: 10px;
+      padding: 10px 12px;
+      margin: 12px 0;
+      display: flex;
+      gap: 8px;
+      align-items: flex-start;
+    }
+    .sub-icon { font-size: 14px; margin-top: 1px; }
+    .sub-text { font-size: 12px; color: #92400E; line-height: 1.4; }
+
+    .more-items-btn {
+      width: 100%;
+      padding: 12px;
+      background: var(--bg);
+      border: 1.5px dashed var(--border);
+      border-radius: 12px;
+      font-size: 13px;
+      font-weight: 600;
+      color: var(--muted);
+      font-family: 'Inter', sans-serif;
+      cursor: pointer;
+      margin: 8px 0 16px;
+    }
+
+    .basket-total-row {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 14px 0;
+      border-top: 2px solid var(--border);
+      margin-top: 4px;
+    }
+    .total-label { font-size: 14px; font-weight: 600; color: var(--muted); }
+    .total-amount { font-size: 18px; font-weight: 800; color: var(--text); }
+
+    .action-stack {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+      padding: 16px;
+      border-top: 1px solid var(--border);
+      background: white;
+    }
+    .btn-primary {
+      width: 100%;
+      padding: 15px;
+      background: var(--green);
+      color: white;
+      border: none;
+      border-radius: 14px;
+      font-size: 15px;
+      font-weight: 700;
+      font-family: 'Inter', sans-serif;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+    }
+    .btn-secondary {
+      width: 100%;
+      padding: 14px;
+      background: white;
+      color: var(--text);
+      border: 1.5px solid var(--border);
+      border-radius: 14px;
+      font-size: 14px;
+      font-weight: 600;
+      font-family: 'Inter', sans-serif;
+      cursor: pointer;
+    }
+    .btn-ghost {
+      width: 100%;
+      padding: 12px;
+      background: transparent;
+      color: var(--muted);
+      border: none;
+      font-size: 13px;
+      font-weight: 500;
+      font-family: 'Inter', sans-serif;
+      cursor: pointer;
+    }
+
+    /* ── Screen: Complete ── */
+    .complete-body {
+      padding: 40px 28px;
+      text-align: center;
+    }
+    .complete-icon {
+      width: 80px; height: 80px;
+      background: var(--green-pale);
+      border-radius: 50%;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 36px;
+      margin: 0 auto 24px;
+    }
+    .complete-title {
+      font-size: 24px;
+      font-weight: 800;
+      color: var(--text);
+      margin-bottom: 12px;
+    }
+    .complete-sub {
+      font-size: 14px;
+      color: var(--muted);
+      line-height: 1.6;
+      margin-bottom: 32px;
+    }
+    .schedule-card {
+      background: var(--bg);
+      border-radius: 16px;
+      padding: 20px;
+      text-align: left;
+      margin-bottom: 28px;
+    }
+    .sched-row {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      margin-bottom: 10px;
+    }
+    .sched-row:last-child { margin-bottom: 0; }
+    .sched-icon { font-size: 18px; width: 28px; text-align: center; }
+    .sched-text { font-size: 13px; font-weight: 500; color: var(--text); }
+    .sched-val { font-size: 13px; font-weight: 700; color: var(--green); }
+
+    /* ── WhatsApp Mockups ── */
+    .wa-phone {
+      width: 375px;
+      margin: 0 auto;
+      border-radius: 40px;
+      overflow: hidden;
+      box-shadow: 0 32px 80px rgba(0,0,0,0.5), 0 0 0 1px rgba(255,255,255,0.1);
+    }
+    .wa-topbar {
+      background: #075E54;
+      padding: 12px 16px 10px;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+    .wa-back { color: white; font-size: 16px; }
+    .wa-avatar {
+      width: 36px; height: 36px;
+      background: var(--green-light);
+      border-radius: 50%;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 16px;
+    }
+    .wa-contact-info { flex: 1; }
+    .wa-contact-name { color: white; font-size: 14px; font-weight: 600; }
+    .wa-contact-status { color: rgba(255,255,255,0.7); font-size: 11px; }
+
+    .wa-chat {
+      background: #E5DDD5;
+      background-image: url("data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='none' fill-rule='evenodd'%3E%3Cg fill='%23c8bbaf' fill-opacity='0.2'%3E%3Cpath d='M36 34v-4h-2v4h-4v2h4v4h2v-4h4v-2h-4zm0-30V0h-2v4h-4v2h4v4h2V6h4V4h-4zM6 34v-4H4v4H0v2h4v4h2v-4h4v-2H6zM6 4V0H4v4H0v2h4v4h2V6h4V4H6z'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E");
+      padding: 16px 12px;
+      min-height: 400px;
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+
+    .wa-msg {
+      max-width: 85%;
+      background: white;
+      border-radius: 8px 8px 8px 0;
+      padding: 10px 12px;
+      font-size: 13px;
+      line-height: 1.5;
+      color: #1A1A1A;
+      align-self: flex-start;
+      box-shadow: 0 1px 2px rgba(0,0,0,0.1);
+    }
+    .wa-msg.sent {
+      background: #DCF8C6;
+      border-radius: 8px 8px 0 8px;
+      align-self: flex-end;
+    }
+    .wa-msg-time {
+      font-size: 10px;
+      color: #9CA3AF;
+      text-align: right;
+      margin-top: 4px;
+    }
+
+    .wa-basket-card {
+      background: white;
+      border-radius: 8px 8px 8px 0;
+      overflow: hidden;
+      max-width: 90%;
+      box-shadow: 0 1px 2px rgba(0,0,0,0.1);
+    }
+    .wa-card-header {
+      background: var(--green);
+      padding: 12px 14px;
+      color: white;
+    }
+    .wa-card-title { font-size: 14px; font-weight: 700; margin-bottom: 2px; }
+    .wa-card-sub { font-size: 11px; opacity: 0.8; }
+    .wa-card-body { padding: 12px 14px; }
+    .wa-item-row {
+      display: flex;
+      justify-content: space-between;
+      font-size: 12px;
+      padding: 4px 0;
+      color: #374151;
+    }
+    .wa-item-name { font-weight: 500; }
+    .wa-item-price { font-weight: 600; color: var(--green); }
+    .wa-more { font-size: 11px; color: var(--muted); margin-top: 4px; }
+    .wa-total-row {
+      display: flex;
+      justify-content: space-between;
+      border-top: 1px solid var(--border);
+      padding-top: 8px;
+      margin-top: 8px;
+      font-size: 13px;
+      font-weight: 700;
+    }
+    .wa-sub-banner {
+      background: #FFF7ED;
+      padding: 8px 14px;
+      font-size: 11px;
+      color: #92400E;
+      display: flex;
+      gap: 6px;
+    }
+
+    .wa-buttons {
+      border-top: 1px solid var(--border);
+      display: flex;
+      flex-direction: column;
+    }
+    .wa-btn {
+      padding: 10px 14px;
+      border: none;
+      border-bottom: 1px solid var(--border);
+      background: white;
+      color: #128C7E;
+      font-size: 13px;
+      font-weight: 600;
+      font-family: 'Inter', sans-serif;
+      cursor: pointer;
+      text-align: center;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 6px;
+    }
+    .wa-btn:last-child { border-bottom: none; }
+
+    .wa-receipt-card {
+      background: white;
+      border-radius: 8px 8px 8px 0;
+      overflow: hidden;
+      max-width: 90%;
+      box-shadow: 0 1px 2px rgba(0,0,0,0.1);
+    }
+    .wa-receipt-header {
+      background: #1B4332;
+      padding: 14px;
+      text-align: center;
+      color: white;
+    }
+    .wa-receipt-icon { font-size: 28px; margin-bottom: 6px; }
+    .wa-receipt-title { font-size: 15px; font-weight: 700; }
+    .wa-receipt-sub { font-size: 11px; opacity: 0.8; margin-top: 2px; }
+    .wa-receipt-body { padding: 14px; }
+    .wa-receipt-row {
+      display: flex;
+      justify-content: space-between;
+      font-size: 12px;
+      padding: 5px 0;
+      border-bottom: 1px solid var(--border);
+    }
+    .wa-receipt-row:last-child { border-bottom: none; }
+    .wa-receipt-label { color: var(--muted); }
+    .wa-receipt-val { font-weight: 600; color: var(--text); }
+    .wa-track-btn {
+      width: 100%;
+      padding: 10px;
+      background: var(--orange);
+      color: white;
+      border: none;
+      border-radius: 0 0 8px 8px;
+      font-size: 13px;
+      font-weight: 700;
+      font-family: 'Inter', sans-serif;
+      cursor: pointer;
+    }
+
+    .wa-input-bar {
+      background: #F0F0F0;
+      padding: 8px 12px;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+    .wa-input {
+      flex: 1;
+      background: white;
+      border: none;
+      border-radius: 20px;
+      padding: 8px 14px;
+      font-size: 13px;
+      font-family: 'Inter', sans-serif;
+      color: var(--muted);
+    }
+    .wa-send {
+      width: 36px; height: 36px;
+      background: #128C7E;
+      border-radius: 50%;
+      display: flex; align-items: center; justify-content: center;
+      color: white; font-size: 14px;
+    }
+
+    /* ── Two-column layout for WA screens ── */
+    .two-col {
+      display: flex;
+      gap: 32px;
+      max-width: 820px;
+      margin: 0 auto;
+      flex-wrap: wrap;
+      justify-content: center;
+    }
+    .two-col .wa-phone { flex: 1; min-width: 320px; }
+    .annotation {
+      flex: 1;
+      min-width: 220px;
+      max-width: 260px;
+      padding-top: 80px;
+    }
+    .annotation-item {
+      display: flex;
+      gap: 12px;
+      margin-bottom: 20px;
+    }
+    .ann-num {
+      width: 24px; height: 24px;
+      background: var(--green);
+      color: white;
+      border-radius: 50%;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 11px;
+      font-weight: 700;
+      flex-shrink: 0;
+    }
+    .ann-text { font-size: 12px; color: #9CA3AF; line-height: 1.5; }
+    .ann-bold { color: white; font-weight: 600; }
+  </style>
+</head>
+<body>
+
+<!-- Navigation -->
+<div class="nav">
+  <button class="nav-btn active" onclick="show('landing')">1. Landing</button>
+  <button class="nav-btn" onclick="show('q1')">2. Household</button>
+  <button class="nav-btn" onclick="show('q2')">3. Diet Type</button>
+  <button class="nav-btn" onclick="show('q3')">4. Budget</button>
+  <button class="nav-btn" onclick="show('inference')">5. What We Know</button>
+  <button class="nav-btn" onclick="show('whatsapp')">6. Link WhatsApp</button>
+  <button class="nav-btn" onclick="show('basket')">7. Basket Preview</button>
+  <button class="nav-btn" onclick="show('complete')">8. All Set</button>
+  <button class="nav-btn" onclick="show('wa-basket')">WA: Basket Card</button>
+  <button class="nav-btn" onclick="show('wa-receipt')">WA: Receipt</button>
+  <button class="nav-btn" onclick="show('wa-reauth')">WA: Re-auth</button>
+</div>
+
+<!-- ═══════════════════════════════════════════════════ -->
+<!-- Screen 1: Landing -->
+<!-- ═══════════════════════════════════════════════════ -->
+<div id="landing" class="stage active">
+  <div class="stage-title">Screen 1 — Landing Page</div>
+  <div class="phone">
+    <div class="phone-status">
+      <span>9:41</span><span>●●● 5G 🔋</span>
+    </div>
+    <div class="phone-content">
+      <div class="landing-hero">
+        <div class="landing-logo">
+          <div class="logo-icon">🥦</div>
+          <div class="logo-text">PantryPilot</div>
+        </div>
+        <div class="hero-headline">Your weekly groceries,<br/>planned for you.</div>
+        <div class="hero-sub">Nutrition-aware. Budget-smart.<br/>Delivered on Swiggy Instamart.</div>
+      </div>
+      <div class="landing-body">
+        <div class="trust-row">
+          <div class="trust-item">
+            <div class="trust-icon">🛡️</div>
+            <div>
+              <div class="trust-text">No auto-orders without approval</div>
+              <div class="trust-sub">You confirm every basket before it's placed</div>
+            </div>
+          </div>
+          <div class="trust-item">
+            <div class="trust-icon">🧠</div>
+            <div>
+              <div class="trust-text">Learns your household over time</div>
+              <div class="trust-sub">Gets smarter with every order</div>
+            </div>
+          </div>
+          <div class="trust-item">
+            <div class="trust-icon">⚡</div>
+            <div>
+              <div class="trust-text">Powered by Swiggy Instamart</div>
+              <div class="trust-sub">50,000+ SKUs, delivered in minutes</div>
+            </div>
+          </div>
+        </div>
+        <button class="cta-btn">
+          <span>🧡</span> Connect your Swiggy account
+        </button>
+        <div class="swiggy-badge">You'll be redirected to <span>Swiggy</span> to sign in securely</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════════════════ -->
+<!-- Screen 2: Q1 — Household -->
+<!-- ═══════════════════════════════════════════════════ -->
+<div id="q1" class="stage">
+  <div class="stage-title">Screen 2 — Questionnaire: Household</div>
+  <div class="phone">
+    <div class="phone-status"><span>9:41</span><span>●●● 5G 🔋</span></div>
+    <div class="phone-content">
+      <div class="q-header">
+        <div class="q-progress">
+          <div class="q-progress-bar done"></div>
+          <div class="q-progress-bar"></div>
+          <div class="q-progress-bar"></div>
+        </div>
+        <div class="q-header-text">Quick setup</div>
+        <div class="q-header-sub">3 questions · takes 30 seconds</div>
+      </div>
+      <div class="q-body">
+        <div class="q-label">Question 1 of 3</div>
+        <div class="q-question">Who's in your household?</div>
+        <div class="option-grid">
+          <div class="option-card">
+            <div class="option-emoji">🧍</div>
+            <div class="option-label">Just me</div>
+            <div class="option-sub">Solo</div>
+          </div>
+          <div class="option-card selected">
+            <div class="option-emoji">👫</div>
+            <div class="option-label">Couple</div>
+            <div class="option-sub">2 people</div>
+          </div>
+          <div class="option-card">
+            <div class="option-emoji">👨‍👩‍👧</div>
+            <div class="option-label">Family</div>
+            <div class="option-sub">With kids</div>
+          </div>
+          <div class="option-card">
+            <div class="option-emoji">🏠</div>
+            <div class="option-label">Joint family</div>
+            <div class="option-sub">5+ people</div>
+          </div>
+        </div>
+        <button class="next-btn">Continue →</button>
+        <div class="skip-link">Skip for now</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════════════════ -->
+<!-- Screen 3: Q2 — Diet -->
+<!-- ═══════════════════════════════════════════════════ -->
+<div id="q2" class="stage">
+  <div class="stage-title">Screen 3 — Questionnaire: Diet Type</div>
+  <div class="phone">
+    <div class="phone-status"><span>9:41</span><span>●●● 5G 🔋</span></div>
+    <div class="phone-content">
+      <div class="q-header">
+        <div class="q-progress">
+          <div class="q-progress-bar done"></div>
+          <div class="q-progress-bar done"></div>
+          <div class="q-progress-bar"></div>
+        </div>
+        <div class="q-header-text">Quick setup</div>
+        <div class="q-header-sub">3 questions · takes 30 seconds</div>
+      </div>
+      <div class="q-body">
+        <div class="q-label">Question 2 of 3</div>
+        <div class="q-question">How does your household eat?</div>
+        <div class="option-list">
+          <div class="option-row selected">
+            <div class="option-row-icon">🥦</div>
+            <div>
+              <div class="option-row-label">Vegetarian</div>
+              <div class="option-sub" style="margin-top:2px">No meat or fish</div>
+            </div>
+            <div class="option-row-check">✓</div>
+          </div>
+          <div class="option-row">
+            <div class="option-row-icon">🌱</div>
+            <div>
+              <div class="option-row-label">Vegan</div>
+              <div class="option-sub" style="margin-top:2px">No animal products</div>
+            </div>
+            <div class="option-row-check"></div>
+          </div>
+          <div class="option-row">
+            <div class="option-row-icon">🪔</div>
+            <div>
+              <div class="option-row-label">Jain</div>
+              <div class="option-sub" style="margin-top:2px">No root vegetables</div>
+            </div>
+            <div class="option-row-check"></div>
+          </div>
+        </div>
+        <button class="next-btn">Continue →</button>
+        <div class="skip-link">Skip for now</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════════════════ -->
+<!-- Screen 4: Q3 — Budget -->
+<!-- ═══════════════════════════════════════════════════ -->
+<div id="q3" class="stage">
+  <div class="stage-title">Screen 4 — Questionnaire: Budget</div>
+  <div class="phone">
+    <div class="phone-status"><span>9:41</span><span>●●● 5G 🔋</span></div>
+    <div class="phone-content">
+      <div class="q-header">
+        <div class="q-progress">
+          <div class="q-progress-bar done"></div>
+          <div class="q-progress-bar done"></div>
+          <div class="q-progress-bar done"></div>
+        </div>
+        <div class="q-header-text">Quick setup</div>
+        <div class="q-header-sub">3 questions · takes 30 seconds</div>
+      </div>
+      <div class="q-body">
+        <div class="q-label">Question 3 of 3</div>
+        <div class="q-question">Weekly grocery budget?</div>
+        <div class="budget-grid">
+          <div class="budget-card">
+            <div class="budget-amount">Under ₹1,500</div>
+            <div class="budget-sub">Essentials only</div>
+          </div>
+          <div class="budget-card selected">
+            <div class="budget-amount">₹1,500–3,000</div>
+            <div class="budget-sub">Comfortable</div>
+          </div>
+          <div class="budget-card">
+            <div class="budget-amount">₹3,000–5,000</div>
+            <div class="budget-sub">Well-stocked</div>
+          </div>
+          <div class="budget-card">
+            <div class="budget-amount">₹5,000+</div>
+            <div class="budget-sub">No constraints</div>
+          </div>
+        </div>
+        <button class="next-btn">See what we know →</button>
+        <div class="skip-link">Skip for now</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════════════════ -->
+<!-- Screen 5: Inference Summary -->
+<!-- ═══════════════════════════════════════════════════ -->
+<div id="inference" class="stage">
+  <div class="stage-title">Screen 5 — Inference Summary ("What We Know")</div>
+  <div class="phone">
+    <div class="phone-status"><span>9:41</span><span>●●● 5G 🔋</span></div>
+    <div class="phone-content">
+      <div class="inf-header">
+        <div style="font-size:32px;margin-bottom:12px">🔍</div>
+        <div class="inf-title">Here's what we already know</div>
+        <div class="inf-sub">Pulled from your Swiggy order history</div>
+      </div>
+      <div class="inf-body">
+        <div class="inf-card">
+          <div class="inf-card-title">Your household</div>
+          <div class="inf-row">
+            <div class="inf-dot"></div>
+            <div class="inf-row-label">Household type</div>
+            <div class="inf-row-value">Couple ✓</div>
+          </div>
+          <div class="inf-row">
+            <div class="inf-dot"></div>
+            <div class="inf-row-label">Diet pattern</div>
+            <div class="inf-row-value">Vegetarian (94%)</div>
+          </div>
+          <div class="inf-row">
+            <div class="inf-dot"></div>
+            <div class="inf-row-label">Typical order day</div>
+            <div class="inf-row-value">Sunday evenings</div>
+          </div>
+          <div class="inf-row">
+            <div class="inf-dot"></div>
+            <div class="inf-row-label">Avg weekly spend</div>
+            <div class="inf-row-value">₹2,100</div>
+          </div>
+        </div>
+        <div class="inf-card">
+          <div class="inf-card-title">Your go-to items</div>
+          <div class="inf-items">
+            <span class="inf-tag">🌾 Aashirvaad Atta</span>
+            <span class="inf-tag">🫘 Toor Dal</span>
+            <span class="inf-tag">🥛 Amul Butter</span>
+            <span class="inf-tag">🍅 Tomatoes</span>
+            <span class="inf-tag">🧅 Onions</span>
+            <span class="inf-tag">+ 11 more</span>
+          </div>
+        </div>
+        <div class="inf-card">
+          <div class="inf-card-title">Delivery address</div>
+          <div class="inf-row">
+            <div class="inf-dot"></div>
+            <div class="inf-row-label">📍 Home — Koramangala, Bengaluru</div>
+          </div>
+        </div>
+        <div style="font-size:13px;color:var(--muted);text-align:center;margin-bottom:14px">
+          Does this look right?
+        </div>
+        <div class="confirm-row">
+          <button class="btn-confirm">✓ Yes, looks good</button>
+          <button class="btn-adjust">Edit</button>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════════════════ -->
+<!-- Screen 6: WhatsApp Verification -->
+<!-- ═══════════════════════════════════════════════════ -->
+<div id="whatsapp" class="stage">
+  <div class="stage-title">Screen 6 — Link WhatsApp</div>
+  <div class="phone">
+    <div class="phone-status"><span>9:41</span><span>●●● 5G 🔋</span></div>
+    <div class="phone-content">
+      <div class="wa-header">
+        <div class="wa-icon">💬</div>
+        <div class="wa-title">Link your WhatsApp</div>
+        <div class="wa-sub">We'll send your weekly basket here for review</div>
+      </div>
+      <div class="wa-body">
+        <div class="input-label">Your WhatsApp Number</div>
+        <input class="input-field" type="tel" value="+91 98765 43210" />
+
+        <div class="input-label">Enter OTP sent to WhatsApp</div>
+        <div class="otp-row">
+          <div class="otp-box">4</div>
+          <div class="otp-box" style="border-color:var(--border)">·</div>
+          <div class="otp-box" style="border-color:var(--border)">·</div>
+          <div class="otp-box" style="border-color:var(--border)">·</div>
+          <div class="otp-box" style="border-color:var(--border)">·</div>
+          <div class="otp-box" style="border-color:var(--border)">·</div>
+        </div>
+        <div class="resend-text">Didn't get it? <span>Resend OTP</span> (expires in 8:42)</div>
+        <button class="next-btn" style="background:var(--green)">Verify &amp; Continue →</button>
+
+        <div style="margin-top:20px;padding:14px;background:var(--bg);border-radius:12px;">
+          <div style="font-size:12px;color:var(--muted);line-height:1.6">
+            🔒 We only use this to send your weekly basket. We'll never spam you or share your number.
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════════════════ -->
+<!-- Screen 7: Basket Preview -->
+<!-- ═══════════════════════════════════════════════════ -->
+<div id="basket" class="stage">
+  <div class="stage-title">Screen 7 — First Basket Preview</div>
+  <div class="phone">
+    <div class="phone-status"><span>9:41</span><span>●●● 5G 🔋</span></div>
+    <div class="phone-content">
+      <div class="basket-header">
+        <div class="basket-header-top">
+          <div class="basket-title">Your basket this week 🛒</div>
+          <div class="basket-badge">13 items</div>
+        </div>
+        <div class="budget-bar-wrap">
+          <div class="budget-bar-label">
+            <span>Budget usage</span>
+            <span>₹1,940 of ₹2,200</span>
+          </div>
+          <div class="budget-bar-track">
+            <div class="budget-bar-fill"></div>
+          </div>
+        </div>
+      </div>
+      <div class="basket-body">
+        <div class="basket-section-title">Staples</div>
+        <div class="basket-item">
+          <div class="basket-item-icon">🌾</div>
+          <div class="basket-item-info">
+            <div class="basket-item-name">Aashirvaad Atta 5kg</div>
+            <div class="basket-item-meta">Running low · Last ordered 14 days ago</div>
+          </div>
+          <div class="basket-item-price">₹280</div>
+        </div>
+        <div class="basket-item">
+          <div class="basket-item-icon">🫘</div>
+          <div class="basket-item-info">
+            <div class="basket-item-name">Tata Sampann Toor Dal 1kg</div>
+            <div class="basket-item-meta">Running low · Preferred brand</div>
+          </div>
+          <div class="basket-item-price">₹145</div>
+        </div>
+
+        <div class="substitution-banner">
+          <div class="sub-icon">⚠️</div>
+          <div class="sub-text"><strong>1 substitution:</strong> Amul Butter 500g unavailable → Amul Gold Butter 500g (₹288). Same brand, same size.</div>
+        </div>
+
+        <div class="basket-section-title" style="margin-top:8px">Fresh Produce</div>
+        <div class="basket-item">
+          <div class="basket-item-icon">🍅</div>
+          <div class="basket-item-info">
+            <div class="basket-item-name">Fresh Tomatoes 1kg</div>
+            <div class="basket-item-meta">Added weekly · In season</div>
+          </div>
+          <div class="basket-item-price">₹52</div>
+        </div>
+        <div class="basket-item">
+          <div class="basket-item-icon">🥬</div>
+          <div class="basket-item-info">
+            <div class="basket-item-name">Spinach 500g</div>
+            <div class="basket-item-meta">✨ New suggestion · In season</div>
+          </div>
+          <div class="basket-item-price">₹35</div>
+        </div>
+
+        <button class="more-items-btn">+ 8 more items</button>
+
+        <div class="basket-total-row">
+          <div class="total-label">Estimated total</div>
+          <div class="total-amount">₹1,940</div>
+        </div>
+      </div>
+      <div class="action-stack">
+        <button class="btn-primary">📲 Send to WhatsApp for review</button>
+        <button class="btn-secondary">Set a weekly schedule instead</button>
+        <button class="btn-ghost">Skip for now</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════════════════ -->
+<!-- Screen 8: Onboarding Complete -->
+<!-- ═══════════════════════════════════════════════════ -->
+<div id="complete" class="stage">
+  <div class="stage-title">Screen 8 — Onboarding Complete</div>
+  <div class="phone">
+    <div class="phone-status"><span>9:41</span><span>●●● 5G 🔋</span></div>
+    <div class="phone-content">
+      <div class="complete-body">
+        <div class="complete-icon">🎉</div>
+        <div class="complete-title">You're all set!</div>
+        <div class="complete-sub">PantryPilot is now planning your groceries. You'll always review before anything is ordered.</div>
+
+        <div class="schedule-card">
+          <div class="sched-row">
+            <div class="sched-icon">📅</div>
+            <div class="sched-text">Next basket on <span class="sched-val">Sunday, 29 Jun at 10 AM</span></div>
+          </div>
+          <div class="sched-row">
+            <div class="sched-icon">💬</div>
+            <div class="sched-text">Sent to <span class="sched-val">+91 98765 43210</span> on WhatsApp</div>
+          </div>
+          <div class="sched-row">
+            <div class="sched-icon">📍</div>
+            <div class="sched-text">Delivered to <span class="sched-val">Koramangala, Bengaluru</span></div>
+          </div>
+          <div class="sched-row">
+            <div class="sched-icon">✅</div>
+            <div class="sched-text">You have <span class="sched-val">4 hours</span> to confirm each basket</div>
+          </div>
+        </div>
+
+        <button class="cta-btn" style="margin-bottom:12px">
+          💬 Open WhatsApp
+        </button>
+        <div class="skip-link">Go to settings</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════════════════ -->
+<!-- WA Screen 1: Basket Card -->
+<!-- ═══════════════════════════════════════════════════ -->
+<div id="wa-basket" class="stage">
+  <div class="stage-title">WhatsApp — Basket Preview Card</div>
+  <div class="two-col">
+    <div class="wa-phone">
+      <div class="phone-status" style="background:#1A1A1A"><span>9:41</span><span>●●● 5G 🔋</span></div>
+      <div class="wa-topbar">
+        <div class="wa-back">←</div>
+        <div class="wa-avatar">🥦</div>
+        <div class="wa-contact-info">
+          <div class="wa-contact-name">PantryPilot</div>
+          <div class="wa-contact-status">online</div>
+        </div>
+        <div style="color:white;font-size:18px">⋮</div>
+      </div>
+      <div class="wa-chat">
+        <div class="wa-basket-card">
+          <div class="wa-card-header">
+            <div class="wa-card-title">🛒 Your basket for this week</div>
+            <div class="wa-card-sub">Sunday, 29 Jun · 13 items · ₹2,200 budget</div>
+          </div>
+          <div class="wa-card-body">
+            <div class="wa-item-row">
+              <span class="wa-item-name">Aashirvaad Atta 5kg</span>
+              <span class="wa-item-price">₹280</span>
+            </div>
+            <div class="wa-item-row">
+              <span class="wa-item-name">Tata Sampann Toor Dal 1kg</span>
+              <span class="wa-item-price">₹145</span>
+            </div>
+            <div class="wa-item-row">
+              <span class="wa-item-name">Amul Gold Butter 500g</span>
+              <span class="wa-item-price">₹288</span>
+            </div>
+            <div class="wa-item-row">
+              <span class="wa-item-name">Fresh Tomatoes 1kg</span>
+              <span class="wa-item-price">₹52</span>
+            </div>
+            <div class="wa-item-row">
+              <span class="wa-item-name">Spinach 500g</span>
+              <span class="wa-item-price">₹35</span>
+            </div>
+            <div class="wa-more">+ 8 more items</div>
+            <div class="wa-total-row">
+              <span>Estimated total</span>
+              <span style="color:var(--green)">₹1,940</span>
+            </div>
+          </div>
+          <div class="wa-sub-banner">
+            <span>⚠️</span>
+            <span>1 substitution made — Amul Butter unavailable, replaced with Amul Gold Butter</span>
+          </div>
+          <div class="wa-buttons">
+            <button class="wa-btn">✅ Looks good, order it</button>
+            <button class="wa-btn">✏️ Let me review items</button>
+            <button class="wa-btn">❌ Skip this week</button>
+          </div>
+        </div>
+        <div style="align-self:flex-start;font-size:10px;color:#9CA3AF;margin-top:4px;padding-left:4px">
+          10:02 AM
+        </div>
+      </div>
+      <div class="wa-input-bar">
+        <div class="wa-input">Type a message</div>
+        <div class="wa-send">➤</div>
+      </div>
+    </div>
+    <div class="annotation">
+      <div class="annotation-item">
+        <div class="ann-num">1</div>
+        <div class="ann-text"><span class="ann-bold">Green header</span> shows basket metadata at a glance — date, item count, budget</div>
+      </div>
+      <div class="annotation-item">
+        <div class="ann-num">2</div>
+        <div class="ann-text"><span class="ann-bold">Top 5 items shown</span> with prices. "+8 more" keeps the card compact</div>
+      </div>
+      <div class="annotation-item">
+        <div class="ann-num">3</div>
+        <div class="ann-text"><span class="ann-bold">Substitution banner</span> — always transparent about what was swapped and why</div>
+      </div>
+      <div class="annotation-item">
+        <div class="ann-num">4</div>
+        <div class="ann-text"><span class="ann-bold">3 interactive buttons</span> — confirm, review/edit, or skip. No free typing needed</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════════════════ -->
+<!-- WA Screen 2: Order Receipt -->
+<!-- ═══════════════════════════════════════════════════ -->
+<div id="wa-receipt" class="stage">
+  <div class="stage-title">WhatsApp — Order Receipt</div>
+  <div class="two-col">
+    <div class="wa-phone">
+      <div class="phone-status" style="background:#1A1A1A"><span>9:41</span><span>●●● 5G 🔋</span></div>
+      <div class="wa-topbar">
+        <div class="wa-back">←</div>
+        <div class="wa-avatar">🥦</div>
+        <div class="wa-contact-info">
+          <div class="wa-contact-name">PantryPilot</div>
+          <div class="wa-contact-status">online</div>
+        </div>
+        <div style="color:white;font-size:18px">⋮</div>
+      </div>
+      <div class="wa-chat">
+        <div class="wa-msg sent">
+          ✅ Looks good, order it
+          <div class="wa-msg-time">10:04 AM ✓✓</div>
+        </div>
+        <div class="wa-msg" style="font-size:13px">
+          Placing your order now 🛒
+          <div class="wa-msg-time">10:04 AM</div>
+        </div>
+        <div class="wa-receipt-card">
+          <div class="wa-receipt-header">
+            <div class="wa-receipt-icon">🎉</div>
+            <div class="wa-receipt-title">Order placed successfully!</div>
+            <div class="wa-receipt-sub">Swiggy Instamart · 29 Jun 2026</div>
+          </div>
+          <div class="wa-receipt-body">
+            <div class="wa-receipt-row">
+              <span class="wa-receipt-label">Items</span>
+              <span class="wa-receipt-val">13 items</span>
+            </div>
+            <div class="wa-receipt-row">
+              <span class="wa-receipt-label">Order total</span>
+              <span class="wa-receipt-val">₹1,952</span>
+            </div>
+            <div class="wa-receipt-row">
+              <span class="wa-receipt-label">Delivering to</span>
+              <span class="wa-receipt-val">Koramangala</span>
+            </div>
+            <div class="wa-receipt-row">
+              <span class="wa-receipt-label">Expected by</span>
+              <span class="wa-receipt-val" style="color:var(--green)">Today, 6–8 PM</span>
+            </div>
+          </div>
+          <button class="wa-track-btn">📦 Track on Swiggy</button>
+        </div>
+        <div style="font-size:10px;color:#9CA3AF;margin-top:4px;padding-left:4px">
+          10:05 AM
+        </div>
+        <div class="wa-msg" style="margin-top:8px;font-size:12px;color:var(--muted);background:transparent;box-shadow:none;padding:0">
+          Next basket arrives Sunday, 6 Jul at 10 AM 📅
+        </div>
+      </div>
+      <div class="wa-input-bar">
+        <div class="wa-input">Type a message</div>
+        <div class="wa-send">➤</div>
+      </div>
+    </div>
+    <div class="annotation">
+      <div class="annotation-item">
+        <div class="ann-num">1</div>
+        <div class="ann-text"><span class="ann-bold">User's confirmation</span> shown in chat — feels like a natural conversation</div>
+      </div>
+      <div class="annotation-item">
+        <div class="ann-num">2</div>
+        <div class="ann-text"><span class="ann-bold">Placing order</span> message bridges the wait — no dead silence after confirmation</div>
+      </div>
+      <div class="annotation-item">
+        <div class="ann-num">3</div>
+        <div class="ann-text"><span class="ann-bold">Receipt card</span> — key details only. Delivery window in green for quick scan</div>
+      </div>
+      <div class="annotation-item">
+        <div class="ann-num">4</div>
+        <div class="ann-text"><span class="ann-bold">Track on Swiggy</span> CTA — hands off tracking to Swiggy's own interface</div>
+      </div>
+      <div class="annotation-item">
+        <div class="ann-num">5</div>
+        <div class="ann-text"><span class="ann-bold">Next basket date</span> shown immediately — sets expectation, closes the loop</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════════════════ -->
+<!-- WA Screen 3: Re-auth Reminder -->
+<!-- ═══════════════════════════════════════════════════ -->
+<div id="wa-reauth" class="stage">
+  <div class="stage-title">WhatsApp — Re-auth Reminder (48hr)</div>
+  <div class="two-col">
+    <div class="wa-phone">
+      <div class="phone-status" style="background:#1A1A1A"><span>9:41</span><span>●●● 5G 🔋</span></div>
+      <div class="wa-topbar">
+        <div class="wa-back">←</div>
+        <div class="wa-avatar">🥦</div>
+        <div class="wa-contact-info">
+          <div class="wa-contact-name">PantryPilot</div>
+          <div class="wa-contact-status">online</div>
+        </div>
+        <div style="color:white;font-size:18px">⋮</div>
+      </div>
+      <div class="wa-chat">
+        <div class="wa-receipt-card" style="border-radius:8px 8px 8px 0;max-width:90%">
+          <div class="wa-receipt-header" style="background:#92400E">
+            <div class="wa-receipt-icon">⏰</div>
+            <div class="wa-receipt-title">Heads up!</div>
+            <div class="wa-receipt-sub">Your Swiggy connection expires in 2 days</div>
+          </div>
+          <div class="wa-receipt-body">
+            <div style="font-size:13px;color:#374151;line-height:1.5;margin-bottom:12px">
+              To keep your grocery planning running, reconnect your Swiggy account before <strong>Friday, 27 Jun at 9 AM</strong>.
+            </div>
+            <div style="font-size:12px;color:var(--muted)">Takes less than a minute 👇</div>
+          </div>
+          <div class="wa-buttons">
+            <button class="wa-btn" style="color:#92400E">🔗 Reconnect Swiggy</button>
+          </div>
+        </div>
+        <div style="font-size:10px;color:#9CA3AF;margin-top:4px;padding-left:4px">Thu, 9:00 AM</div>
+
+        <div class="wa-msg sent" style="margin-top:12px">
+          ✓ Just reconnected!
+          <div class="wa-msg-time">9:03 AM ✓✓</div>
+        </div>
+        <div class="wa-msg">
+          You're back! ✅ Your grocery planning will continue as usual. Next basket Sunday at 10 AM.
+          <div class="wa-msg-time">9:03 AM</div>
+        </div>
+      </div>
+      <div class="wa-input-bar">
+        <div class="wa-input">Type a message</div>
+        <div class="wa-send">➤</div>
+      </div>
+    </div>
+    <div class="annotation">
+      <div class="annotation-item">
+        <div class="ann-num">1</div>
+        <div class="ann-text"><span class="ann-bold">Warm amber</span> header — urgent but not alarming. Reserve red for actual failure</div>
+      </div>
+      <div class="annotation-item">
+        <div class="ann-num">2</div>
+        <div class="ann-text"><span class="ann-bold">Specific deadline</span> shown — "Friday 27 Jun at 9 AM" is more actionable than "2 days"</div>
+      </div>
+      <div class="annotation-item">
+        <div class="ann-num">3</div>
+        <div class="ann-text"><span class="ann-bold">Single CTA</span> — no other options. One tap to fix it</div>
+      </div>
+      <div class="annotation-item">
+        <div class="ann-num">4</div>
+        <div class="ann-text"><span class="ann-bold">Reconnect confirmation</span> shown immediately in chat — reassures user it worked</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+  function show(id) {
+    document.querySelectorAll('.stage').forEach(s => s.classList.remove('active'));
+    document.querySelectorAll('.nav-btn').forEach(b => b.classList.remove('active'));
+    document.getElementById(id).classList.add('active');
+    event.target.classList.add('active');
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  }
+</script>
+
+</body>
+</html>
