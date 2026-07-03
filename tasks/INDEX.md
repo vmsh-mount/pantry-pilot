@@ -11,7 +11,7 @@
 
 | ID | Title | Area | Status | File |
 |----|-------|------|--------|------|
-| BE-002 | Basket items — client-side category inference | Frontend | ✅ Done | [be/BE-002-basket-category.md](be/BE-002-basket-category.md) |
+| UI-015 | Basket editing — in-app review, remove, add item | Frontend + Backend | ✅ Done | [ui/UI-015-basket-editing.md](ui/UI-015-basket-editing.md) |
 
 ---
 
@@ -19,7 +19,6 @@
 
 | ID | Title | Reason |
 |----|-------|--------|
-| UI-015 | Per-item remove/adjust in basket | Post-MVP complexity |
 | UI-016 | Pantry state visualisation page | Post-MVP |
 
 ---
@@ -63,6 +62,7 @@ UI-003 → UI-004 → UI-005 → UI-006 → UI-007 → UI-008 → UI-009 → UI-
 UI-011 ← BE-002
 UI-012, UI-013          ← parallel with UI-011
 UI-014                  ← independent
+UI-015                  ← depends on UI-009, BE-002
 ```
 
 ---

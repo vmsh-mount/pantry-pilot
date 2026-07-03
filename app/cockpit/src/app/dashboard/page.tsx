@@ -1,13 +1,15 @@
 "use client"
 
-import { useEffect, useRef, useState } from "react"
+import { useCallback, useEffect, useRef, useState } from "react"
 import { useRouter } from "next/navigation"
 import { api } from "@/lib/api"
 import { AppShell, Card, Button, Alert, Spinner, BudgetBar, SubstitutionBanner } from "@/components/ui"
+import { ItemSearchDropdown, type SearchProduct } from "@/components/basket/ItemSearchDropdown"
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 
 interface BasketItem {
+  id:                  string
   item_name:           string
   brand:               string | null
   product_name:        string | null
@@ -20,6 +22,7 @@ interface BasketItem {
   original_item_name?: string
   add_reason?:         string
   category?:           string
+  added_by?:           string
 }
 
 interface PendingBasket {
@@ -85,7 +88,14 @@ function fmtDate(iso: string) {
 
 // ── Category group component ──────────────────────────────────────────────────
 
-function CategorySection({ cat, items }: { cat: string; items: BasketItem[] }) {
+function CategorySection({
+  cat, items, onRemove, removingIds,
+}: {
+  cat:         string
+  items:       BasketItem[]
+  onRemove:    (id: string, name: string) => void
+  removingIds: Set<string>
+}) {
   const emoji = CATEGORY_EMOJI[cat] ?? "🛒"
   const label = cat.charAt(0).toUpperCase() + cat.slice(1)
   return (
@@ -94,8 +104,8 @@ function CategorySection({ cat, items }: { cat: string; items: BasketItem[] }) {
         <span className="text-sm">{emoji}</span>
         <span className="text-xs font-semibold text-gray-500 uppercase tracking-wider">{label}</span>
       </div>
-      {items.map((item, i) => (
-        <div key={i} className="flex items-start gap-3 px-4 py-3 border-b border-gray-50 last:border-0">
+      {items.map((item) => (
+        <div key={item.id} className="flex items-start gap-3 px-4 py-3 border-b border-gray-50 last:border-0">
           <div className="flex-1 min-w-0">
             <p className="text-sm font-medium text-gray-900 leading-snug truncate">
               {item.product_name || item.item_name}
@@ -107,11 +117,25 @@ function CategorySection({ cat, items }: { cat: string; items: BasketItem[] }) {
               </span>
             )}
           </div>
-          <div className="text-right shrink-0">
-            <p className="text-sm font-semibold text-gray-900">₹{Math.round(item.total_price)}</p>
-            <p className="text-xs text-gray-400">
-              {item.quantity} {item.unit}
-            </p>
+          <div className="flex items-center gap-2 shrink-0">
+            <div className="text-right">
+              <p className="text-sm font-semibold text-gray-900">₹{Math.round(item.total_price)}</p>
+              <p className="text-xs text-gray-400">
+                {item.quantity} {item.unit}
+              </p>
+            </div>
+            <button
+              onClick={() => onRemove(item.id, item.item_name)}
+              disabled={removingIds.has(item.id)}
+              className="ml-1 w-6 h-6 flex items-center justify-center rounded-full text-gray-300 hover:text-red-400 hover:bg-red-50 transition-colors disabled:opacity-30"
+              aria-label={`Remove ${item.item_name}`}
+            >
+              {removingIds.has(item.id) ? (
+                <span className="w-3 h-3 border border-gray-300 border-t-transparent rounded-full animate-spin" />
+              ) : (
+                <span className="text-xs leading-none">✕</span>
+              )}
+            </button>
           </div>
         </div>
       ))}
@@ -128,6 +152,9 @@ export default function DashboardPage() {
   const [actionLoading, setActionLoading] = useState<"confirm" | "skip" | "trigger" | null>(null)
   const [error,         setError]         = useState("")
   const [successMsg,    setSuccessMsg]    = useState("")
+  const [removingIds,   setRemovingIds]   = useState<Set<string>>(new Set())
+  const [addingItem,    setAddingItem]    = useState(false)
+  const [editSummary,   setEditSummary]   = useState({ removed: 0, added: 0 })
   const pollRef = useRef<ReturnType<typeof setInterval> | null>(null)
 
   useEffect(() => {
@@ -213,6 +240,90 @@ export default function DashboardPage() {
       startPolling()
     } else {
       setError((res.error as { message?: string })?.message ?? "Could not trigger basket.")
+    }
+  }
+
+  function handleTokenExpired() {
+    router.push("/reauth")
+  }
+
+  async function handleRemoveItem(itemId: string, itemName: string) {
+    if (!(basket as PendingBasket)?.items) return
+    setRemovingIds((prev) => new Set(prev).add(itemId))
+    setError("")
+
+    // Optimistic update
+    const prev = basket as PendingBasket
+    const newItems = prev.items.filter((i) => i.id !== itemId)
+    const newTotal = newItems.reduce((s, i) => s + i.total_price, 0)
+    setBasket({ ...prev, items: newItems, estimated_total: newTotal, item_count: newItems.length })
+    setEditSummary((s) => ({ ...s, removed: s.removed + 1 }))
+
+    try {
+      const res = await api.basket.removeItem(itemId)
+      setRemovingIds((prev) => { const n = new Set(prev); n.delete(itemId); return n })
+
+      if (!res.success) {
+        const code = (res.error as { code?: string })?.code
+        if (code === "TOKEN_EXPIRED") { handleTokenExpired(); return }
+        setBasket(prev)
+        setEditSummary((s) => ({ ...s, removed: Math.max(0, s.removed - 1) }))
+        setError(`Could not remove ${itemName}.`)
+      } else {
+        const data = res.data as { estimated_total: number; item_count: number }
+        setBasket((cur) => cur?.pending ? { ...cur as PendingBasket, estimated_total: data.estimated_total, item_count: data.item_count } : cur)
+      }
+    } catch {
+      setRemovingIds((prev) => { const n = new Set(prev); n.delete(itemId); return n })
+      setBasket(prev)
+      setEditSummary((s) => ({ ...s, removed: Math.max(0, s.removed - 1) }))
+      setError(`Could not remove ${itemName}. Please try again.`)
+    }
+  }
+
+  const handleSearch = useCallback(async (q: string): Promise<SearchProduct[]> => {
+    try {
+      const res = await api.basket.searchItems(q)
+      if (!res.success) {
+        const code = (res.error as { code?: string })?.code
+        if (code === "TOKEN_EXPIRED") { router.push("/reauth"); return [] }
+        setError("Search failed. Please try again.")
+        return []
+      }
+      return (res.data as { results: SearchProduct[] })?.results ?? []
+    } catch {
+      setError("Search failed. Check your connection and try again.")
+      return []
+    }
+  }, [router])
+
+  async function handleAddItem(product: SearchProduct) {
+    setAddingItem(true); setError("")
+    try {
+      const res = await api.basket.addItem({
+        swiggy_product_id: product.swiggy_product_id,
+        name:      product.name,
+        price:     product.price,
+        image_url: product.image_url,
+        brand:     product.brand,
+      })
+      if (!res.success) {
+        const code = (res.error as { code?: string })?.code
+        if (code === "TOKEN_EXPIRED") { handleTokenExpired(); return }
+        setError(`Could not add ${product.name}.`)
+        return
+      }
+      const data = res.data as { item: BasketItem; estimated_total: number; item_count: number }
+      setBasket((cur) => {
+        if (!cur?.pending) return cur
+        const p = cur as PendingBasket
+        return { ...p, items: [...p.items, data.item], estimated_total: data.estimated_total, item_count: data.item_count }
+      })
+      setEditSummary((s) => ({ ...s, added: s.added + 1 }))
+    } catch {
+      setError(`Could not add ${product.name}. Please try again.`)
+    } finally {
+      setAddingItem(false)
     }
   }
 
@@ -344,7 +455,7 @@ export default function DashboardPage() {
                     <div>
                       <h1 className="text-xl font-bold text-white">Your basket is ready</h1>
                       <p className="text-[#D8F3DC] text-sm mt-0.5">
-                        {basket.item_count} items · ₹{Math.round(basket.estimated_total).toLocaleString("en-IN")}
+                        {basket.item_count} item{basket.item_count !== 1 ? "s" : ""} · ₹{Math.round(basket.estimated_total).toLocaleString("en-IN")}
                       </p>
                     </div>
                     <span className="text-3xl">🛒</span>
@@ -362,6 +473,24 @@ export default function DashboardPage() {
                   )}
                 </div>
 
+                {/* Edit change summary banner */}
+                {(editSummary.removed > 0 || editSummary.added > 0) && (
+                  <div className="mx-4 mt-3 px-3 py-2 rounded-xl bg-[#D8F3DC] border border-[#2D6A4F]/20 flex items-center justify-between">
+                    <p className="text-xs font-medium text-[#1B4332]">
+                      {[
+                        editSummary.removed > 0 && `Removed ${editSummary.removed}`,
+                        editSummary.added   > 0 && `Added ${editSummary.added}`,
+                      ].filter(Boolean).join(" · ")}
+                    </p>
+                    <button
+                      onClick={() => setEditSummary({ removed: 0, added: 0 })}
+                      className="text-[#2D6A4F] text-xs ml-2"
+                    >
+                      ✕
+                    </button>
+                  </div>
+                )}
+
                 {/* Substitution banner */}
                 {basket.items.some((it) => it.is_substitution) && (
                   <div className="px-4 pt-3">
@@ -373,13 +502,13 @@ export default function DashboardPage() {
                   </div>
                 )}
 
-                {/* Items grouped by category */}
+                {/* Items grouped by category — or empty state */}
                 {basket.item_count === 0 ? (
                   <div className="px-6 py-8 text-center">
-                    <p className="text-3xl mb-2">🤷</p>
-                    <p className="text-sm font-medium text-gray-600">No items resolved this week</p>
+                    <p className="text-3xl mb-2">🛒</p>
+                    <p className="text-sm font-medium text-gray-600">Basket is empty</p>
                     <p className="text-xs text-gray-400 mt-1">
-                      Your pantry may be fully stocked, or Instamart had no matches.
+                      Add an item below, or skip this week.
                     </p>
                   </div>
                 ) : (
@@ -392,11 +521,26 @@ export default function DashboardPage() {
                         grouped[cat].push(item)
                       })
                       return Object.entries(grouped).map(([cat, items]) => (
-                        <CategorySection key={cat} cat={cat} items={items} />
+                        <CategorySection
+                          key={cat}
+                          cat={cat}
+                          items={items}
+                          onRemove={handleRemoveItem}
+                          removingIds={removingIds}
+                        />
                       ))
                     })()}
                   </div>
                 )}
+
+                {/* Add item search */}
+                <div className="px-4 py-3 border-t border-gray-100">
+                  <ItemSearchDropdown
+                    onSearch={handleSearch}
+                    onSelect={handleAddItem}
+                    disabled={addingItem}
+                  />
+                </div>
 
                 {/* Total footer — only when items exist */}
                 {basket.item_count > 0 && (
@@ -411,20 +555,24 @@ export default function DashboardPage() {
 
               {/* Actions */}
               <div className="space-y-3">
-                {basket.item_count > 0 && (
+                {basket.item_count > 0 ? (
                   <Button
                     onClick={handleConfirm}
                     loading={actionLoading === "confirm"}
-                    disabled={!!actionLoading}
+                    disabled={!!actionLoading || addingItem}
                   >
                     ✅ Approve &amp; order
                   </Button>
+                ) : (
+                  <div className="px-4 py-3 rounded-2xl bg-amber-50 border border-amber-200 text-center">
+                    <p className="text-sm font-medium text-amber-800">Nothing left — skip this week?</p>
+                  </div>
                 )}
                 <Button
                   variant="secondary"
                   onClick={handleSkip}
                   loading={actionLoading === "skip"}
-                  disabled={!!actionLoading}
+                  disabled={!!actionLoading || addingItem}
                 >
                   Skip this week
                 </Button>

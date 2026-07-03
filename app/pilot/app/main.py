@@ -1,5 +1,6 @@
 from contextlib import asynccontextmanager
 from fastapi import FastAPI, Request
+from fastapi.exceptions import RequestValidationError
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 from starlette.middleware.sessions import SessionMiddleware
@@ -64,6 +65,23 @@ app.include_router(webhooks.router,        prefix="/v1")
 app.include_router(settings_router.router, prefix="/v1")
 app.include_router(basket.router,          prefix="/v1")
 app.include_router(orders.router,          prefix="/v1")
+
+# ── Validation error handler ─────────────────
+@app.exception_handler(RequestValidationError)
+async def validation_error_handler(request: Request, exc: RequestValidationError):
+    first = exc.errors()[0] if exc.errors() else {}
+    return JSONResponse(
+        status_code=422,
+        content={
+            "success": False,
+            "data": None,
+            "error": {
+                "code": "VALIDATION_ERROR",
+                "message": first.get("msg", "Invalid request body"),
+                "retryable": False,
+            }
+        }
+    )
 
 # ── Domain error handler ──────────────────────
 @app.exception_handler(PantryPilotError)

@@ -300,30 +300,12 @@ async def _handle(payload: dict) -> None:
                 )
                 return
 
-            from app.models.db import LoopRunItem, LoopRunEdit
-            items_result = await db.execute(
-                select(LoopRunItem).where(LoopRunItem.loop_run_id == pending_run.id)
-            )
-            all_items = items_result.scalars().all()
+            from app.services.basket_editing_service import BasketEditingService
+            svc     = BasketEditingService()
+            removed = await svc.remove_items_by_index(db, pending_run.id, indices)
 
-            removed_names = []
-            for idx in sorted(set(indices), reverse=True):
-                if 0 <= idx < len(all_items):
-                    item = all_items[idx]
-                    removed_names.append(item.item_name)
-                    db.add(LoopRunEdit(
-                        loop_run_id  = pending_run.id,
-                        household_id = household_id,
-                        edit_type    = "remove_item",
-                        item_name    = item.item_name,
-                        original_qty = float(item.quantity),
-                    ))
-                    await db.delete(item)
-
-            await db.commit()
-
-            if removed_names:
-                removed_str = "\n".join(f"— {n}" for n in removed_names)
+            if removed:
+                removed_str = "\n".join(f"— {i.item_name}" for i in removed)
                 await wa.send_text(
                     msg.phone_number,
                     f"Removed:\n{removed_str}\n\n"

@@ -141,24 +141,14 @@ def add_item_to_basket(household_id: str, item_query: str, phone_number: str):
     async def _run():
         from sqlalchemy import select
         from app.database import AsyncSessionLocal
-        from app.models.db import Household, LoopRun, LoopRunItem
-        from app.services.auth_service import AuthService
+        from app.models.db import LoopRun
         from app.services.whatsapp_service import WhatsAppService
-        from app.providers.factory import get_mcp_provider
+        from app.services.basket_editing_service import BasketEditingService
         from app.utils.exceptions import SwiggyMCPError, TokenExpiredError
 
         async with AsyncSessionLocal() as db:
-            wa = WhatsAppService()
-
-            try:
-                auth_svc     = AuthService(db)
-                access_token = await auth_svc.get_valid_token(household_id)
-            except TokenExpiredError:
-                await wa.send_text(
-                    phone_number,
-                    "⚠️ Your Swiggy session has expired. Please reconnect to add items.",
-                )
-                return
+            wa  = WhatsAppService()
+            svc = BasketEditingService()
 
             # Find pending loop run
             run_result = await db.execute(
@@ -176,67 +166,41 @@ def add_item_to_basket(household_id: str, item_query: str, phone_number: str):
                 )
                 return
 
-            # Get delivery address
-            from app.models.db import HouseholdPreferences
-            prefs_result = await db.execute(
-                select(HouseholdPreferences).where(
-                    HouseholdPreferences.household_id == household_id
-                )
-            )
-            prefs = prefs_result.scalar_one_or_none()
-            address_id = prefs.preferred_address_id if prefs else None
-
-            if not address_id:
-                await wa.send_text(phone_number, "Could not find your delivery address.")
-                return
-
-            client = get_mcp_provider(access_token)
-
             try:
-                result = await client.search_products(item_query, address_id, limit=3)
-            except (SwiggyMCPError, Exception):
+                products = await svc.search_items(db, household_id, item_query, limit=3)
+            except TokenExpiredError:
+                await wa.send_text(
+                    phone_number,
+                    "⚠️ Your Swiggy session has expired. Please reconnect to add items.",
+                )
+                return
+            except SwiggyMCPError:
                 await wa.send_text(
                     phone_number,
                     f"Sorry, I couldn't search for *{item_query}* right now. Try again in a moment.",
                 )
                 return
 
-            # Normalize: mock returns list[dict], real returns MCPSearchResult
-            products = result if isinstance(result, list) else getattr(result, "products", [])
-
-            def _pattr(p, key, default=None):
-                return p.get(key, default) if isinstance(p, dict) else getattr(p, key, default)
-
-            in_stock = [p for p in products if _pattr(p, "in_stock", True)]
-            if not in_stock:
+            if not products:
                 await wa.send_text(
                     phone_number,
                     f"*{item_query}* doesn't seem to be available on Swiggy Instamart right now.",
                 )
                 return
 
-            product = in_stock[0]
-            db.add(LoopRunItem(
-                loop_run_id         = loop_run.id,
-                household_id        = household_id,
-                item_name           = item_query,
-                swiggy_sku_id       = _pattr(product, "sku_id", _pattr(product, "id")),
-                swiggy_product_name = _pattr(product, "name"),
-                brand               = _pattr(product, "brand"),
-                quantity            = 1.0,
-                unit                = "unit",
-                unit_price          = _pattr(product, "price", 0),
-                total_price         = _pattr(product, "price", 0),
-                added_by            = "user_added",
-                add_reason          = "User requested via WhatsApp",
-            ))
-            await db.commit()
+            product  = products[0]
+            new_item = await svc.add_item(
+                db, loop_run, household_id, product,
+                item_query=item_query,
+                add_reason="User requested via WhatsApp",
+            )
 
-            pname  = _pattr(product, "name", item_query)
-            pprice = _pattr(product, "price", 0)
+            from app.services.basket_editing_service import _pattr
+            pname  = _pattr(product, "name", item_query) or item_query
+            pprice = _pattr(product, "price", 0) or 0
             await wa.send_text(
                 phone_number,
-                f"Added *{pname}* — Rs{int(pprice)} check\n\n"
+                f"Added *{pname}* — ₹{int(pprice)}\n\n"
                 "Reply *review* to see the full basket, or *order now* to confirm.",
             )
 

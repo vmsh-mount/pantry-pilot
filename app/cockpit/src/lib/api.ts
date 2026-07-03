@@ -40,10 +40,20 @@ export const api = {
     complete:     (body: unknown) => request("/onboard/complete", { method: "POST", body: JSON.stringify(body) }),
   },
   basket: {
-    pending:  () => request("/basket/pending"),
-    confirm:  () => request("/basket/confirm", { method: "POST" }),
-    skip:     () => request("/basket/skip",    { method: "POST" }),
-    trigger:  () => request("/basket/trigger", { method: "POST" }),
+    pending:        () => request("/basket/pending"),
+    confirm:        () => request("/basket/confirm", { method: "POST" }),
+    skip:           () => request("/basket/skip",    { method: "POST" }),
+    trigger:        () => request("/basket/trigger", { method: "POST" }),
+    removeItem:     (itemId: string) => request(`/basket/item/${itemId}`, { method: "DELETE" }),
+    searchItems:    (q: string)      => request<{ results: import("@/components/basket/ItemSearchDropdown").SearchProduct[] }>(`/basket/search?q=${encodeURIComponent(q)}`),
+    addItem:        (body: {
+      swiggy_product_id: string
+      name:    string
+      price:   number
+      image_url?: string | null
+      category?: string | null
+      brand?:    string | null
+    }) => request("/basket/item", { method: "POST", body: JSON.stringify(body) }),
   },
   orders: {
     list: () => request("/orders"),
