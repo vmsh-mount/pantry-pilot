@@ -137,6 +137,7 @@ class SwiggyMCPClient:
         mcp_items = [
             {"spinId": item["sku_id"], "quantity": max(1, int(item["quantity"]))}
             for item in items
+            if int(item.get("quantity", 0)) > 0
         ]
         params: dict = {"items": mcp_items}
         if address_id:
