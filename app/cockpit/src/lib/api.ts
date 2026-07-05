@@ -24,6 +24,50 @@ async function request<T>(
   return res.json()
 }
 
+export interface RunSummary {
+  id:             string
+  state:          string
+  triggered_at:   string
+  completed_at:   string | null
+  item_count:     number
+  total_price:    number | null
+  failure_reason: string | null
+  failure_stage:  string | null
+  skip_reason:    string | null
+}
+
+export interface RunsListResponse {
+  runs:           RunSummary[]
+  filtered_count: number
+  next_run_at:    string | null
+  stats: {
+    total_runs:       number
+    last_order_total: number | null
+    avg_order_total:  number | null
+  }
+}
+
+export interface RunItem {
+  item_name:           string
+  swiggy_product_name: string | null
+  brand:               string | null
+  quantity:            number
+  unit:                string
+  total_price:         number | null
+  added_by:            string
+  is_substitution:     boolean
+  original_item_name:  string | null
+}
+
+export interface RunItemsResponse {
+  items: RunItem[]
+}
+
+export interface SettingsResponse {
+  dry_run: boolean
+  [key: string]: unknown
+}
+
 export const api = {
   auth: {
     initiate: () => request<{ redirect_url: string }>("/auth/initiate", { method: "POST" }),
@@ -58,8 +102,19 @@ export const api = {
   orders: {
     list: () => request("/orders"),
   },
+  runs: {
+    list: (params?: { status?: string; limit?: number; offset?: number }) => {
+      const query = new URLSearchParams(
+        Object.entries(params ?? {})
+          .filter(([, v]) => v != null)
+          .map(([k, v]) => [k, String(v)])
+      )
+      return request<RunsListResponse>(`/runs?${query}`)
+    },
+    getItems: (runId: string) => request<RunItemsResponse>(`/runs/${runId}/items`),
+  },
   settings: {
-    get:    () => request("/settings"),
+    get:    () => request<SettingsResponse>("/settings"),
     update: (body: unknown) => request("/settings", { method: "PATCH", body: JSON.stringify(body) }),
     pause:  (reason: string) => request("/settings/pause", { method: "POST", body: JSON.stringify({ reason }) }),
     resume: () => request("/settings/resume", { method: "POST" }),

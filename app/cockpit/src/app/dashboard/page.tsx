@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useRef, useState } from "react"
 import { useRouter } from "next/navigation"
-import { api } from "@/lib/api"
+import { api, type RunSummary, type RunsListResponse, type SettingsResponse } from "@/lib/api"
 import { AppShell, Card, Button, Alert, Spinner, BudgetBar, SubstitutionBanner } from "@/components/ui"
 import { ItemSearchDropdown, type SearchProduct } from "@/components/basket/ItemSearchDropdown"
 
@@ -143,11 +143,41 @@ function CategorySection({
   )
 }
 
+// ── Status helpers ────────────────────────────────────────────────────────────
+
+const ACTIVE_STATES = new Set(["pending", "sensing", "planning", "optimizing", "confirmed", "placing"])
+
+function RunBadge({ state }: { state: string }) {
+  const isActive = ACTIVE_STATES.has(state)
+  const styles: Record<string, string> = {
+    in_progress:           "bg-amber-50 text-amber-700",
+    awaiting_confirmation: "bg-purple-50 text-purple-700",
+    completed:             "bg-[#D8F3DC] text-[#2D6A4F]",
+    failed:                "bg-red-50 text-red-600",
+    skipped:               "bg-gray-100 text-gray-500",
+  }
+  const badge = isActive ? "in_progress" : state
+  const label: Record<string, string> = {
+    in_progress:           "In progress",
+    awaiting_confirmation: "Awaiting you",
+    completed:             "Completed",
+    failed:                "Failed",
+    skipped:               "Skipped",
+  }
+  return (
+    <span className={`px-2 py-0.5 rounded-full text-[10px] font-semibold ${styles[badge] ?? "bg-gray-100 text-gray-500"}`}>
+      {label[badge] ?? badge}
+    </span>
+  )
+}
+
 // ── Main page ─────────────────────────────────────────────────────────────────
 
 export default function DashboardPage() {
   const router = useRouter()
   const [basket,        setBasket]        = useState<BasketState | null>(null)
+  const [runsData,      setRunsData]      = useState<RunsListResponse | null>(null)
+  const [dryRun,        setDryRun]        = useState(false)
   const [loading,       setLoading]       = useState(true)
   const [actionLoading, setActionLoading] = useState<"confirm" | "skip" | "trigger" | null>(null)
   const [error,         setError]         = useState("")
@@ -158,7 +188,7 @@ export default function DashboardPage() {
   const pollRef = useRef<ReturnType<typeof setInterval> | null>(null)
 
   useEffect(() => {
-    loadBasket()
+    loadAll()
     return () => stopPolling()
   }, [])
 
@@ -176,9 +206,46 @@ export default function DashboardPage() {
     if (res.success && res.data) {
       const data = res.data as BasketState
       setBasket(data)
-      // Stop polling once we leave in_progress state
       if (!data.pending && !(data as NoPendingBasket).in_progress) {
         stopPolling()
+        // Refresh runs list when run completes
+        loadRuns()
+      }
+    }
+  }
+
+  async function loadRuns() {
+    const res = await api.runs.list({ limit: 4 })
+    if (res.success && res.data) {
+      setRunsData(res.data as RunsListResponse)
+    }
+  }
+
+  async function loadAll() {
+    setLoading(true); setError("")
+    const [basketRes, settingsRes] = await Promise.all([
+      api.basket.pending(),
+      api.settings.get(),
+      loadRuns(),
+    ])
+    if (settingsRes.success && settingsRes.data) {
+      setDryRun((settingsRes.data as SettingsResponse).dry_run ?? false)
+    }
+    setLoading(false)
+    if (basketRes.success && basketRes.data) {
+      const data = basketRes.data as BasketState
+      setBasket(data)
+      if (!data.pending && (data as NoPendingBasket).in_progress) {
+        startPolling()
+      }
+    } else {
+      const code = (basketRes.error as { code?: string })?.code
+      if (code === "NOT_AUTHENTICATED" || code === "TOKEN_EXPIRED") {
+        router.push("/")
+      } else if (code === "ONBOARDING_INCOMPLETE") {
+        router.push("/onboard")
+      } else {
+        setError((basketRes.error as { message?: string })?.message ?? "Could not load basket.")
       }
     }
   }
@@ -190,7 +257,6 @@ export default function DashboardPage() {
     if (res.success && res.data) {
       const data = res.data as BasketState
       setBasket(data)
-      // Auto-poll if a run is in progress
       if (!data.pending && (data as NoPendingBasket).in_progress) {
         startPolling()
       }
@@ -225,6 +291,7 @@ export default function DashboardPage() {
     if (res.success) {
       setSuccessMsg("Basket skipped. See you next week!")
       loadBasket()
+      loadRuns()
     } else {
       setError((res.error as { message?: string })?.message ?? "Could not skip basket.")
     }
@@ -235,9 +302,9 @@ export default function DashboardPage() {
     const res = await api.basket.trigger()
     setActionLoading(null)
     if (res.success) {
-      // Immediately show in-progress state and start polling
       setBasket({ pending: false, in_progress: true, last_failed: false, next_run_at: null })
       startPolling()
+      loadRuns()
     } else {
       setError((res.error as { message?: string })?.message ?? "Could not trigger basket.")
     }
@@ -335,6 +402,9 @@ export default function DashboardPage() {
           <span className="text-xl">🥦</span>
           <span className="font-bold">PantryPilot</span>
         </div>
+        <button onClick={() => router.push("/runs")} className="text-[#D8F3DC] text-xs">
+          Run history →
+        </button>
       </div>
 
       {loading ? (
@@ -344,6 +414,99 @@ export default function DashboardPage() {
       ) : (
         <div className="space-y-4">
           {error && <Alert type="error" message={error} />}
+
+          {dryRun && (
+            <div className="rounded-2xl px-4 py-3 bg-amber-50 border border-amber-300 flex items-center gap-2">
+              <span className="text-amber-600 text-base">⚠</span>
+              <p className="text-xs font-medium text-amber-800">
+                Test mode — orders won&apos;t be placed on Swiggy
+              </p>
+            </div>
+          )}
+
+          {/* ── Next run card + stats ── */}
+          {runsData && (
+            <>
+              {/* Next run / guard rail */}
+              {(() => {
+                const isRunActive = basket && !basket.pending && (basket as NoPendingBasket).in_progress
+                const nextRunAt   = runsData.next_run_at
+                return (
+                  <div className={`rounded-2xl px-4 py-3 flex items-center justify-between gap-3 ${
+                    isRunActive
+                      ? "bg-amber-50 border border-amber-200"
+                      : "bg-white/10 border border-white/20"
+                  }`}>
+                    <div>
+                      <p className={`text-xs font-medium ${isRunActive ? "text-amber-700" : "text-[#D8F3DC]"}`}>
+                        {isRunActive ? "A run is already in progress" : "Next run"}
+                      </p>
+                      {!isRunActive && nextRunAt && (
+                        <p className="text-white text-sm font-semibold mt-0.5">
+                          {new Date(nextRunAt).toLocaleDateString("en-IN", { weekday: "long", day: "numeric", month: "short" })}
+                        </p>
+                      )}
+                      {!isRunActive && !nextRunAt && (
+                        <p className="text-[#D8F3DC] text-sm mt-0.5">Not scheduled</p>
+                      )}
+                    </div>
+                    {!isRunActive && (
+                      <button
+                        onClick={handleTrigger}
+                        disabled={!!actionLoading}
+                        className="shrink-0 px-3 py-1.5 rounded-xl bg-white text-[#2D6A4F] text-xs font-semibold disabled:opacity-50"
+                      >
+                        {actionLoading === "trigger" ? "…" : "Plan now"}
+                      </button>
+                    )}
+                  </div>
+                )
+              })()}
+
+              {/* Stats chips */}
+              {(runsData.stats.total_runs > 0) && (
+                <div className="grid grid-cols-3 gap-2">
+                  {[
+                    { label: "Runs", value: String(runsData.stats.total_runs) },
+                    { label: "Last order", value: runsData.stats.last_order_total != null ? `₹${Math.round(runsData.stats.last_order_total).toLocaleString("en-IN")}` : "—" },
+                    { label: "Weekly avg", value: runsData.stats.avg_order_total != null ? `₹${Math.round(runsData.stats.avg_order_total).toLocaleString("en-IN")}` : "—" },
+                  ].map((s) => (
+                    <div key={s.label} className="bg-white/10 rounded-2xl px-3 py-2 text-center">
+                      <p className="text-white font-semibold text-sm">{s.value}</p>
+                      <p className="text-[#D8F3DC] text-[10px] mt-0.5">{s.label}</p>
+                    </div>
+                  ))}
+                </div>
+              )}
+
+              {/* Recent runs */}
+              {runsData.runs.length > 0 && (
+                <Card>
+                  <div className="px-4 pt-3 pb-1 flex items-center justify-between">
+                    <p className="text-xs font-semibold text-gray-400 uppercase tracking-wider">Recent runs</p>
+                    <button onClick={() => router.push("/runs")} className="text-xs text-[#2D6A4F] font-medium">
+                      See all →
+                    </button>
+                  </div>
+                  <div className="divide-y divide-gray-50">
+                    {runsData.runs.map((run: RunSummary) => (
+                      <div key={run.id} className="flex items-center justify-between px-4 py-2.5">
+                        <div className="flex items-center gap-2 flex-wrap">
+                          <span className="text-xs text-gray-500">
+                            {new Date(run.triggered_at).toLocaleDateString("en-IN", { day: "numeric", month: "short" })}
+                          </span>
+                          <RunBadge state={run.state} />
+                        </div>
+                        <span className="text-xs text-gray-400">
+                          {run.total_price != null ? `₹${Math.round(run.total_price).toLocaleString("en-IN")}` : run.item_count > 0 ? `${run.item_count} items` : ""}
+                        </span>
+                      </div>
+                    ))}
+                  </div>
+                </Card>
+              )}
+            </>
+          )}
 
           {successMsg && (
             <div className="bg-[#D8F3DC] border border-[#2D6A4F]/30 text-[#1B4332] text-sm rounded-2xl px-4 py-3">
@@ -356,39 +519,38 @@ export default function DashboardPage() {
             (() => {
               const b = basket as NoPendingBasket | null
               if (b?.in_progress) {
-                // Run is happening — show animated state, poll silently
                 const stateLabel: Record<string, string> = {
-                  pending:    "Getting started…",
+                  pending:    "Queued…",
                   sensing:    "Checking your pantry…",
                   planning:   "Planning your basket…",
                   optimizing: "Optimising & pricing…",
+                  confirmed:  "Placing order…",
+                  placing:    "Placing order…",
                 }
-                const label = stateLabel[b.run_state ?? "pending"] ?? "Building your basket…"
+                const pipelineStages = ["sensing", "planning", "optimizing"]
+                const activeStage    = pipelineStages.indexOf(b.run_state ?? "")
+                const showBar        = activeStage !== -1
+                const label          = stateLabel[b.run_state ?? "pending"] ?? "Building your basket…"
                 return (
                   <Card>
                     <div className="px-6 py-10 text-center space-y-4">
-                      <div className="flex justify-center">
-                        <div className="relative">
-                          <div className="w-16 h-16 rounded-full bg-[#D8F3DC] flex items-center justify-center text-3xl animate-pulse">
-                            🛒
-                          </div>
-                        </div>
+                      <div className="w-16 h-16 rounded-full bg-[#D8F3DC] flex items-center justify-center text-3xl animate-pulse mx-auto">
+                        🛒
                       </div>
                       <div>
                         <h2 className="text-base font-bold text-gray-900">{label}</h2>
                         <p className="text-sm text-gray-400 mt-1">This takes about a minute</p>
                       </div>
-                      <div className="flex justify-center gap-1.5 pt-1">
-                        {["sensing","planning","optimizing"].map((s) => (
-                          <div
-                            key={s}
-                            className={`h-1.5 w-8 rounded-full transition-all ${
-                              b.run_state === s || (b.run_state === "optimizing" && s !== "sensing")
-                                ? "bg-[#2D6A4F]" : "bg-gray-200"
-                            }`}
-                          />
-                        ))}
-                      </div>
+                      {showBar && (
+                        <div className="flex justify-center gap-1.5 pt-1">
+                          {pipelineStages.map((s, i) => (
+                            <div
+                              key={s}
+                              className={`h-1.5 w-8 rounded-full transition-all ${i <= activeStage ? "bg-[#2D6A4F]" : "bg-gray-200"}`}
+                            />
+                          ))}
+                        </div>
+                      )}
                     </div>
                   </Card>
                 )
@@ -397,21 +559,10 @@ export default function DashboardPage() {
               if (b?.last_failed) {
                 return (
                   <Card>
-                    <div className="px-6 py-8 text-center space-y-4">
+                    <div className="px-6 py-8 text-center space-y-3">
                       <div className="text-5xl">⚠️</div>
-                      <div>
-                        <h2 className="text-lg font-bold text-gray-900">Basket generation failed</h2>
-                        <p className="text-sm text-gray-500 mt-1">
-                          Something went wrong. This usually fixes itself — try again.
-                        </p>
-                      </div>
-                      <Button
-                        onClick={handleTrigger}
-                        loading={actionLoading === "trigger"}
-                        disabled={!!actionLoading}
-                      >
-                        Try again
-                      </Button>
+                      <h2 className="text-lg font-bold text-gray-900">Last run failed</h2>
+                      <p className="text-sm text-gray-500">Use "Plan now" above to try again.</p>
                     </div>
                   </Card>
                 )
@@ -419,28 +570,10 @@ export default function DashboardPage() {
 
               return (
                 <Card>
-                  <div className="px-6 py-8 text-center space-y-4">
+                  <div className="px-6 py-8 text-center space-y-2">
                     <div className="text-5xl">🛒</div>
-                    <div>
-                      <h2 className="text-lg font-bold text-gray-900">No basket pending</h2>
-                      {b?.next_run_at ? (
-                        <p className="text-sm text-gray-500 mt-1">
-                          Next basket scheduled for{" "}
-                          <span className="font-medium text-gray-700">
-                            {fmtDate(b.next_run_at)}
-                          </span>
-                        </p>
-                      ) : (
-                        <p className="text-sm text-gray-500 mt-1">You can generate one now.</p>
-                      )}
-                    </div>
-                    <Button
-                      onClick={handleTrigger}
-                      loading={actionLoading === "trigger"}
-                      disabled={!!actionLoading}
-                    >
-                      Generate basket now
-                    </Button>
+                    <h2 className="text-lg font-bold text-gray-900">No basket pending</h2>
+                    <p className="text-sm text-gray-500">Use "Plan now" above to generate your basket.</p>
                   </div>
                 </Card>
               )
