@@ -223,10 +223,10 @@ export default function DashboardPage() {
 
   async function loadAll() {
     setLoading(true); setError("")
+    loadRuns().catch(() => {})
     const [basketRes, settingsRes] = await Promise.all([
       api.basket.pending(),
       api.settings.get(),
-      loadRuns(),
     ])
     if (settingsRes.success && settingsRes.data) {
       setDryRun((settingsRes.data as SettingsResponse).dry_run ?? false)
