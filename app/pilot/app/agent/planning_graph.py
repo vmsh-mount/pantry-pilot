@@ -901,27 +901,31 @@ async def place(state: PlanningState) -> dict:
         await db.commit()
 
     try:
-        # Step 1 — clear then build cart
-        await client.clear_cart()
+        from app.config import get_settings as _get_settings
 
-        cart_items = [
-            {"sku_id": item["sku_id"], "quantity": int(item["quantity"])}
-            for item in resolved_basket
-            if item.get("sku_id")
-        ]
-        cart = await client.update_cart(cart_items, address_id=address_id)
-
-        # Step 2 — price tolerance check (±5%)
         def _rattr(obj, key, default=None):
             return obj.get(key, default) if isinstance(obj, dict) else getattr(obj, key, default)
 
-        from app.config import get_settings as _get_settings
         if _get_settings().pantrypilot_dry_run:
-            # In dry run, update_cart still hits the real Swiggy API and its
-            # grand_total reflects actual cart state, not the confirmed basket.
-            # Use the confirmed basket total so the Order record shows the right amount.
+            # Skip all real Swiggy cart mutations — use expected total directly.
             actual_total = expected_total
+            order = await client.checkout(
+                address_id      = address_id,
+                delivery_slot   = delivery_slot,
+                estimated_total = expected_total,
+            )
         else:
+            # Step 1 — clear then build cart
+            await client.clear_cart()
+
+            cart_items = [
+                {"sku_id": item["sku_id"], "quantity": int(item["quantity"])}
+                for item in resolved_basket
+                if item.get("sku_id")
+            ]
+            cart = await client.update_cart(cart_items, address_id=address_id)
+
+            # Step 2 — price tolerance check (±5%)
             actual_total = _rattr(cart, "grand_total", _rattr(cart, "total", 0))
             if expected_total > 0 and actual_total > 0:
                 drift = abs(actual_total - expected_total) / expected_total
@@ -931,12 +935,12 @@ async def place(state: PlanningState) -> dict:
                         f"Rs{expected_total:.0f} by {drift*100:.1f}% (limit 5%)"
                     )
 
-        # Step 3 — checkout
-        order = await client.checkout(
-            address_id      = address_id,
-            delivery_slot   = delivery_slot,
-            estimated_total = expected_total,
-        )
+            # Step 3 — checkout
+            order = await client.checkout(
+                address_id      = address_id,
+                delivery_slot   = delivery_slot,
+                estimated_total = expected_total,
+            )
 
     except TokenExpiredError:
         raise   # bubble up — Celery task will catch and send re-auth
