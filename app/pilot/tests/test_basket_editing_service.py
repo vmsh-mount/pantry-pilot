@@ -50,20 +50,30 @@ def svc():
 
 
 @pytest_asyncio.fixture
-async def db(tmp_path):
-    """In-process SQLite database for unit-test isolation — no Docker required."""
+async def db():
+    """Isolated PostgreSQL schema per test — same pattern as integration tests."""
+    import uuid
     from sqlalchemy.ext.asyncio import create_async_engine, AsyncSession
     from sqlalchemy.orm import sessionmaker
+    from sqlalchemy import text
     from app.models.db import Base
 
-    engine = create_async_engine("sqlite+aiosqlite:///:memory:", echo=False)
+    schema = f"test_{uuid.uuid4().hex[:12]}"
+    base_url = "postgresql+asyncpg://pantrypilot:pantrypilot@postgres:5432/pantrypilot"
+    engine = create_async_engine(base_url, echo=False)
+
     async with engine.begin() as conn:
+        await conn.execute(text(f'CREATE SCHEMA "{schema}"'))
+        await conn.execute(text(f'SET search_path TO "{schema}"'))
         await conn.run_sync(Base.metadata.create_all)
 
     Session = sessionmaker(engine, class_=AsyncSession, expire_on_commit=False)
     async with Session() as session:
+        await session.execute(text(f'SET search_path TO "{schema}"'))
         yield session
 
+    async with engine.begin() as conn:
+        await conn.execute(text(f'DROP SCHEMA "{schema}" CASCADE'))
     await engine.dispose()
 
 

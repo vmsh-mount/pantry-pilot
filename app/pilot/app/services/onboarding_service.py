@@ -279,9 +279,6 @@ class OnboardingService:
         else:
             prefs.preferred_order_day = preferred_day
 
-        if inference and inference.address_id:
-            prefs.preferred_address_id = inference.address_id
-
         # Seed brand preferences from inference
         if inference:
             for bp in inference.brand_preferences:

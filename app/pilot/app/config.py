@@ -66,6 +66,9 @@ class Settings(BaseSettings):
     mock_mcp_base_url: str = "http://localhost:8001"
     mock_mcp_public_url: str = "http://localhost:8001"
 
+    # Dry run — mocks Swiggy checkout so no real order is placed
+    pantrypilot_dry_run: bool = False
+
     # Monitoring
     sentry_dsn: str = ""
     log_level: str = "INFO"

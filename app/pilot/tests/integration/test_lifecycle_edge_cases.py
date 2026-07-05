@@ -306,7 +306,7 @@ async def test_optimize_budget_exactly_at_limit(swiggy_mcp):
         "should_abort":         False,
         "household_profile":    {"diet_type": "vegetarian", "budget_max": 28, "budget_min": 0},
         "brand_preferences":    {},
-        "preferred_address_id": "addr_home_001",
+        "swiggy_address_id":    "addr_home_001",
         "candidate_basket": [
             {"item_name": "Tata Salt", "sku_id": None, "quantity": 1.0,
              "unit": "kg", "category": "staples", "brand": None,
@@ -355,7 +355,7 @@ async def test_optimize_substitution_recorded():
         "should_abort":         False,
         "household_profile":    {"diet_type": "vegetarian", "budget_max": 5000, "budget_min": 0},
         "brand_preferences":    {},
-        "preferred_address_id": "addr_home_001",
+        "swiggy_address_id":    "addr_home_001",
         "candidate_basket": [
             {"item_name": "Special Brand Salt", "sku_id": None, "quantity": 1.0,
              "unit": "kg", "category": "staples", "brand": "SpecialBrand",
@@ -474,7 +474,7 @@ async def test_place_node_calls_checkout_and_persists_order(db, swiggy_mcp):
         "household_id":             household_id,
         "loop_run_id":              str(run.id),
         "access_token":             "fake_access_token_for_tests",
-        "preferred_address_id":     "addr_home_001",
+        "swiggy_address_id":        "addr_home_001",
         "preferred_delivery_slot":  "evening",
         "whatsapp_number":          "+918499933228",
         "resolved_basket":          resolved,
@@ -529,7 +529,7 @@ async def test_place_node_falls_back_to_swiggy_address_when_pref_is_null(db, swi
         "household_id":             household_id,
         "loop_run_id":              str(run.id),
         "access_token":             "fake_access_token_for_tests",
-        "preferred_address_id":     None,   # ← no address saved
+        "swiggy_address_id":        None,   # ← no address saved; triggers fallback fetch from Swiggy
         "preferred_delivery_slot":  "evening",
         "whatsapp_number":          "+918499933228",
         "resolved_basket":          resolved,
@@ -571,7 +571,7 @@ async def test_place_node_fails_gracefully_when_no_address_anywhere(db):
         "household_id":             household_id,
         "loop_run_id":              str(run.id),
         "access_token":             "fake_access_token_for_tests",
-        "preferred_address_id":     None,
+        "swiggy_address_id":        None,
         "preferred_delivery_slot":  "evening",
         "whatsapp_number":          "+918499933228",
         "resolved_basket":          [

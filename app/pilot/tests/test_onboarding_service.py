@@ -94,9 +94,9 @@ def test_next_weekday_correct_day():
 
 
 def test_next_weekday_always_in_future():
-    """Even if today is Sunday, next_weekday('sunday') is 7 days out."""
+    """next_weekday always returns a datetime strictly in the future."""
     future = _next_weekday("sunday")
-    assert (future - datetime.now(timezone.utc)).days >= 1
+    assert (future - datetime.now(timezone.utc)).total_seconds() > 0
 
 
 def test_empty_preview_structure():

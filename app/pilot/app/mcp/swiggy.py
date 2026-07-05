@@ -128,12 +128,20 @@ class SwiggyMCPClient:
         result = await self._call("get_cart", {})
         return _parse_cart(result)
 
-    async def update_cart(self, items: list[dict]) -> MCPCart:
+    async def update_cart(self, items: list[dict], address_id: str | None = None) -> MCPCart:
         """
         Replace cart contents with the provided items.
         items: [{"sku_id": "...", "quantity": 1}, ...]
+        address_id: Swiggy's address ID (required for cart to be valid at checkout)
         """
-        result = await self._call("update_cart", {"items": items})
+        mcp_items = [
+            {"spinId": item["sku_id"], "quantity": max(1, int(item["quantity"]))}
+            for item in items
+        ]
+        params: dict = {"items": mcp_items}
+        if address_id:
+            params["selectedAddressId"] = address_id
+        result = await self._call("update_cart", params)
         return _parse_cart(result)
 
     async def clear_cart(self) -> bool:
@@ -145,20 +153,33 @@ class SwiggyMCPClient:
 
     async def checkout(
         self,
-        address_id:    str,
-        delivery_slot: str = "evening",
+        address_id:      str,
+        delivery_slot:   str   = "evening",
+        estimated_total: float = 0.0,
     ) -> MCPCheckoutResult:
         """
         Place and confirm an Instamart order.
         Raises CheckoutFailedError if Swiggy rejects the order.
         """
+        if get_settings().pantrypilot_dry_run:
+            import uuid as _uuid
+            fake_order_id = f"dry_run_{_uuid.uuid4().hex[:12]}"
+            logger.info("dry_run_checkout_skipped", fake_order_id=fake_order_id)
+            return MCPCheckoutResult(
+                order_id           = fake_order_id,
+                status             = "PLACED",
+                grand_total        = estimated_total,
+                estimated_delivery = "Dry run — no order placed",
+            )
+
         # Swiggy params: addressId, deliverySlot (camelCase)
         result = await self._call("checkout", {
             "addressId":    address_id,
             "deliverySlot": delivery_slot,
         })
 
-        order_id = result.get("orderId") or result.get("order_id")
+        data = result.get("data", result)
+        order_id = data.get("orderId") or data.get("order_id") or result.get("orderId") or result.get("order_id")
         if not order_id:
             raise CheckoutFailedError(
                 f"Checkout succeeded but no orderId returned: {result}"
@@ -166,9 +187,15 @@ class SwiggyMCPClient:
 
         return MCPCheckoutResult(
             order_id           = order_id,
-            status             = result.get("status", "placed"),
-            grand_total        = float(result.get("grandTotal") or result.get("grand_total") or 0.0),
-            estimated_delivery = result.get("estimatedDelivery") or result.get("estimated_delivery"),
+            status             = data.get("status") or result.get("status", "placed"),
+            grand_total        = float(
+                data.get("cartTotal") or data.get("grandTotal") or data.get("grand_total") or
+                result.get("grandTotal") or result.get("grand_total") or 0.0
+            ),
+            estimated_delivery = (
+                data.get("estimatedDelivery") or data.get("estimated_delivery") or
+                result.get("estimatedDelivery") or result.get("estimated_delivery")
+            ),
         )
 
     # ── Track Tools ───────────────────────────────────────────────────────────
@@ -508,9 +535,11 @@ def _safe_json(response: httpx.Response) -> dict:
 
 
 def _parse_cart(result: dict) -> MCPCart:
+    if "raw" in result and "items" not in result:
+        raise SwiggyMCPError(f"update_cart failed: {result['raw']}")
     items = [
         MCPCartItem(
-            sku_id      = i["sku_id"],
+            sku_id      = i.get("spinId") or i.get("sku_id", ""),
             name        = i.get("name", ""),
             brand       = i.get("brand"),
             quantity    = i.get("quantity", 1),

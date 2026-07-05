@@ -22,7 +22,7 @@ def _household_id(request: Request) -> str | None:
     return request.session.get("household_id")
 
 
-IN_PROGRESS_STATES = {"pending", "sensing", "planning", "optimizing"}
+IN_PROGRESS_STATES = {"pending", "sensing", "planning", "optimizing", "confirmed", "placing"}
 
 async def _assert_onboarding_complete(household_id: str, db: AsyncSession):
     result = await db.execute(

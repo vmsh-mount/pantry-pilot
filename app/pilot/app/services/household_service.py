@@ -58,6 +58,7 @@ class HouseholdService:
         )
         prefs = prefs_result.scalar_one_or_none()
 
+        from app.config import get_settings as _get_settings
         return {
             "household_id":        household_id,
             "household_type":      household.household_type,
@@ -86,6 +87,7 @@ class HouseholdService:
                 "freq_dairy_eggs":          prefs.freq_dairy_eggs if prefs else "weekly",
                 "freq_packaged":            prefs.freq_packaged if prefs else "weekly",
             } if prefs else {},
+            "dry_run": _get_settings().pantrypilot_dry_run,
         }
 
     async def update_settings(

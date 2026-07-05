@@ -17,14 +17,14 @@ class SwiggyMCPProvider:
     async def get_cart(self):
         return await self._client.get_cart()
 
-    async def update_cart(self, items):
-        return await self._client.update_cart(items)
+    async def update_cart(self, items, address_id=None):
+        return await self._client.update_cart(items, address_id=address_id)
 
     async def clear_cart(self):
         return await self._client.clear_cart()
 
-    async def checkout(self, address_id, delivery_slot=None):
-        return await self._client.checkout(address_id, delivery_slot)
+    async def checkout(self, address_id, delivery_slot=None, estimated_total: float = 0.0):
+        return await self._client.checkout(address_id, delivery_slot, estimated_total)
 
     async def get_orders(self, limit=20):
         return await self._client.get_orders(limit)

@@ -51,6 +51,7 @@ def mock_settings(monkeypatch):
     settings.gemini_api_key         = ""
     settings.gemini_model           = "gemini-2.0-flash"
     settings.mock_mcp_base_url      = "http://localhost:8001"
+    settings.pantrypilot_dry_run     = False
     settings.sentry_dsn             = ""
     settings.log_level              = "DEBUG"
 
@@ -59,13 +60,17 @@ def mock_settings(monkeypatch):
     # Also patch the module-level calls in services that cache settings at import
     for module_path in [
         "app.mcp.swiggy.settings",
+        "app.mcp.swiggy.get_settings",
         "app.services.auth_service.settings",
         "app.services.whatsapp_service.settings",
         "app.utils.crypto.get_settings",
         "app.agent.planning_graph.settings",
     ]:
         try:
-            monkeypatch.setattr(module_path, settings if "settings" in module_path.split(".")[-1] else lambda: settings)
+            # Use the settings object directly for module-level `settings = get_settings()` vars;
+            # use a callable lambda for `get_settings` function references.
+            value = settings if module_path.split(".")[-1] == "settings" else lambda: settings
+            monkeypatch.setattr(module_path, value)
         except (AttributeError, ValueError):
             pass
 

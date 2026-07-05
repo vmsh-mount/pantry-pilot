@@ -201,12 +201,24 @@ class PlanningService:
 
         estimated_total = sum(i["total_price"] for i in resolved_basket)
 
+        # Resolve swiggy_address_id from our internal UUID FK
+        swiggy_address_id = None
+        if prefs and prefs.preferred_address_id:
+            from app.models.db import Address
+            addr_result = await self._db.execute(
+                select(Address).where(Address.id == prefs.preferred_address_id)
+            )
+            addr = addr_result.scalar_one_or_none()
+            if addr:
+                swiggy_address_id = addr.swiggy_address_id
+
         # Build a minimal state for the place() node
         state = {
             "household_id":           household_id,
             "loop_run_id":            loop_run_id,
             "access_token":           access_token,
-            "preferred_address_id":   prefs.preferred_address_id if prefs else None,
+            "preferred_address_id":   str(prefs.preferred_address_id) if prefs else None,
+            "swiggy_address_id":      swiggy_address_id,
             "preferred_delivery_slot": prefs.preferred_delivery_slot if prefs else "evening",
             "whatsapp_number":        household.whatsapp_number if household else "",
             "resolved_basket":        resolved_basket,

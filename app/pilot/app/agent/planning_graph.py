@@ -536,7 +536,7 @@ async def optimize(state: PlanningState) -> dict:
     from app.utils.exceptions import SwiggyMCPError
 
     household_id = state["household_id"]
-    address_id   = state.get("swiggy_address_id") or state.get("preferred_address_id")
+    address_id   = state.get("swiggy_address_id")
     profile      = state.get("household_profile", {})
     brand_prefs  = state.get("brand_preferences", {})
 
@@ -842,7 +842,7 @@ async def place(state: PlanningState) -> dict:
 
     household_id    = state["household_id"]
     loop_run_id     = state["loop_run_id"]
-    address_id      = state.get("preferred_address_id")
+    address_id      = state.get("swiggy_address_id")
     delivery_slot   = state.get("preferred_delivery_slot", "evening")
     resolved_basket = state.get("resolved_basket") or state.get("user_edited_basket", [])
     expected_total  = state.get("estimated_total", 0)
@@ -870,7 +870,12 @@ async def place(state: PlanningState) -> dict:
                     )
                     prefs = prefs_res.scalar_one_or_none()
                     if prefs and not prefs.preferred_address_id:
-                        prefs.preferred_address_id = address_id
+                        from app.services.id_mapper import ExternalIdMapper
+                        internal_id = await ExternalIdMapper.get_or_create_internal_id(
+                            db, "address", "swiggy", address_id,
+                            household_id=household_id,
+                        )
+                        prefs.preferred_address_id = internal_id
                         await db.commit()
         except Exception as e:
             logger.warning("place_address_fallback_failed", household_id=household_id, error=str(e))
@@ -904,25 +909,33 @@ async def place(state: PlanningState) -> dict:
             for item in resolved_basket
             if item.get("sku_id")
         ]
-        cart = await client.update_cart(cart_items)
+        cart = await client.update_cart(cart_items, address_id=address_id)
 
         # Step 2 — price tolerance check (±5%)
         def _rattr(obj, key, default=None):
             return obj.get(key, default) if isinstance(obj, dict) else getattr(obj, key, default)
 
-        actual_total = _rattr(cart, "grand_total", _rattr(cart, "total", 0))
-        if expected_total > 0 and actual_total > 0:
-            drift = abs(actual_total - expected_total) / expected_total
-            if drift > 0.05:
-                raise CartPriceMismatchError(
-                    f"Cart total Rs{actual_total:.0f} differs from expected "
-                    f"Rs{expected_total:.0f} by {drift*100:.1f}% (limit 5%)"
-                )
+        from app.config import get_settings as _get_settings
+        if _get_settings().pantrypilot_dry_run:
+            # In dry run, update_cart still hits the real Swiggy API and its
+            # grand_total reflects actual cart state, not the confirmed basket.
+            # Use the confirmed basket total so the Order record shows the right amount.
+            actual_total = expected_total
+        else:
+            actual_total = _rattr(cart, "grand_total", _rattr(cart, "total", 0))
+            if expected_total > 0 and actual_total > 0:
+                drift = abs(actual_total - expected_total) / expected_total
+                if drift > 0.05:
+                    raise CartPriceMismatchError(
+                        f"Cart total Rs{actual_total:.0f} differs from expected "
+                        f"Rs{expected_total:.0f} by {drift*100:.1f}% (limit 5%)"
+                    )
 
         # Step 3 — checkout
         order = await client.checkout(
-            address_id    = address_id,
-            delivery_slot = delivery_slot,
+            address_id      = address_id,
+            delivery_slot   = delivery_slot,
+            estimated_total = expected_total,
         )
 
     except TokenExpiredError:
@@ -943,6 +956,34 @@ async def place(state: PlanningState) -> dict:
                 )
             )
             await db.commit()
+
+        # Notify the user — they confirmed this basket and deserve to know it failed.
+        whatsapp_number = state.get("whatsapp_number")
+        if whatsapp_number:
+            error_str = str(e).lower()
+            if "partially available" in error_str:
+                msg = (
+                    "Your order couldn't be placed — one or more items you confirmed "
+                    "are now low in stock and couldn't be added at the requested quantity. "
+                    "Please edit your basket and confirm again."
+                )
+            elif "price mismatch" in error_str:
+                msg = (
+                    "Your order couldn't be placed — prices changed between confirmation "
+                    "and checkout. Please review your basket and confirm again."
+                )
+            else:
+                msg = (
+                    "Your order couldn't be placed due to a checkout error. "
+                    "Please try confirming again or contact support."
+                )
+            try:
+                from app.services.whatsapp_service import WhatsAppService
+                wa = WhatsAppService()
+                await wa.send_text(whatsapp_number, msg)
+            except Exception as wa_err:
+                logger.warning("place_failed_wa_notify_error", error=str(wa_err))
+
         return {
             "error": str(e), "error_stage": "place", "should_abort": True
         }
@@ -995,24 +1036,26 @@ async def place(state: PlanningState) -> dict:
         )
         await db.commit()
 
+    order_id_str = _rattr(order, "order_id", "MOCK")
+
     # Send WhatsApp receipt
     try:
         from app.services.whatsapp_service import WhatsAppService
         wa = WhatsAppService()
+        receipt_order_id = f"[DRY RUN] {order_id_str}" if settings.pantrypilot_dry_run else order_id_str
         await wa.send_order_receipt(
             phone_number       = state.get("whatsapp_number", ""),
             item_count         = len(resolved_basket),
             grand_total        = actual_total,
             delivery_area      = "",   # resolved from address label at runtime
             estimated_delivery = _rattr(order, "estimated_delivery", _rattr(order, "estimated_delivery", "Today")) or "Today",
-            swiggy_order_id    = _rattr(order, "order_id", "MOCK"),
+            swiggy_order_id    = receipt_order_id,
         )
     except Exception as e:
         logger.warning("receipt_whatsapp_failed", error=str(e))
 
     # Schedule pantry update (30 min after placement)
     from app.tasks.pantry import update_pantry_post_order
-    order_id_str = _rattr(order, "order_id", "MOCK")
     update_pantry_post_order.apply_async(
         args      = [household_id, order_id_str],
         countdown = 30 * 60,

@@ -60,7 +60,7 @@ def base_state(**overrides) -> PlanningState:
         "pantry_items":            [],
         "recent_orders":           [],
         "brand_preferences":       {},
-        "preferred_address_id":    "addr_home_001",
+        "swiggy_address_id":       "addr_home_001",
         "preferred_delivery_slot": "evening",
         "whatsapp_number":         "+918499933228",
         "week_label":              "Week of 28 Jun 2026",
@@ -422,7 +422,7 @@ async def test_optimize_budget_trim(swiggy_mcp):
 async def test_optimize_no_address_aborts():
     """Missing address ID with no fallback → should_abort=True."""
     state = base_state(
-        preferred_address_id=None,
+        swiggy_address_id=None,
         candidate_basket=[
             {"item_name": "Toor Dal", "sku_id": None, "quantity": 1.0,
              "unit": "kg", "category": "staples", "brand": None,
