@@ -177,7 +177,8 @@ export default function DashboardPage() {
   const router = useRouter()
   const [basket,        setBasket]        = useState<BasketState | null>(null)
   const [runsData,      setRunsData]      = useState<RunsListResponse | null>(null)
-  const [dryRun,        setDryRun]        = useState(false)
+  const [dryRun,           setDryRun]           = useState(false)
+  const [whatsappEnabled,  setWhatsappEnabled]  = useState(true)
   const [loading,       setLoading]       = useState(true)
   const [actionLoading, setActionLoading] = useState<"confirm" | "skip" | "trigger" | null>(null)
   const [error,         setError]         = useState("")
@@ -229,7 +230,9 @@ export default function DashboardPage() {
       api.settings.get(),
     ])
     if (settingsRes.success && settingsRes.data) {
-      setDryRun((settingsRes.data as SettingsResponse).dry_run ?? false)
+      const s = settingsRes.data as SettingsResponse
+      setDryRun(s.dry_run ?? false)
+      setWhatsappEnabled(s.whatsapp_enabled ?? true)
     }
     setLoading(false)
     if (basketRes.success && basketRes.data) {
@@ -420,6 +423,15 @@ export default function DashboardPage() {
               <span className="text-amber-600 text-base">⚠</span>
               <p className="text-xs font-medium text-amber-800">
                 Test mode — orders won&apos;t be placed on Swiggy
+              </p>
+            </div>
+          )}
+
+          {!whatsappEnabled && (
+            <div className="rounded-2xl px-4 py-3 bg-slate-100 border border-slate-300 flex items-center gap-2">
+              <span className="text-slate-500 text-base">ℹ</span>
+              <p className="text-xs font-medium text-slate-700">
+                WhatsApp off — confirm orders via this dashboard
               </p>
             </div>
           )}

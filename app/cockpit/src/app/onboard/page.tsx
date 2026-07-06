@@ -616,7 +616,8 @@ const STEP_META: { icon: string; title: string; subtitle: string }[] = [
 export default function OnboardPage() {
   const router = useRouter()
   const [step, setStep] = useState(1)
-  const [resumeChecked, setResumeChecked] = useState(false)
+  const [resumeChecked,    setResumeChecked]    = useState(false)
+  const [whatsappEnabled,  setWhatsappEnabled]  = useState(true)
 
   // Form state
   const [householdType, setHouseholdType] = useState("couple")
@@ -630,6 +631,14 @@ export default function OnboardPage() {
 
   // On mount: check backend status and resume at the correct step
   useEffect(() => {
+    // Fetch whatsapp_enabled flag — default true on failure so steps are never
+    // accidentally skipped due to a transient settings error
+    api.settings.get().then((res) => {
+      if (res.success && res.data) {
+        setWhatsappEnabled((res.data as import("@/lib/api").SettingsResponse).whatsapp_enabled ?? true)
+      }
+    }).catch(() => {})
+
     api.onboard.status().then((res) => {
       if (!res.success) {
         // Session points to a deleted household (e.g. after make nuke) — go to login
@@ -652,13 +661,14 @@ export default function OnboardPage() {
           if (d.household_type)      setHouseholdType(d.household_type as string)
           setStep(7)
         } else if (d.profile_saved) {
-          // Profile saved but WhatsApp not yet verified — jump to phone entry
+          // Profile saved but WhatsApp not yet verified
           if (d.diet_type)           setDietType(d.diet_type as string)
           if (d.weekly_budget_min)   setBudgetMin(d.weekly_budget_min as number)
           if (d.weekly_budget_max)   setBudgetMax(d.weekly_budget_max as number)
           if (d.household_type)      setHouseholdType(d.household_type as string)
           if (d.whatsapp_number)     setPhone(d.whatsapp_number as string)
-          setStep(5)
+          // Skip phone/OTP steps when WhatsApp is disabled
+          setStep(whatsappEnabled ? 5 : 7)
         }
         // else: fresh start, keep step=1
       }
@@ -805,7 +815,7 @@ export default function OnboardPage() {
           <Step4Inference
             infer={infer}
             loading={inferLoading}
-            onNext={() => setStep(5)}
+            onNext={() => setStep(whatsappEnabled ? 5 : 7)}
             onBack={() => setStep(3)}
           />
         )}

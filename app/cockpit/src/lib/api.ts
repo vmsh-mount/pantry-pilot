@@ -64,7 +64,8 @@ export interface RunItemsResponse {
 }
 
 export interface SettingsResponse {
-  dry_run: boolean
+  dry_run:          boolean
+  whatsapp_enabled: boolean
   [key: string]: unknown
 }
 
