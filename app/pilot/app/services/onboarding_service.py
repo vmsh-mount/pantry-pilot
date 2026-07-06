@@ -65,6 +65,7 @@ class InferenceResult:
         self.brand_preferences:  list[dict]       = []   # [{item_name, brand, confidence, category}]
         self.pantry_seeds:       list[dict]       = []   # [{item_name, category, qty, unit}]
         self.confidence_notes:   list[str]        = []   # human-readable inference notes
+        self.has_order_history:  bool             = False
         self.address_id:         Optional[str]    = None  # Swiggy address ID (not our DB UUID)
         self.address_label:      Optional[str]    = None  # human-readable label for display
 
@@ -121,6 +122,8 @@ class OnboardingService:
         if not orders:
             result.confidence_notes.append("No past Instamart orders found — using defaults.")
             return result
+
+        result.has_order_history = True
 
         # ── Preferred order day ───────────────────────────────────────────────
         day_counter: Counter = Counter()

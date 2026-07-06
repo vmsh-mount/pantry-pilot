@@ -729,7 +729,8 @@ async def confirm(state: PlanningState) -> dict:
     phone         = state.get("whatsapp_number", "")
     profile       = state.get("household_profile", {})
 
-    if not phone:
+    from app.config import get_settings
+    if not phone and get_settings().whatsapp_enabled:
         return {
             "error":        "No WhatsApp number for household",
             "error_stage":  "confirm",
@@ -906,6 +907,7 @@ async def place(state: PlanningState) -> dict:
         def _rattr(obj, key, default=None):
             return obj.get(key, default) if isinstance(obj, dict) else getattr(obj, key, default)
 
+        cart = None
         if _get_settings().pantrypilot_dry_run:
             # Skip all real Swiggy cart mutations — use expected total directly.
             actual_total = expected_total

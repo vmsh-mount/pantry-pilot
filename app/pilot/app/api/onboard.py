@@ -100,6 +100,7 @@ async def run_inference(request: Request, db: AsyncSession = Depends(get_db)):
         "brand_preferences":   result.brand_preferences,
         "pantry_seeds":        result.pantry_seeds,
         "confidence_notes":    result.confidence_notes,
+        "has_order_history":   result.has_order_history,
         "address_line":        address_line,
     })
 

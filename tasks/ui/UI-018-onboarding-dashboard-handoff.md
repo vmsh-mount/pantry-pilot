@@ -1,6 +1,6 @@
 # UI-018 — Onboarding → Dashboard Handoff
 
-**Status:** ⏳ Pending  
+**Status:** ✅ Done  
 **Area:** Frontend  
 **Depends on:** BE-005 (whatsapp_enabled flag — done), UI-017 (runs endpoint — done)
 
@@ -67,7 +67,7 @@ Replace with a single neutral CTA regardless of WA state: **`"Continue →"`**
 
 The basket preview step advances the wizard — the WA message (if enabled) fires in the background after `POST /onboard/complete`, not at this step. Adding a 📲 emoji here implies WA sends at this moment, which is wrong. Using one CTA for both states avoids a conditional and keeps the copy honest.
 
-Remove the `"Nothing is ordered yet. You'll confirm on WhatsApp first."` note at the bottom when WA is disabled.
+Remove the `"Nothing is ordered yet. You'll confirm on WhatsApp first."` note unconditionally — it is misleading regardless of WA state, because confirmation happens at the dashboard (not at this step).
 
 ### Step 8 (All Set) — `whatsapp_enabled=false` variant
 
@@ -160,7 +160,7 @@ Use a friendly label derived from the actual day name in the date (do not hardco
 - [ ] "Schedule for usual day" → lands on dashboard with first-session scheduled card showing the right day
 - [ ] First-session scheduled card shows friendly date (`"this Sunday"`, `"tomorrow"`, etc.)
 - [ ] First-session card absent once `total_runs > 0` — returning users see normal empty state
-- [ ] Step 7 CTA copy does not mention WhatsApp when `whatsapp_enabled=false`
+- [ ] Step 7 CTA reads `"Continue →"` regardless of `whatsapp_enabled` state
 - [ ] Step 8 How-it-works list removes WA row when `whatsapp_enabled=false`
 - [ ] No intermediate `/onboard/placing` or `/onboard/done` pages in the happy path
 - [ ] `onboard/done` and `onboard/placing` pages still render if accessed directly (no crash)
