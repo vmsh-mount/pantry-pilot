@@ -128,7 +128,7 @@ export default function SettingsPage() {
     api.settings.get().then((res) => {
       setLoading(false)
       if (res.success && res.data) {
-        const raw = res.data as HouseholdSettings
+        const raw = res.data as unknown as HouseholdSettings
         // Redirect to onboarding if not yet complete
         if (!raw.whatsapp_verified) {
           router.push("/onboard")

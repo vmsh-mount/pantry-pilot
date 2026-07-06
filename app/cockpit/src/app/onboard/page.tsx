@@ -121,7 +121,7 @@ function Step2Diet({
   value: string
   onChange: (v: string) => void
   onNext: () => void
-  onBack: () => void
+  onBack?: () => void
 }) {
   return (
     <div className="px-6 pb-6 space-y-5">
@@ -136,7 +136,7 @@ function Step2Diet({
         ]}
       />
       <Button onClick={onNext} disabled={!value}>Continue →</Button>
-      <Button variant="ghost" onClick={onBack}>← Back</Button>
+      {onBack && <Button variant="ghost" onClick={onBack}>← Back</Button>}
     </div>
   )
 }
@@ -152,7 +152,7 @@ function Step3Budget({
   budgetMax: number
   onSelect: (min: number, max: number) => void
   onNext: () => void
-  onBack: () => void
+  onBack?: () => void
 }) {
   return (
     <div className="px-6 pb-6 space-y-5">
@@ -162,7 +162,7 @@ function Step3Budget({
         onChange={onSelect}
       />
       <Button onClick={onNext} disabled={!budgetMax}>Continue →</Button>
-      <Button variant="ghost" onClick={onBack}>← Back</Button>
+      {onBack && <Button variant="ghost" onClick={onBack}>← Back</Button>}
     </div>
   )
 }
@@ -171,24 +171,13 @@ function Step3Budget({
 
 function Step4Inference({
   infer,
-  loading,
   onNext,
   onBack,
 }: {
   infer: Record<string, unknown> | null
-  loading: boolean
   onNext: () => void
-  onBack: () => void
+  onBack?: () => void
 }) {
-  if (loading) {
-    return (
-      <div className="flex flex-col items-center py-12 gap-3 text-gray-400">
-        <Spinner size="lg" />
-        <p className="text-sm">Analysing your Swiggy history…</p>
-      </div>
-    )
-  }
-
   return (
     <div className="px-6 pb-6 space-y-4">
       <div className="bg-[#F7F8F5] rounded-2xl p-4 space-y-3">
@@ -217,7 +206,7 @@ function Step4Inference({
         These are pre-filled from your Swiggy history. You can update them in Settings any time.
       </p>
       <Button onClick={onNext}>Looks good →</Button>
-      <Button variant="ghost" onClick={onBack}>← Back</Button>
+      {onBack && <Button variant="ghost" onClick={onBack}>← Back</Button>}
     </div>
   )
 }
@@ -241,7 +230,7 @@ function Step5Phone({
   onBack,
 }: {
   onSent: (phone: string) => void
-  onBack: () => void
+  onBack?: () => void
 }) {
   const [phone,   setPhone]   = useState("")
   const [loading, setLoading] = useState(false)
@@ -291,7 +280,7 @@ function Step5Phone({
       {error && <Alert type="error" message={error} />}
 
       <Button type="submit" loading={loading}>Send code on WhatsApp →</Button>
-      <Button variant="ghost" onClick={onBack} type="button">← Back</Button>
+      {onBack && <Button variant="ghost" onClick={onBack} type="button">← Back</Button>}
     </form>
   )
 }
@@ -525,7 +514,7 @@ function Step7BasketPreview({
         {/* Action stack */}
         <div className="space-y-2 pt-2">
           <Button onClick={onNext}>
-            📲 Send to WhatsApp for review
+            Continue →
           </Button>
           <Button variant="secondary" onClick={onNext}>
             Set a weekly schedule instead
@@ -535,9 +524,6 @@ function Step7BasketPreview({
           </Button>
         </div>
 
-        <p className="text-center text-xs text-gray-400">
-          Nothing is ordered yet. You'll confirm on WhatsApp first.
-        </p>
       </div>
     </div>
   )
@@ -547,31 +533,38 @@ function Step7BasketPreview({
 
 function Step8AllSet({
   onFinish,
+  whatsappEnabled,
 }: {
   onFinish: (placeNow: boolean) => void
+  whatsappEnabled: boolean
 }) {
   const [loading, setLoading] = useState(false)
+
+  const howItWorks = whatsappEnabled
+    ? [
+        { icon: "🧠", text: "PantryPilot plans your basket each week" },
+        { icon: "💬", text: "You get it on WhatsApp before anything ships" },
+        { icon: "✅", text: "Confirm, edit, or skip — you're always in control" },
+      ]
+    : [
+        { icon: "🧠", text: "PantryPilot plans your basket each week" },
+        { icon: "📋", text: "Review it here in the dashboard before anything ships" },
+        { icon: "✅", text: "Confirm, edit, or skip — you're always in control" },
+      ]
 
   return (
     <div className="px-6 pb-6 space-y-5">
       <div className="text-center space-y-2">
         <div className="text-5xl mb-3">🎉</div>
-        <h3 className="text-xl font-bold text-gray-900">You're all set!</h3>
+        <h3 className="text-xl font-bold text-gray-900">You&apos;re all set!</h3>
         <p className="text-sm text-gray-500">
-          PantryPilot will plan and send your weekly basket every week.
-          Nothing ships without your approval.
+          Your first basket is being prepared. We&apos;ll notify you when it&apos;s ready to review.
         </p>
       </div>
 
-      {/* Schedule card */}
       <div className="bg-[#F7F8F5] border border-[#D8F3DC] rounded-2xl p-4 space-y-3">
         <p className="text-xs font-semibold text-[#2D6A4F] uppercase tracking-wide">How it works</p>
-        {[
-          { icon: "📅", text: "Basket planned every week on your order day" },
-          { icon: "💬", text: "Sent to WhatsApp for your approval" },
-          { icon: "✅", text: "You confirm — then it's ordered instantly" },
-          { icon: "⏸️",  text: "Pause or cancel any time in Settings" },
-        ].map((r) => (
+        {howItWorks.map((r) => (
           <div key={r.text} className="flex items-center gap-3 text-sm text-gray-700">
             <span className="text-base">{r.icon}</span>
             {r.text}
@@ -579,45 +572,56 @@ function Step8AllSet({
         ))}
       </div>
 
-      <div className="space-y-2">
-        <Button
-          loading={loading}
-          onClick={() => { setLoading(true); onFinish(true) }}
-        >
-          🛒 Place my first order now
-        </Button>
-        <Button variant="secondary" onClick={() => onFinish(false)}>
-          Schedule for my usual day
-        </Button>
-      </div>
-
-      <p className="text-center text-xs text-gray-400">
-        You can update your schedule any time in Settings
-      </p>
+      <Button
+        loading={loading}
+        onClick={() => { setLoading(true); onFinish(false) }}
+      >
+        Go to dashboard →
+      </Button>
     </div>
   )
 }
 
 // ── Root onboarding page ──────────────────────────────────────────────────────
 
-const QUESTIONNAIRE_STEPS = 3  // steps 1–3 show the step bar
+type StepKey =
+  | "household" | "diet" | "budget"   // questionnaire (Flow B only)
+  | "inference"                         // always present
+  | "phone"     | "otp"                 // WA steps, conditional
+  | "allset"                            // always present
 
-const STEP_META: { icon: string; title: string; subtitle: string }[] = [
-  { icon: "🏠", title: "Who's in your household?",     subtitle: "We'll plan the right quantities for you." },
-  { icon: "🥗", title: "What's your diet preference?", subtitle: "We'll filter out items that don't match." },
-  { icon: "💰", title: "What's your weekly budget?",   subtitle: "We'll keep your basket within range." },
-  { icon: "✨", title: "Here's what we found",          subtitle: "Based on your Swiggy order history." },
-  { icon: "📱", title: "Connect WhatsApp",              subtitle: "We'll send your basket here every week." },
-  { icon: "🔒", title: "Enter verification code",       subtitle: "Check your WhatsApp messages." },
-  { icon: "🛒", title: "Your first basket preview",    subtitle: "" },
-  { icon: "🚀", title: "You're ready to go!",           subtitle: "" },
-]
+const QUESTIONNAIRE_STEP_KEYS: StepKey[] = ["household", "diet", "budget"]
+
+function computeFlow(hasHistory: boolean, whatsappEnabled: boolean): StepKey[] {
+  const questionnaire: StepKey[] = hasHistory ? [] : ["household", "diet", "budget"]
+  const wa: StepKey[]            = whatsappEnabled ? ["phone", "otp"] : []
+  return [...questionnaire, "inference", ...wa, "allset"]
+}
+
+const STEP_META: Record<StepKey, { icon: string; title: string; subtitle: (hasHistory: boolean) => string }> = {
+  household: { icon: "🏠", title: "Who's in your household?",     subtitle: () => "We'll plan the right quantities for you." },
+  diet:      { icon: "🥗", title: "What's your diet preference?", subtitle: () => "We'll filter out items that don't match." },
+  budget:    { icon: "💰", title: "What's your weekly budget?",   subtitle: () => "We'll keep your basket within range." },
+  inference: {
+    icon: "✨",
+    title: "Here's what we found",
+    subtitle: (h) => h
+      ? "Based on your Swiggy order history."
+      : "No previous Swiggy orders found. We'll learn your preferences as you shop.",
+  },
+  phone:  { icon: "📱", title: "Connect WhatsApp",           subtitle: () => "We'll send your basket here every week." },
+  otp:    { icon: "🔒", title: "Enter verification code",    subtitle: () => "Check your WhatsApp messages." },
+  allset: { icon: "🚀", title: "You're ready to go!",        subtitle: () => "" },
+}
 
 export default function OnboardPage() {
   const router = useRouter()
-  const [step, setStep] = useState(1)
-  const [resumeChecked,    setResumeChecked]    = useState(false)
-  const [whatsappEnabled,  setWhatsappEnabled]  = useState(true)
+
+  // Flow is empty until inference resolves; null = not yet computed
+  const [flow,           setFlow]           = useState<StepKey[] | null>(null)
+  const [currentStep,    setCurrentStep]    = useState<StepKey>("household")
+  const [hasHistory,     setHasHistory]     = useState(false)
+  const [whatsappEnabled, setWhatsappEnabled] = useState(true)
 
   // Form state
   const [householdType, setHouseholdType] = useState("couple")
@@ -626,77 +630,86 @@ export default function OnboardPage() {
   const [budgetMax,     setBudgetMax]     = useState(2500)
   const [phone,         setPhone]         = useState("")
   const [infer,         setInfer]         = useState<Record<string, unknown> | null>(null)
-  const [inferLoading,  setInferLoading]  = useState(false)
   const [error,         setError]         = useState("")
 
-  // On mount: check backend status and resume at the correct step
+  // On mount: inference first (sequential), then resume logic
   useEffect(() => {
-    // Fetch whatsapp_enabled flag — default true on failure so steps are never
-    // accidentally skipped due to a transient settings error
-    api.settings.get().then((res) => {
-      if (res.success && res.data) {
-        setWhatsappEnabled((res.data as import("@/lib/api").SettingsResponse).whatsapp_enabled ?? true)
-      }
-    }).catch(() => {})
+    let waEnabled = true
 
-    api.onboard.status().then((res) => {
-      if (!res.success) {
-        // Session points to a deleted household (e.g. after make nuke) — go to login
-        router.replace("/")
-        return
-      }
-      if (res.success && res.data) {
-        const d = res.data as Record<string, unknown>
-        // If onboarding already fully complete, redirect to dashboard
-        if (d.onboarding_complete) {
-          router.replace("/basket")
-          return
+    async function bootstrap() {
+      // 1. Fetch settings — default true on failure so WA steps are never
+      //    accidentally skipped due to a transient settings error
+      try {
+        const settingsRes = await api.settings.get()
+        if (settingsRes.success && settingsRes.data) {
+          waEnabled = (settingsRes.data as import("@/lib/api").SettingsResponse).whatsapp_enabled ?? true
+          setWhatsappEnabled(waEnabled)
         }
-        // Resume at the right step
-        if (d.whatsapp_verified) {
-          // Profile + WhatsApp already done — jump to basket preview
-          if (d.diet_type)           setDietType(d.diet_type as string)
-          if (d.weekly_budget_min)   setBudgetMin(d.weekly_budget_min as number)
-          if (d.weekly_budget_max)   setBudgetMax(d.weekly_budget_max as number)
-          if (d.household_type)      setHouseholdType(d.household_type as string)
-          setStep(7)
-        } else if (d.profile_saved) {
-          // Profile saved but WhatsApp not yet verified
-          if (d.diet_type)           setDietType(d.diet_type as string)
-          if (d.weekly_budget_min)   setBudgetMin(d.weekly_budget_min as number)
-          if (d.weekly_budget_max)   setBudgetMax(d.weekly_budget_max as number)
-          if (d.household_type)      setHouseholdType(d.household_type as string)
-          if (d.whatsapp_number)     setPhone(d.whatsapp_number as string)
-          // Skip phone/OTP steps when WhatsApp is disabled
-          setStep(whatsappEnabled ? 5 : 7)
-        }
-        // else: fresh start, keep step=1
-      }
-      setResumeChecked(true)
-    }).catch(() => setResumeChecked(true))
-  }, [])
+      } catch { /* keep default */ }
 
-  // Run inference when we reach step 4
-  useEffect(() => {
-    if (step === 4 && infer === null && !inferLoading) {
-      setInferLoading(true)
-      api.onboard.infer().then((res) => {
-        setInferLoading(false)
-        if (res.success && res.data) {
-          const d = res.data as Record<string, unknown>
+      // 2. Run inference — must complete before status so flow is computed first
+      let history = false
+      try {
+        const inferRes = await api.onboard.infer()
+        if (inferRes.success && inferRes.data) {
+          const d = inferRes.data as Record<string, unknown>
           setInfer(d)
-          // Pre-fill diet + budget from inference
+          history = d.has_order_history === true
+          setHasHistory(history)
           if (d.diet_type)         setDietType(d.diet_type as string)
           if (d.weekly_budget_min) setBudgetMin(d.weekly_budget_min as number)
           if (d.weekly_budget_max) setBudgetMax(d.weekly_budget_max as number)
-        } else {
-          setInfer({})
         }
-      })
-    }
-  }, [step])
+      } catch { setInfer(null); /* history stays false — show questionnaire */ }
 
-  // Save profile when advancing past step 3
+      const computed = computeFlow(history, waEnabled)
+      setFlow(computed)
+
+      // 3. Resume logic — fires after flow is known
+      try {
+        const statusRes = await api.onboard.status()
+        if (!statusRes.success) {
+          router.replace("/")
+          return
+        }
+        if (statusRes.data) {
+          const d = statusRes.data as Record<string, unknown>
+          if (d.onboarding_complete) {
+            router.replace("/dashboard")
+            return
+          }
+          if (d.diet_type)        setDietType(d.diet_type as string)
+          if (d.weekly_budget_min) setBudgetMin(d.weekly_budget_min as number)
+          if (d.weekly_budget_max) setBudgetMax(d.weekly_budget_max as number)
+          if (d.household_type)   setHouseholdType(d.household_type as string)
+          if (d.whatsapp_number)  setPhone(d.whatsapp_number as string)
+
+          if (d.whatsapp_verified) {
+            setCurrentStep("allset")
+          } else if (d.profile_saved) {
+            setCurrentStep(waEnabled ? "phone" : "allset")
+          } else {
+            setCurrentStep(computed[0])
+          }
+        }
+      } catch { setCurrentStep(computed[0]) }
+    }
+
+    bootstrap()
+  }, [router])
+
+  function goNext() {
+    if (!flow) return
+    const idx = flow.indexOf(currentStep)
+    if (idx < flow.length - 1) setCurrentStep(flow[idx + 1])
+  }
+
+  function goBack() {
+    if (!flow) return
+    const idx = flow.indexOf(currentStep)
+    if (idx > 0) setCurrentStep(flow[idx - 1])
+  }
+
   async function saveProfileAndAdvance() {
     const res = await api.onboard.saveProfile({
       household_type:    householdType as "solo" | "couple" | "family" | "joint_family",
@@ -707,7 +720,7 @@ export default function OnboardPage() {
       allergies:         [],
     })
     if (res.success) {
-      setStep(4)
+      goNext()
     } else {
       setError((res.error as { message?: string })?.message ?? "Could not save profile.")
     }
@@ -717,21 +730,14 @@ export default function OnboardPage() {
     setError("")
     const res = await api.onboard.complete({ place_order_now: placeNow })
     if (res.success) {
-      router.push(placeNow ? "/onboard/placing" : "/onboard/done")
+      router.push("/dashboard")
     } else {
       setError((res.error as { message?: string })?.message ?? "Something went wrong.")
     }
   }
 
-  async function handleSkipBasket() {
-    router.push("/onboard/done")
-  }
-
-  const meta = STEP_META[step - 1]
-  const showStepBar = step <= QUESTIONNAIRE_STEPS
-
-  // Show a blank shell while we check resume state to avoid step-1 flash
-  if (!resumeChecked) {
+  // Show spinner while flow is being computed (inference in flight)
+  if (!flow) {
     return (
       <Shell>
         <div className="flex items-center justify-between px-1 mb-4">
@@ -749,6 +755,12 @@ export default function OnboardPage() {
     )
   }
 
+  const meta              = STEP_META[currentStep]
+  const questionnaireSteps = flow.filter(s => QUESTIONNAIRE_STEP_KEYS.includes(s))
+  const isQuestionnaireStep = QUESTIONNAIRE_STEP_KEYS.includes(currentStep)
+  const currentQStep      = questionnaireSteps.indexOf(currentStep) + 1
+  const isFirstStep       = currentStep === flow[0]
+
   return (
     <Shell>
       {/* Logo bar */}
@@ -757,24 +769,26 @@ export default function OnboardPage() {
           <span className="text-xl">🥦</span>
           <span className="font-bold">PantryPilot</span>
         </div>
-        <span className="text-[#D8F3DC] text-xs">
-          {step < 7 ? `Step ${step} of 8` : ""}
-        </span>
+        {isQuestionnaireStep && questionnaireSteps.length > 0 && (
+          <span className="text-[#D8F3DC] text-xs">
+            Step {currentQStep} of {questionnaireSteps.length}
+          </span>
+        )}
       </div>
 
       <Card>
         {/* Progress bar — only for questionnaire steps */}
-        {showStepBar && (
-          <StepBar step={step} total={QUESTIONNAIRE_STEPS} />
+        {isQuestionnaireStep && questionnaireSteps.length > 0 && (
+          <StepBar step={currentQStep} total={questionnaireSteps.length} />
         )}
 
-        {/* Section header — skip for basket preview (step 7) which has its own header */}
-        {step !== 7 && (
+        {/* Section header */}
+        {currentStep !== "allset" && (
           <div className="px-6 pt-5 pb-2">
             <div className="text-3xl mb-2">{meta.icon}</div>
             <h2 className="text-xl font-bold text-gray-900">{meta.title}</h2>
-            {meta.subtitle && (
-              <p className="text-sm text-gray-500 mt-1">{meta.subtitle}</p>
+            {meta.subtitle(hasHistory) && (
+              <p className="text-sm text-gray-500 mt-1">{meta.subtitle(hasHistory)}</p>
             )}
           </div>
         )}
@@ -785,66 +799,57 @@ export default function OnboardPage() {
           </div>
         )}
 
-        {step === 1 && (
+        {currentStep === "household" && (
           <Step1Household
             value={householdType}
             onChange={setHouseholdType}
-            onNext={() => setStep(2)}
+            onNext={goNext}
           />
         )}
 
-        {step === 2 && (
+        {currentStep === "diet" && (
           <Step2Diet
             value={dietType}
             onChange={setDietType}
-            onNext={() => setStep(3)}
-            onBack={() => setStep(1)}
+            onNext={goNext}
+            onBack={isFirstStep ? undefined : goBack}
           />
         )}
 
-        {step === 3 && (
+        {currentStep === "budget" && (
           <Step3Budget
             budgetMax={budgetMax}
             onSelect={(min, max) => { setBudgetMin(min); setBudgetMax(max) }}
             onNext={saveProfileAndAdvance}
-            onBack={() => setStep(2)}
+            onBack={isFirstStep ? undefined : goBack}
           />
         )}
 
-        {step === 4 && (
+        {currentStep === "inference" && (
           <Step4Inference
             infer={infer}
-            loading={inferLoading}
-            onNext={() => setStep(whatsappEnabled ? 5 : 7)}
-            onBack={() => setStep(3)}
+            onNext={goNext}
+            onBack={isFirstStep ? undefined : goBack}
           />
         )}
 
-        {step === 5 && (
+        {currentStep === "phone" && (
           <Step5Phone
-            onSent={(p) => { setPhone(p); setStep(6) }}
-            onBack={() => setStep(4)}
+            onSent={(p) => { setPhone(p); goNext() }}
+            onBack={isFirstStep ? undefined : goBack}
           />
         )}
 
-        {step === 6 && (
+        {currentStep === "otp" && (
           <Step6Otp
             phone={phone}
-            onVerified={() => setStep(7)}
-            onChangeNumber={() => setStep(5)}
+            onVerified={goNext}
+            onChangeNumber={goBack}
           />
         )}
 
-        {step === 7 && (
-          <Step7BasketPreview
-            budgetMax={budgetMax}
-            onNext={() => setStep(8)}
-            onSkip={handleSkipBasket}
-          />
-        )}
-
-        {step === 8 && (
-          <Step8AllSet onFinish={handleComplete} />
+        {currentStep === "allset" && (
+          <Step8AllSet onFinish={handleComplete} whatsappEnabled={whatsappEnabled} />
         )}
       </Card>
     </Shell>

@@ -86,6 +86,22 @@ function fmtDate(iso: string) {
   })
 }
 
+function fmtNextRun(iso: string): string {
+  const target = new Date(iso)
+  const now    = new Date()
+  // Compare calendar dates in local timezone
+  const tDate  = new Date(target.getFullYear(), target.getMonth(), target.getDate())
+  const today  = new Date(now.getFullYear(),    now.getMonth(),    now.getDate())
+  const diffMs = tDate.getTime() - today.getTime()
+  const diffDays = Math.round(diffMs / 86400000)
+  if (diffDays === 0) return "today"
+  if (diffDays === 1) return "tomorrow"
+  const dayName = target.toLocaleDateString("en-IN", { weekday: "long" })
+  if (diffDays < 7) return `this ${dayName}`
+  const d   = target.toLocaleDateString("en-IN", { weekday: "short", day: "numeric", month: "short" })
+  return d
+}
+
 // ── Category group component ──────────────────────────────────────────────────
 
 function CategorySection({
@@ -580,12 +596,37 @@ export default function DashboardPage() {
                 )
               }
 
+              // First-time user: no completed runs, no failure, and a scheduled run is coming
+              const isFirstSession = (runsData?.stats?.total_runs ?? 0) === 0 && !b?.last_failed && !!b?.next_run_at
+              if (isFirstSession) {
+                return (
+                  <Card>
+                    <div className="px-6 py-8 text-center space-y-3">
+                      <div className="text-5xl">🎉</div>
+                      <h2 className="text-lg font-bold text-gray-900">Welcome to PantryPilot!</h2>
+                      <p className="text-sm text-gray-500">
+                        We&apos;ll prepare a basket for your review on{" "}
+                        <span className="font-semibold text-gray-800">{fmtNextRun(b?.next_run_at ?? "")}</span>.
+                        You confirm before anything ships.
+                      </p>
+                      <button
+                        onClick={handleTrigger}
+                        disabled={actionLoading === "trigger"}
+                        className="mt-1 text-sm font-medium text-[#2D6A4F] hover:underline disabled:opacity-40"
+                      >
+                        {actionLoading === "trigger" ? "Starting…" : "Plan now instead →"}
+                      </button>
+                    </div>
+                  </Card>
+                )
+              }
+
               return (
                 <Card>
                   <div className="px-6 py-8 text-center space-y-2">
                     <div className="text-5xl">🛒</div>
                     <h2 className="text-lg font-bold text-gray-900">No basket pending</h2>
-                    <p className="text-sm text-gray-500">Use "Plan now" above to generate your basket.</p>
+                    <p className="text-sm text-gray-500">Use &quot;Plan now&quot; above to generate your basket.</p>
                   </div>
                 </Card>
               )
