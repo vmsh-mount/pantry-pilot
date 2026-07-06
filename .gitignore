@@ -33,3 +33,10 @@ app/pilot/migrations/versions/__pycache__/
 
 # Docker volumes / local data
 *.log
+
+# Celery Beat runtime schedule (changes on every beat tick)
+app/pilot/celerybeat-schedule
+app/pilot/celerybeat.pid
+
+# Git submodules file (empty/unused)
+.gitmodules
