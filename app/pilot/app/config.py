@@ -69,6 +69,9 @@ class Settings(BaseSettings):
     # Dry run — mocks Swiggy checkout so no real order is placed
     pantrypilot_dry_run: bool = False
 
+    # WhatsApp — set to true in production; false silences all outbound messages
+    whatsapp_enabled: bool = False
+
     # Monitoring
     sentry_dsn: str = ""
     log_level: str = "INFO"

@@ -52,6 +52,7 @@ def mock_settings(monkeypatch):
     settings.gemini_model           = "gemini-2.0-flash"
     settings.mock_mcp_base_url      = "http://localhost:8001"
     settings.pantrypilot_dry_run     = False
+    settings.whatsapp_enabled        = False
     settings.sentry_dsn             = ""
     settings.log_level              = "DEBUG"
 
@@ -63,6 +64,7 @@ def mock_settings(monkeypatch):
         "app.mcp.swiggy.get_settings",
         "app.services.auth_service.settings",
         "app.services.whatsapp_service.settings",
+        "app.services.whatsapp_service.get_settings",
         "app.utils.crypto.get_settings",
         "app.agent.planning_graph.settings",
     ]:

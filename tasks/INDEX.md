@@ -15,6 +15,8 @@
 | UI-015 | Basket editing — in-app review, remove, add item | Frontend + Backend | ✅ Done | [ui/UI-015-basket-editing.md](ui/UI-015-basket-editing.md) |
 | UI-017 | Run visibility — schedule, history, in-progress | Frontend + Backend | ✅ Done | [ui/UI-017-run-visibility.md](ui/UI-017-run-visibility.md) |
 | BE-004 | Dry run mode — order guard rail | Backend + Frontend | ✅ Done | [be/BE-004-dry-run-mode.md](be/BE-004-dry-run-mode.md) |
+| BE-005 | WhatsApp enabled flag | Backend + Frontend | ✅ Done | [be/BE-005-whatsapp-enabled-flag.md](be/BE-005-whatsapp-enabled-flag.md) |
+| UI-018 | Onboarding → dashboard handoff | Frontend | ⏳ Pending | [ui/UI-018-onboarding-dashboard-handoff.md](ui/UI-018-onboarding-dashboard-handoff.md) |
 
 ---
 

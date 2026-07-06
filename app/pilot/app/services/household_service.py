@@ -87,7 +87,8 @@ class HouseholdService:
                 "freq_dairy_eggs":          prefs.freq_dairy_eggs if prefs else "weekly",
                 "freq_packaged":            prefs.freq_packaged if prefs else "weekly",
             } if prefs else {},
-            "dry_run": _get_settings().pantrypilot_dry_run,
+            "dry_run":          _get_settings().pantrypilot_dry_run,
+            "whatsapp_enabled": _get_settings().whatsapp_enabled,
         }
 
     async def update_settings(

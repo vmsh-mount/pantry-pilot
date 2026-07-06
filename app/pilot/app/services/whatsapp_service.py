@@ -34,9 +34,14 @@ Auth: Basic <base64(api_key)>
 import re
 from typing import Optional
 
+from app.config import get_settings
 from app.utils.logging import get_logger
 
 logger = get_logger(__name__)
+
+
+def _whatsapp_enabled() -> bool:
+    return get_settings().whatsapp_enabled
 
 # Opt-out keywords Meta mandates we honour
 _OPT_OUT_KEYWORDS = {"stop", "unsubscribe", "optout", "opt out", "opt-out"}
@@ -123,6 +128,9 @@ class WhatsAppService:
 
     async def send_otp(self, phone_number: str, otp: str) -> None:
         """Send OTP during onboarding WhatsApp verification."""
+        if not _whatsapp_enabled():
+            logger.info("whatsapp_disabled_skip", method="send_otp")
+            return
         await self._provider.send_otp(_normalise_phone(phone_number), otp)
         logger.info("whatsapp_otp_sent", phone_last4=phone_number[-4:])
 
@@ -136,6 +144,9 @@ class WhatsAppService:
         weekly_budget:  float,
     ) -> None:
         """Send weekly basket card with 3 quick-reply buttons."""
+        if not _whatsapp_enabled():
+            logger.info("whatsapp_disabled_skip", method="send_basket_preview")
+            return
         await self._provider.send_basket_preview(
             _normalise_phone(phone_number),
             basket_summary,
@@ -160,6 +171,9 @@ class WhatsAppService:
         swiggy_order_id:     str,
     ) -> None:
         """Confirm a placed Swiggy Instamart order."""
+        if not _whatsapp_enabled():
+            logger.info("whatsapp_disabled_skip", method="send_order_receipt")
+            return
         await self._provider.send_order_receipt(
             _normalise_phone(phone_number),
             item_count,
@@ -182,6 +196,9 @@ class WhatsAppService:
         expiry_label:  str,
         reauth_url:    str,
     ) -> None:
+        if not _whatsapp_enabled():
+            logger.info("whatsapp_disabled_skip", method="send_reauth_48hr")
+            return
         await self._provider.send_reauth_48hr(
             _normalise_phone(phone_number), expiry_label, reauth_url
         )
@@ -195,6 +212,9 @@ class WhatsAppService:
         expiry_label: str,
         reauth_url:   str,
     ) -> None:
+        if not _whatsapp_enabled():
+            logger.info("whatsapp_disabled_skip", method="send_reauth_24hr")
+            return
         await self._provider.send_reauth_24hr(
             _normalise_phone(phone_number), expiry_label, reauth_url
         )
@@ -203,6 +223,9 @@ class WhatsAppService:
     # ── Outbound: Template 6 — Session expired ────────────────────────────────
 
     async def send_session_expired(self, phone_number: str, reauth_url: str) -> None:
+        if not _whatsapp_enabled():
+            logger.info("whatsapp_disabled_skip", method="send_session_expired")
+            return
         await self._provider.send_session_expired(
             _normalise_phone(phone_number), reauth_url
         )
@@ -220,6 +243,9 @@ class WhatsAppService:
         Send a free-form text message.
         Only valid within a 24-hour conversation window (i.e. user messaged first).
         """
+        if not _whatsapp_enabled():
+            logger.info("whatsapp_disabled_skip", method="send_text")
+            return
         await self._provider.send_text(_normalise_phone(phone_number), text, buttons)
 
     # ── Inbound routing ───────────────────────────────────────────────────────
