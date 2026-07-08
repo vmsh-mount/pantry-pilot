@@ -389,7 +389,7 @@ export default function SettingsPage() {
 
         {/* Account */}
         <Section title="Account">
-          <div className="space-y-2">
+          <div className="space-y-3">
             <Button
               variant="secondary"
               onClick={async () => {

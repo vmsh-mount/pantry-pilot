@@ -19,6 +19,7 @@
 | UI-018 | Onboarding → dashboard handoff | Frontend | ✅ Done | [ui/UI-018-onboarding-dashboard-handoff.md](ui/UI-018-onboarding-dashboard-handoff.md) |
 | UI-019 | Smart onboarding flow (history-aware) | Frontend | ✅ Done | [ui/UI-019-smart-onboarding-flow.md](ui/UI-019-smart-onboarding-flow.md) |
 | UI-020 | Inference screen design sync ("What We Know") | Frontend | ✅ Done | [ui/UI-020-inference-screen-design-sync.md](ui/UI-020-inference-screen-design-sync.md) |
+| UI-021 | Layout consistency system | Frontend | ✅ Done | [ui/UI-021-layout-consistency.md](ui/UI-021-layout-consistency.md) |
 
 ---
 

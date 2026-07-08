@@ -94,19 +94,23 @@ function Step1Household({
   onNext: () => void
 }) {
   return (
-    <div className="px-6 pb-6 space-y-5">
-      <OptionGrid
-        value={value as "solo" | "couple" | "family" | "joint_family"}
-        onChange={(v) => { onChange(v); }}
-        options={[
-          { value: "solo",         emoji: "🧑", label: "Just me",     sub: "1 person" },
-          { value: "couple",       emoji: "👫", label: "Couple",       sub: "2 people" },
-          { value: "family",       emoji: "👨‍👩‍👧", label: "Family",       sub: "3–5 people" },
-          { value: "joint_family", emoji: "🏠", label: "Joint family", sub: "6+ people" },
-        ]}
-      />
-      <Button onClick={onNext} disabled={!value}>Continue →</Button>
-    </div>
+    <>
+      <div className="flex-1 overflow-y-auto px-6 pt-2 pb-2">
+        <OptionGrid
+          value={value as "solo" | "couple" | "family" | "joint_family"}
+          onChange={(v) => { onChange(v); }}
+          options={[
+            { value: "solo",         emoji: "🧑", label: "Just me",     sub: "1 person" },
+            { value: "couple",       emoji: "👫", label: "Couple",       sub: "2 people" },
+            { value: "family",       emoji: "👨‍👩‍👧", label: "Family",       sub: "3–5 people" },
+            { value: "joint_family", emoji: "🏠", label: "Joint family", sub: "6+ people" },
+          ]}
+        />
+      </div>
+      <div className="px-6 pb-6 pt-3 space-y-3 border-t border-gray-100">
+        <Button onClick={onNext} disabled={!value}>Continue →</Button>
+      </div>
+    </>
   )
 }
 
@@ -124,20 +128,24 @@ function Step2Diet({
   onBack?: () => void
 }) {
   return (
-    <div className="px-6 pb-6 space-y-5">
-      <OptionList
-        value={value as "vegetarian" | "vegan" | "jain" | "non_vegetarian"}
-        onChange={(v) => { onChange(v) }}
-        options={[
-          { value: "vegetarian",     emoji: "🥗", label: "Vegetarian",    sub: "No meat or eggs" },
-          { value: "vegan",          emoji: "🌱", label: "Vegan",          sub: "No animal products" },
-          { value: "jain",           emoji: "🕊️", label: "Jain",           sub: "No root vegetables" },
-          { value: "non_vegetarian", emoji: "🍗", label: "Non-vegetarian", sub: "Includes meat & eggs" },
-        ]}
-      />
-      <Button onClick={onNext} disabled={!value}>Continue →</Button>
-      {onBack && <Button variant="ghost" onClick={onBack}>← Back</Button>}
-    </div>
+    <>
+      <div className="flex-1 overflow-y-auto px-6 pt-2 pb-2">
+        <OptionList
+          value={value as "vegetarian" | "vegan" | "jain" | "non_vegetarian"}
+          onChange={(v) => { onChange(v) }}
+          options={[
+            { value: "vegetarian",     emoji: "🥗", label: "Vegetarian",    sub: "No meat or eggs" },
+            { value: "vegan",          emoji: "🌱", label: "Vegan",          sub: "No animal products" },
+            { value: "jain",           emoji: "🕊️", label: "Jain",           sub: "No root vegetables" },
+            { value: "non_vegetarian", emoji: "🍗", label: "Non-vegetarian", sub: "Includes meat & eggs" },
+          ]}
+        />
+      </div>
+      <div className="px-6 pb-6 pt-3 space-y-3 border-t border-gray-100">
+        <Button onClick={onNext} disabled={!value}>Continue →</Button>
+        {onBack && <Button variant="ghost" onClick={onBack}>← Back</Button>}
+      </div>
+    </>
   )
 }
 
@@ -155,15 +163,19 @@ function Step3Budget({
   onBack?: () => void
 }) {
   return (
-    <div className="px-6 pb-6 space-y-5">
-      <BudgetGrid
-        presets={BUDGET_PRESETS}
-        value={budgetMax}
-        onChange={onSelect}
-      />
-      <Button onClick={onNext} disabled={!budgetMax}>Continue →</Button>
-      {onBack && <Button variant="ghost" onClick={onBack}>← Back</Button>}
-    </div>
+    <>
+      <div className="flex-1 overflow-y-auto px-6 pt-2 pb-2">
+        <BudgetGrid
+          presets={BUDGET_PRESETS}
+          value={budgetMax}
+          onChange={onSelect}
+        />
+      </div>
+      <div className="px-6 pb-6 pt-3 space-y-3 border-t border-gray-100">
+        <Button onClick={onNext} disabled={!budgetMax}>Continue →</Button>
+        {onBack && <Button variant="ghost" onClick={onBack}>← Back</Button>}
+      </div>
+    </>
   )
 }
 
@@ -191,7 +203,7 @@ function Step4Inference({
   const capDay = (d: string) => d.charAt(0).toUpperCase() + d.slice(1)
 
   return (
-    <div className="bg-white rounded-3xl shadow-sm overflow-hidden">
+    <div className="bg-white rounded-3xl shadow-xl overflow-hidden flex flex-col flex-1 min-h-0">
       {/* Full-bleed gradient header */}
       <div
         className="px-6 pt-8 pb-6 text-center"
@@ -208,8 +220,8 @@ function Step4Inference({
         </p>
       </div>
 
-      {/* Card body */}
-      <div className="px-5 pb-6 pt-4 space-y-3">
+      {/* Scrollable card body */}
+      <div className="flex-1 overflow-y-auto px-6 pt-5 pb-2 space-y-4">
 
         {/* Your household — history only */}
         {hasHistory && (dietType || orderDay || budgetMax) && (
@@ -263,8 +275,11 @@ function Step4Inference({
             We'll personalise your basket as you shop.<br />The more you order, the smarter we get.
           </p>
         )}
+      </div>
 
-        <p className="text-xs text-gray-400 text-center pt-1">Does this look right?</p>
+      {/* Pinned CTA footer */}
+      <div className="px-6 pb-6 pt-3 space-y-3 border-t border-gray-100">
+        <p className="text-xs text-gray-400 text-center">Does this look right?</p>
         <Button onClick={onNext}>✓ Yes, looks good</Button>
         {onBack && <Button variant="ghost" onClick={onBack}>← Back</Button>}
       </div>
@@ -328,32 +343,36 @@ function Step5Phone({
   }
 
   return (
-    <form onSubmit={handleSend} className="px-6 pb-6 space-y-4">
-      <div className="bg-[#D8F3DC] rounded-2xl p-4 flex items-start gap-3">
-        <span className="text-2xl">💬</span>
-        <p className="text-sm text-[#1B4332]">
-          We'll send your weekly basket to WhatsApp for you to approve — before anything is ordered.
-        </p>
+    <form onSubmit={handleSend} className="flex flex-col flex-1 min-h-0">
+      <div className="flex-1 overflow-y-auto px-6 pt-2 pb-2 space-y-4">
+        <div className="bg-[#D8F3DC] rounded-2xl p-4 flex items-start gap-3">
+          <span className="text-2xl">💬</span>
+          <p className="text-sm text-[#1B4332]">
+            We'll send your weekly basket to WhatsApp for you to approve — before anything is ordered.
+          </p>
+        </div>
+
+        <div className="flex items-center border-2 border-gray-200 focus-within:border-[#2D6A4F] rounded-xl overflow-hidden transition-colors">
+          <span className="px-3 py-3 text-sm text-gray-500 bg-[#F7F8F5] border-r border-gray-200 font-medium">
+            +91
+          </span>
+          <input
+            type="tel"
+            placeholder="98765 43210"
+            value={phone}
+            onChange={(e) => setPhone(e.target.value)}
+            className="flex-1 px-3 py-3 text-sm outline-none bg-white"
+            maxLength={15}
+          />
+        </div>
+
+        {error && <Alert type="error" message={error} />}
       </div>
 
-      <div className="flex items-center border-2 border-gray-200 focus-within:border-[#2D6A4F] rounded-xl overflow-hidden transition-colors">
-        <span className="px-3 py-3 text-sm text-gray-500 bg-[#F7F8F5] border-r border-gray-200 font-medium">
-          +91
-        </span>
-        <input
-          type="tel"
-          placeholder="98765 43210"
-          value={phone}
-          onChange={(e) => setPhone(e.target.value)}
-          className="flex-1 px-3 py-3 text-sm outline-none bg-white"
-          maxLength={15}
-        />
+      <div className="px-6 pb-6 pt-3 space-y-3 border-t border-gray-100">
+        <Button type="submit" loading={loading}>Send code on WhatsApp →</Button>
+        {onBack && <Button variant="ghost" onClick={onBack} type="button">← Back</Button>}
       </div>
-
-      {error && <Alert type="error" message={error} />}
-
-      <Button type="submit" loading={loading}>Send code on WhatsApp →</Button>
-      {onBack && <Button variant="ghost" onClick={onBack} type="button">← Back</Button>}
     </form>
   )
 }
@@ -410,40 +429,44 @@ function Step6Otp({
   }
 
   return (
-    <form onSubmit={handleVerify} className="px-6 pb-6 space-y-5">
-      <div className="text-center">
-        <p className="text-sm text-gray-600">
-          Code sent to <span className="font-semibold text-gray-900">{phone}</span>
-        </p>
-        <button
-          type="button"
-          onClick={onChangeNumber}
-          className="text-xs text-[#2D6A4F] hover:underline mt-0.5"
-        >
-          Change number
-        </button>
-      </div>
-
-      <OtpInput value={otp} onChange={setOtp} />
-
-      {error && <Alert type="error" message={error} />}
-
-      <Button type="submit" loading={loading} disabled={otp.length < 6}>
-        Verify →
-      </Button>
-
-      <div className="text-center text-xs text-gray-400">
-        {countdown > 0 ? (
-          <span>Resend in {countdown}s</span>
-        ) : (
+    <form onSubmit={handleVerify} className="flex flex-col flex-1 min-h-0">
+      <div className="flex-1 overflow-y-auto px-6 pt-2 pb-2 space-y-5">
+        <div className="text-center">
+          <p className="text-sm text-gray-600">
+            Code sent to <span className="font-semibold text-gray-900">{phone}</span>
+          </p>
           <button
             type="button"
-            onClick={resend}
-            className="text-[#2D6A4F] font-medium hover:underline"
+            onClick={onChangeNumber}
+            className="text-xs text-[#2D6A4F] hover:underline mt-0.5"
           >
-            Resend code
+            Change number
           </button>
-        )}
+        </div>
+
+        <OtpInput value={otp} onChange={setOtp} />
+
+        {error && <Alert type="error" message={error} />}
+
+        <div className="text-center text-xs text-gray-400">
+          {countdown > 0 ? (
+            <span>Resend in {countdown}s</span>
+          ) : (
+            <button
+              type="button"
+              onClick={resend}
+              className="text-[#2D6A4F] font-medium hover:underline"
+            >
+              Resend code
+            </button>
+          )}
+        </div>
+      </div>
+
+      <div className="px-6 pb-6 pt-3 space-y-3 border-t border-gray-100">
+        <Button type="submit" loading={loading} disabled={otp.length < 6}>
+          Verify →
+        </Button>
       </div>
     </form>
   )
@@ -626,32 +649,36 @@ function Step8AllSet({
       ]
 
   return (
-    <div className="px-6 pb-6 space-y-5">
-      <div className="text-center space-y-2">
-        <div className="text-5xl mb-3">🎉</div>
-        <h3 className="text-xl font-bold text-gray-900">You&apos;re all set!</h3>
-        <p className="text-sm text-gray-500">
-          Your first basket is being prepared. We&apos;ll notify you when it&apos;s ready to review.
-        </p>
+    <>
+      <div className="flex-1 overflow-y-auto px-6 pt-6 pb-2 space-y-5">
+        <div className="text-center space-y-2">
+          <div className="text-5xl mb-3">🎉</div>
+          <h3 className="text-xl font-bold text-gray-900">You&apos;re all set!</h3>
+          <p className="text-sm text-gray-500">
+            Your first basket is being prepared. We&apos;ll notify you when it&apos;s ready to review.
+          </p>
+        </div>
+
+        <div className="bg-[#F7F8F5] border border-[#D8F3DC] rounded-2xl p-4 space-y-3">
+          <p className="text-xs font-semibold text-[#2D6A4F] uppercase tracking-wide">How it works</p>
+          {howItWorks.map((r) => (
+            <div key={r.text} className="flex items-center gap-3 text-sm text-gray-700">
+              <span className="text-base">{r.icon}</span>
+              {r.text}
+            </div>
+          ))}
+        </div>
       </div>
 
-      <div className="bg-[#F7F8F5] border border-[#D8F3DC] rounded-2xl p-4 space-y-3">
-        <p className="text-xs font-semibold text-[#2D6A4F] uppercase tracking-wide">How it works</p>
-        {howItWorks.map((r) => (
-          <div key={r.text} className="flex items-center gap-3 text-sm text-gray-700">
-            <span className="text-base">{r.icon}</span>
-            {r.text}
-          </div>
-        ))}
+      <div className="px-6 pb-6 pt-3 border-t border-gray-100">
+        <Button
+          loading={loading}
+          onClick={() => { setLoading(true); onFinish(false) }}
+        >
+          Go to dashboard →
+        </Button>
       </div>
-
-      <Button
-        loading={loading}
-        onClick={() => { setLoading(true); onFinish(false) }}
-      >
-        Go to dashboard →
-      </Button>
-    </div>
+    </>
   )
 }
 
@@ -852,15 +879,17 @@ export default function OnboardPage() {
       {/* Inference step owns its full shell — rendered outside <Card> */}
       {currentStep === "inference"
         ? (
-          <Step4Inference
-            infer={infer}
-            hasHistory={hasHistory}
-            onNext={goNext}
-            onBack={isFirstStep ? undefined : goBack}
-          />
+          <div className="flex-1 min-h-0 flex flex-col">
+            <Step4Inference
+              infer={infer}
+              hasHistory={hasHistory}
+              onNext={goNext}
+              onBack={isFirstStep ? undefined : goBack}
+            />
+          </div>
         )
         : (
-          <Card>
+          <Card className="flex-1 min-h-0 flex flex-col">
             {/* Progress bar — only for questionnaire steps */}
             {isQuestionnaireStep && questionnaireSteps.length > 0 && (
               <StepBar step={currentQStep} total={questionnaireSteps.length} />

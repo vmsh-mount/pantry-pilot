@@ -14,8 +14,10 @@ import Link from "next/link"
 /** Full-screen green background — for onboarding / auth flows. */
 export function Shell({ children }: { children: React.ReactNode }) {
   return (
-    <main className="min-h-screen bg-[#2D6A4F] flex flex-col items-center justify-start pt-8 pb-12 px-4">
-      <div className="w-full max-w-[390px]">{children}</div>
+    <main className="h-dvh bg-[#2D6A4F] flex flex-col items-center overflow-hidden px-4 pt-8 pb-6">
+      <div className="w-full max-w-[390px] flex flex-col h-full">
+        {children}
+      </div>
     </main>
   )
 }
@@ -82,6 +84,22 @@ export function Card({
 }) {
   return (
     <div className={`bg-white rounded-3xl shadow-xl overflow-hidden ${className}`}>
+      {children}
+    </div>
+  )
+}
+
+export function CardBody({
+  children,
+  spacing = "space-y-4",
+  className = "",
+}: {
+  children: React.ReactNode
+  spacing?: string
+  className?: string
+}) {
+  return (
+    <div className={`px-6 pt-5 pb-6 ${spacing} ${className}`}>
       {children}
     </div>
   )
