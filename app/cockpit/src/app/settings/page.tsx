@@ -32,8 +32,9 @@ interface HouseholdSettings {
   weekly_budget_min: number
   weekly_budget_max: number
   whatsapp_number:   string
-  whatsapp_verified: boolean
-  is_paused:         boolean
+  whatsapp_verified:  boolean
+  onboarding_complete: boolean
+  is_paused:          boolean
   is_active:         boolean
   preferences: {
     preferred_order_day:     string
@@ -130,7 +131,7 @@ export default function SettingsPage() {
       if (res.success && res.data) {
         const raw = res.data as unknown as HouseholdSettings
         // Redirect to onboarding if not yet complete
-        if (!raw.whatsapp_verified) {
+        if (!raw.onboarding_complete) {
           router.push("/onboard")
           return
         }
