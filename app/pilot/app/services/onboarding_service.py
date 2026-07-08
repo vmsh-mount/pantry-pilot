@@ -212,17 +212,34 @@ class OnboardingService:
                     "category":   item_categories.get(item_name, "grocery"),
                 })
 
-        # ── Pantry seeds (items ordered ≥ 2× in last 20 orders) ──────────────
-        # We use the summary order list (all 20) for frequency, not just the 5 we fetched details for.
-        # So pantry_seeds come from item_order_count; items ordered in ≥ 2 of the 5 detail-fetched orders.
-        for item_name, count in item_order_count.items():
-            if count >= 2:
-                result.pantry_seeds.append({
-                    "item_name": item_name,
-                    "category":  item_categories.get(item_name, "grocery"),
-                    "qty":       None,    # filled by planning loop later
-                    "unit":      "unit",
-                })
+        # ── Pantry seeds — from your_go_to_items MCP ─────────────────────────
+        # Swiggy maintains this list natively (frequency + recency weighted).
+        # Fall back to order-detail item counts if the MCP call fails.
+        if result.address_id:
+            try:
+                go_to_items = await client.your_go_to_items(result.address_id)
+                for item in go_to_items:
+                    name = _attr(item, "name", "")
+                    if name:
+                        result.pantry_seeds.append({
+                            "item_name": name,
+                            "category":  item_categories.get(_normalise_item_name(name), "grocery"),
+                            "qty":       None,
+                            "unit":      "unit",
+                        })
+            except Exception as e:
+                logger.warning("inference_go_to_items_failed", household_id=household_id, error=str(e))
+
+        # Fall back to order-detail counts if go_to_items returned nothing
+        if not result.pantry_seeds:
+            for item_name, count in item_order_count.items():
+                if count >= 2:
+                    result.pantry_seeds.append({
+                        "item_name": item_name,
+                        "category":  item_categories.get(item_name, "grocery"),
+                        "qty":       None,
+                        "unit":      "unit",
+                    })
 
         logger.info(
             "inference_complete",
