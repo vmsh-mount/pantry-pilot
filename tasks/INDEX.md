@@ -18,6 +18,7 @@
 | BE-005 | WhatsApp enabled flag | Backend + Frontend | ✅ Done | [be/BE-005-whatsapp-enabled-flag.md](be/BE-005-whatsapp-enabled-flag.md) |
 | UI-018 | Onboarding → dashboard handoff | Frontend | ✅ Done | [ui/UI-018-onboarding-dashboard-handoff.md](ui/UI-018-onboarding-dashboard-handoff.md) |
 | UI-019 | Smart onboarding flow (history-aware) | Frontend | ✅ Done | [ui/UI-019-smart-onboarding-flow.md](ui/UI-019-smart-onboarding-flow.md) |
+| UI-020 | Inference screen design sync ("What We Know") | Frontend | ✅ Done | [ui/UI-020-inference-screen-design-sync.md](ui/UI-020-inference-screen-design-sync.md) |
 
 ---
 

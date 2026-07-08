@@ -171,54 +171,127 @@ function Step3Budget({
 
 function Step4Inference({
   infer,
+  hasHistory,
   onNext,
   onBack,
 }: {
   infer: Record<string, unknown> | null
+  hasHistory: boolean
   onNext: () => void
   onBack?: () => void
 }) {
+  const dietType        = infer?.diet_type        as string | undefined
+  const budgetMax       = infer?.weekly_budget_max as number | undefined
+  const orderDay        = infer?.preferred_order_day as string | undefined
+  const addressLine     = infer?.address_line      as string | undefined
+  const pantrySeeds     = (infer?.pantry_seeds     as {item_name: string}[] | undefined) ?? []
+  const visibleSeeds    = pantrySeeds.slice(0, 5)
+  const overflowCount   = pantrySeeds.length - visibleSeeds.length
+
+  const capDay = (d: string) => d.charAt(0).toUpperCase() + d.slice(1)
+
   return (
-    <div className="px-6 pb-6 space-y-4">
-      <div className="bg-[#F7F8F5] rounded-2xl p-4 space-y-3">
-        {infer ? (
-          <>
-            {infer.address_line && (
-              <SummaryRow icon="📍" label="Delivery address" value={infer.address_line as string} />
+    <div className="bg-white rounded-3xl shadow-sm overflow-hidden">
+      {/* Full-bleed gradient header */}
+      <div
+        className="px-6 pt-8 pb-6 text-center"
+        style={{ background: "linear-gradient(135deg, #1B4332, #2D6A4F)" }}
+      >
+        <div className="text-4xl mb-3">🔍</div>
+        <h2 className="text-xl font-bold text-white mb-1">
+          {hasHistory ? "Here's what we already know" : "Here's what we found"}
+        </h2>
+        <p className="text-sm" style={{ color: "rgba(255,255,255,0.7)" }}>
+          {hasHistory
+            ? "Pulled from your Swiggy order history"
+            : "No previous Swiggy orders yet"}
+        </p>
+      </div>
+
+      {/* Card body */}
+      <div className="px-5 pb-6 pt-4 space-y-3">
+
+        {/* Your household — history only */}
+        {hasHistory && (dietType || orderDay || budgetMax) && (
+          <InfCard title="Your household">
+            {dietType && (
+              <InfRow
+                label="Diet pattern"
+                value={dietType.replace(/_/g, " ").replace(/^\w/, c => c.toUpperCase())}
+              />
             )}
-            {infer.diet_type && (
-              <SummaryRow icon="🥗" label="Diet detected" value={String(infer.diet_type).replace("_", " ")} />
+            {orderDay && (
+              <InfRow label="Typical order day" value={capDay(orderDay)} />
             )}
-            {infer.weekly_budget_max && (
-              <SummaryRow icon="💰" label="Budget estimate" value={`₹${infer.weekly_budget_max}/week`} />
+            {budgetMax && (
+              <InfRow label="Avg weekly spend" value={`₹${budgetMax.toLocaleString("en-IN")}`} />
             )}
-            {infer.confidence_notes && Array.isArray(infer.confidence_notes) && infer.confidence_notes.length > 0 && (
-              <SummaryRow icon="✨" label="Notes" value={(infer.confidence_notes as string[]).join(", ")} />
-            )}
-          </>
-        ) : (
-          <p className="text-sm text-gray-500 text-center py-2">
-            No previous orders found — we'll personalise as you go!
+          </InfCard>
+        )}
+
+        {/* Your go-to items — history only */}
+        {hasHistory && visibleSeeds.length > 0 && (
+          <InfCard title="Your go-to items">
+            <div className="flex flex-wrap gap-1.5 mt-1">
+              {visibleSeeds.map((s) => (
+                <span
+                  key={s.item_name}
+                  className="bg-white border border-gray-200 rounded-lg px-2.5 py-1 text-xs font-medium text-gray-700"
+                >
+                  {s.item_name}
+                </span>
+              ))}
+              {overflowCount > 0 && (
+                <span className="bg-white border border-gray-200 rounded-lg px-2.5 py-1 text-xs font-medium text-gray-500">
+                  + {overflowCount} more
+                </span>
+              )}
+            </div>
+          </InfCard>
+        )}
+
+        {/* Delivery address — always shown if available */}
+        {addressLine && (
+          <InfCard title="Delivery address">
+            <InfRow label={`📍 ${addressLine}`} />
+          </InfCard>
+        )}
+
+        {/* No-history message */}
+        {!hasHistory && (
+          <p className="text-sm text-gray-500 text-center py-2 leading-relaxed">
+            We'll personalise your basket as you shop.<br />The more you order, the smarter we get.
           </p>
         )}
+
+        <p className="text-xs text-gray-400 text-center pt-1">Does this look right?</p>
+        <Button onClick={onNext}>✓ Yes, looks good</Button>
+        {onBack && <Button variant="ghost" onClick={onBack}>← Back</Button>}
       </div>
-      <p className="text-xs text-gray-400 text-center">
-        These are pre-filled from your Swiggy history. You can update them in Settings any time.
-      </p>
-      <Button onClick={onNext}>Looks good →</Button>
-      {onBack && <Button variant="ghost" onClick={onBack}>← Back</Button>}
     </div>
   )
 }
 
-function SummaryRow({ icon, label, value }: { icon: string; label: string; value: string }) {
+function InfCard({ title, children }: { title: string; children: React.ReactNode }) {
   return (
-    <div className="flex items-start gap-3">
-      <span className="text-lg mt-0.5">{icon}</span>
-      <div>
-        <p className="text-xs text-gray-500">{label}</p>
-        <p className="text-sm font-semibold text-gray-800 capitalize">{value}</p>
-      </div>
+    <div className="bg-[#F7F8F5] rounded-2xl p-4">
+      <p className="text-[11px] font-semibold text-gray-400 uppercase tracking-widest mb-3">{title}</p>
+      {children}
+    </div>
+  )
+}
+
+function InfRow({ label, value }: { label: string; value?: string }) {
+  return (
+    <div className="flex items-start gap-2.5 mb-2.5 last:mb-0">
+      <span
+        className="mt-1.5 shrink-0 rounded-full"
+        style={{ width: 8, height: 8, background: "#D8F3DC" }}
+      />
+      <span className="text-[13px] font-medium text-gray-700 flex-1">{label}</span>
+      {value && (
+        <span className="text-[13px] font-semibold" style={{ color: "#2D6A4F" }}>{value}</span>
+      )}
     </div>
   )
 }
@@ -776,82 +849,87 @@ export default function OnboardPage() {
         )}
       </div>
 
-      <Card>
-        {/* Progress bar — only for questionnaire steps */}
-        {isQuestionnaireStep && questionnaireSteps.length > 0 && (
-          <StepBar step={currentQStep} total={questionnaireSteps.length} />
-        )}
-
-        {/* Section header */}
-        {currentStep !== "allset" && (
-          <div className="px-6 pt-5 pb-2">
-            <div className="text-3xl mb-2">{meta.icon}</div>
-            <h2 className="text-xl font-bold text-gray-900">{meta.title}</h2>
-            {meta.subtitle(hasHistory) && (
-              <p className="text-sm text-gray-500 mt-1">{meta.subtitle(hasHistory)}</p>
-            )}
-          </div>
-        )}
-
-        {error && (
-          <div className="px-6 pb-2">
-            <Alert type="error" message={error} />
-          </div>
-        )}
-
-        {currentStep === "household" && (
-          <Step1Household
-            value={householdType}
-            onChange={setHouseholdType}
-            onNext={goNext}
-          />
-        )}
-
-        {currentStep === "diet" && (
-          <Step2Diet
-            value={dietType}
-            onChange={setDietType}
-            onNext={goNext}
-            onBack={isFirstStep ? undefined : goBack}
-          />
-        )}
-
-        {currentStep === "budget" && (
-          <Step3Budget
-            budgetMax={budgetMax}
-            onSelect={(min, max) => { setBudgetMin(min); setBudgetMax(max) }}
-            onNext={saveProfileAndAdvance}
-            onBack={isFirstStep ? undefined : goBack}
-          />
-        )}
-
-        {currentStep === "inference" && (
+      {/* Inference step owns its full shell — rendered outside <Card> */}
+      {currentStep === "inference"
+        ? (
           <Step4Inference
             infer={infer}
+            hasHistory={hasHistory}
             onNext={goNext}
             onBack={isFirstStep ? undefined : goBack}
           />
-        )}
+        )
+        : (
+          <Card>
+            {/* Progress bar — only for questionnaire steps */}
+            {isQuestionnaireStep && questionnaireSteps.length > 0 && (
+              <StepBar step={currentQStep} total={questionnaireSteps.length} />
+            )}
 
-        {currentStep === "phone" && (
-          <Step5Phone
-            onSent={(p) => { setPhone(p); goNext() }}
-            onBack={isFirstStep ? undefined : goBack}
-          />
-        )}
+            {/* Section header — not shown for allset (owns its layout) */}
+            {currentStep !== "allset" && (
+              <div className="px-6 pt-5 pb-2">
+                <div className="text-3xl mb-2">{meta.icon}</div>
+                <h2 className="text-xl font-bold text-gray-900">{meta.title}</h2>
+                {meta.subtitle(hasHistory) && (
+                  <p className="text-sm text-gray-500 mt-1">{meta.subtitle(hasHistory)}</p>
+                )}
+              </div>
+            )}
 
-        {currentStep === "otp" && (
-          <Step6Otp
-            phone={phone}
-            onVerified={goNext}
-            onChangeNumber={goBack}
-          />
-        )}
+            {error && (
+              <div className="px-6 pb-2">
+                <Alert type="error" message={error} />
+              </div>
+            )}
 
-        {currentStep === "allset" && (
-          <Step8AllSet onFinish={handleComplete} whatsappEnabled={whatsappEnabled} />
-        )}
-      </Card>
+            {currentStep === "household" && (
+              <Step1Household
+                value={householdType}
+                onChange={setHouseholdType}
+                onNext={goNext}
+              />
+            )}
+
+            {currentStep === "diet" && (
+              <Step2Diet
+                value={dietType}
+                onChange={setDietType}
+                onNext={goNext}
+                onBack={isFirstStep ? undefined : goBack}
+              />
+            )}
+
+            {currentStep === "budget" && (
+              <Step3Budget
+                budgetMax={budgetMax}
+                onSelect={(min, max) => { setBudgetMin(min); setBudgetMax(max) }}
+                onNext={saveProfileAndAdvance}
+                onBack={isFirstStep ? undefined : goBack}
+              />
+            )}
+
+            {currentStep === "phone" && (
+              <Step5Phone
+                onSent={(p) => { setPhone(p); goNext() }}
+                onBack={isFirstStep ? undefined : goBack}
+              />
+            )}
+
+            {currentStep === "otp" && (
+              <Step6Otp
+                phone={phone}
+                onVerified={goNext}
+                onChangeNumber={goBack}
+              />
+            )}
+
+            {currentStep === "allset" && (
+              <Step8AllSet onFinish={handleComplete} whatsappEnabled={whatsappEnabled} />
+            )}
+          </Card>
+        )
+      }
     </Shell>
   )
 }
