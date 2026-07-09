@@ -796,7 +796,7 @@ export default function OnboardPage() {
     }
 
     bootstrap()
-  }, [router])
+  }, [])
 
   function goNext() {
     if (!flow) return

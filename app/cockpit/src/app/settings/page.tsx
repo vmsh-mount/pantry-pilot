@@ -164,7 +164,7 @@ export default function SettingsPage() {
         router.push("/")
       }
     })
-  }, [router])
+  }, [])
 
   // Debounced auto-save
   const save = useCallback(async (patch: Record<string, unknown>) => {

@@ -25,8 +25,9 @@ export function Shell({ children }: { children: React.ReactNode }) {
 // ── BottomNav ─────────────────────────────────────────────────────────────────
 
 const NAV_TABS = [
-  { href: "/dashboard", label: "Home",    icon: "🏠" },
-  { href: "/orders",    label: "Orders",  icon: "📦" },
+  { href: "/dashboard", label: "Home",     icon: "🏠" },
+  { href: "/routines",  label: "Routines", icon: "🔄" },
+  { href: "/orders",    label: "Orders",   icon: "📦" },
   { href: "/settings",  label: "Settings", icon: "⚙️" },
 ]
 

@@ -25,13 +25,16 @@ def _household_id(request: Request) -> str | None:
 IN_PROGRESS_STATES = {"pending", "sensing", "planning", "optimizing", "confirmed", "placing"}
 
 async def _assert_onboarding_complete(household_id: str, db: AsyncSession):
+    """Returns 'ok', 'not_found', or 'incomplete'."""
     result = await db.execute(
         select(Household).where(Household.id == household_id)
     )
     household = result.scalar_one_or_none()
-    if not household or not household.onboarding_complete:
-        return False
-    return True
+    if not household:
+        return "not_found"
+    if not household.onboarding_complete:
+        return "incomplete"
+    return "ok"
 
 @router.get("/pending", response_model=APIResponse)
 async def get_pending_basket(request: Request, db: AsyncSession = Depends(get_db)):
@@ -40,7 +43,10 @@ async def get_pending_basket(request: Request, db: AsyncSession = Depends(get_db
     if not household_id:
         return APIResponse.fail("NOT_AUTHENTICATED", "Not authenticated.")
 
-    if not await _assert_onboarding_complete(household_id, db):
+    status = await _assert_onboarding_complete(household_id, db)
+    if status == "not_found":
+        return APIResponse.fail("NOT_AUTHENTICATED", "Session expired. Please log in again.")
+    if status == "incomplete":
         return APIResponse.fail("ONBOARDING_INCOMPLETE", "Onboarding not complete.")
 
     # Check for a basket ready to confirm
@@ -213,7 +219,10 @@ async def trigger_basket(request: Request, db: AsyncSession = Depends(get_db)):
     if not household_id:
         return APIResponse.fail("NOT_AUTHENTICATED", "Not authenticated.")
 
-    if not await _assert_onboarding_complete(household_id, db):
+    _onboard_status = await _assert_onboarding_complete(household_id, db)
+    if _onboard_status == "not_found":
+        return APIResponse.fail("NOT_AUTHENTICATED", "Session expired. Please log in again.")
+    if _onboard_status == "incomplete":
         return APIResponse.fail("ONBOARDING_INCOMPLETE", "Onboarding not complete.")
 
     # Reject paused households

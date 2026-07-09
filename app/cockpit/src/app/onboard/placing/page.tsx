@@ -17,7 +17,7 @@ export default function OnboardPlacing() {
   useEffect(() => {
     const t = setTimeout(() => router.push("/onboard/done"), 4000)
     return () => clearTimeout(t)
-  }, [router])
+  }, [])
 
   return (
     <Shell>

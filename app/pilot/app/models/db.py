@@ -52,6 +52,7 @@ class Household(Base):
     pantry_items:   Mapped[list["PantryItem"]] = relationship(back_populates="household")
     loop_runs:      Mapped[list["LoopRun"]] = relationship(back_populates="household")
     orders:         Mapped[list["Order"]] = relationship(back_populates="household")
+    routines:       Mapped[list["Routine"]] = relationship(back_populates="household")
 
 
 # ─────────────────────────────────────────────
@@ -396,3 +397,70 @@ class OrderItem(Base):
     created_at:       Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
 
     order:            Mapped["Order"] = relationship(back_populates="items")
+
+
+# ─────────────────────────────────────────────
+# Routines
+# ─────────────────────────────────────────────
+class Routine(Base):
+    __tablename__ = "routines"
+
+    id:                 Mapped[str] = mapped_column(UUID(as_uuid=False), primary_key=True, default=gen_uuid)
+    household_id:       Mapped[str] = mapped_column(UUID(as_uuid=False), ForeignKey("households.id", ondelete="CASCADE"))
+    name:               Mapped[str] = mapped_column(String, nullable=False)
+    status:             Mapped[str] = mapped_column(String, default="active")  # active|paused|ended|deleted
+    frequency_type:     Mapped[str] = mapped_column(String, nullable=False)    # every_n_days|weekly|monthly
+    frequency_value:    Mapped[int] = mapped_column(Integer, nullable=False)   # N days | 0-6 weekday | 1-28 day-of-month
+    schedule_time:      Mapped[time] = mapped_column(Time, nullable=False)     # stored as UTC
+    start_date:         Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
+    end_date:           Mapped[datetime | None] = mapped_column(DateTime(timezone=True))  # null = ongoing
+    next_run_at:        Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    paused_at:          Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    total_days_paused:  Mapped[int] = mapped_column(Integer, default=0)
+    created_at:         Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+    updated_at:         Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now(), onupdate=func.now())
+
+    household:          Mapped["Household"] = relationship(back_populates="routines")
+    items:              Mapped[list["RoutineItem"]] = relationship(back_populates="routine", cascade="all, delete-orphan")
+    runs:               Mapped[list["RoutineRun"]] = relationship(back_populates="routine")
+
+    __table_args__ = (
+        Index("idx_routines_household_status", "household_id", "status"),
+        Index("idx_routines_next_run_at", "next_run_at"),
+    )
+
+
+class RoutineItem(Base):
+    __tablename__ = "routine_items"
+
+    id:                   Mapped[str] = mapped_column(UUID(as_uuid=False), primary_key=True, default=gen_uuid)
+    routine_id:           Mapped[str] = mapped_column(UUID(as_uuid=False), ForeignKey("routines.id", ondelete="RESTRICT"))
+    item_name:            Mapped[str] = mapped_column(String, nullable=False)
+    quantity:             Mapped[float] = mapped_column(Numeric(8, 3), nullable=False, default=1)
+    unit:                 Mapped[str] = mapped_column(String, default="unit")
+    swiggy_product_id:    Mapped[str | None] = mapped_column(String)
+    swiggy_product_name:  Mapped[str | None] = mapped_column(String)
+    created_at:           Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+
+    routine:              Mapped["Routine"] = relationship(back_populates="items")
+
+
+class RoutineRun(Base):
+    __tablename__ = "routine_runs"
+
+    id:            Mapped[str] = mapped_column(UUID(as_uuid=False), primary_key=True, default=gen_uuid)
+    routine_id:    Mapped[str] = mapped_column(UUID(as_uuid=False), ForeignKey("routines.id", ondelete="RESTRICT"))
+    scheduled_at:  Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
+    status:        Mapped[str] = mapped_column(String, nullable=False)  # placed|partial|failed|skipped
+    order_id:      Mapped[str | None] = mapped_column(UUID(as_uuid=False), ForeignKey("orders.id"))
+    skipped_items: Mapped[str | None] = mapped_column(Text)  # JSON string: [{item_name, reason}]
+    skip_reason:   Mapped[str | None] = mapped_column(String)  # user_skip|all_items_unavailable|token_expired|lock_timeout|missed|household_paused
+    placed_at:     Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    total_amount:  Mapped[float | None] = mapped_column(Numeric(10, 2))
+    created_at:    Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+
+    routine:       Mapped["Routine"] = relationship(back_populates="runs")
+
+    __table_args__ = (
+        Index("idx_routine_runs_routine_id", "routine_id"),
+    )

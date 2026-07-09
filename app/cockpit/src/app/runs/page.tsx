@@ -247,7 +247,7 @@ export default function RunsPage() {
     } else {
       setRuns(data.runs)
     }
-  }, [router])
+  }, [])
 
   useEffect(() => {
     fetchRuns(statusFilter, 0, false)

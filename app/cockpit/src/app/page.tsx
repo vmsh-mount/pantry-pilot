@@ -19,7 +19,7 @@ export default function Landing() {
         // NOT_AUTHENTICATED or any other error → stay on landing
       }
     })
-  }, [router])
+  }, [])
 
   async function handleConnect() {
     const res = await api.auth.initiate()

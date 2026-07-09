@@ -14,6 +14,7 @@ celery_app = Celery(
         "app.tasks.pantry",
         "app.tasks.whatsapp",
         "app.tasks.maintenance",
+        "app.tasks.routines",
     ]
 )
 
@@ -61,6 +62,7 @@ celery_app.conf.update(
         "app.tasks.pantry.*":      {"queue": "pantry"},
         "app.tasks.whatsapp.*":    {"queue": "whatsapp"},
         "app.tasks.maintenance.*": {"queue": "maintenance"},
+        "app.tasks.routines.*":    {"queue": "planning"},
     },
     beat_schedule={
         "daily-token-expiry-check": {
@@ -70,6 +72,10 @@ celery_app.conf.update(
         "hourly-missed-run-catchup": {
             "task": "app.tasks.maintenance.catchup_missed_runs",
             "schedule": crontab(minute=5),           # :05 every hour
+        },
+        "routine-due-check": {
+            "task": "app.tasks.routines.check_due_routines",
+            "schedule": crontab(minute="*/15"),       # every 15 minutes
         },
     }
 )

@@ -40,7 +40,7 @@ export default function OrdersPage() {
         setError((res.error as { message?: string })?.message ?? "Could not load orders.")
       }
     })
-  }, [router])
+  }, [])
 
   return (
     <AppShell>

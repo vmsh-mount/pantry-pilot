@@ -121,4 +121,18 @@ export const api = {
     resume: () => request("/settings/resume", { method: "POST" }),
     delete: () => request("/settings/account", { method: "DELETE" }),
   },
+  routines: {
+    list:     ()                         => request("/routines"),
+    create:   (body: unknown)            => request("/routines", { method: "POST", body: JSON.stringify(body) }),
+    get:      (id: string)               => request(`/routines/${id}`),
+    patch:    (id: string, body: unknown) => request(`/routines/${id}`, { method: "PATCH", body: JSON.stringify(body) }),
+    delete:   (id: string)               => request(`/routines/${id}`, { method: "DELETE" }),
+    pause:    (id: string)               => request(`/routines/${id}/pause`, { method: "POST" }),
+    resume:   (id: string)               => request(`/routines/${id}/resume`, { method: "POST" }),
+    skipNext: (id: string)               => request(`/routines/${id}/skip-next`, { method: "POST" }),
+    runs:     (id: string)               => request(`/routines/${id}/runs`),
+  },
+  products: {
+    search: (q: string) => request(`/products/search?q=${encodeURIComponent(q)}`),
+  },
 }

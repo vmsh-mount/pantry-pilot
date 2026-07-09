@@ -90,7 +90,7 @@ function ReauthSuccess() {
   useEffect(() => {
     const t = setTimeout(() => router.push("/settings"), 3000)
     return () => clearTimeout(t)
-  }, [router])
+  }, [])
 
   return (
     <Shell>

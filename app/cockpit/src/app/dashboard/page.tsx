@@ -202,6 +202,7 @@ export default function DashboardPage() {
   const [removingIds,   setRemovingIds]   = useState<Set<string>>(new Set())
   const [addingItem,    setAddingItem]    = useState(false)
   const [editSummary,   setEditSummary]   = useState({ removed: 0, added: 0 })
+  const [activeRoutines, setActiveRoutines] = useState<{ id: string; name: string; next_run_at: string | null; items: { item_name: string }[] }[]>([])
   const pollRef = useRef<ReturnType<typeof setInterval> | null>(null)
 
   useEffect(() => {
@@ -241,6 +242,12 @@ export default function DashboardPage() {
   async function loadAll() {
     setLoading(true); setError("")
     loadRuns().catch(() => {})
+    api.routines.list().then(res => {
+      if (res.success && res.data) {
+        const all = res.data as { id: string; name: string; status: string; next_run_at: string | null; items: { item_name: string }[] }[]
+        setActiveRoutines(all.filter(r => r.status === "active").slice(0, 2))
+      }
+    }).catch(() => {})
     const [basketRes, settingsRes] = await Promise.all([
       api.basket.pending(),
       api.settings.get(),
@@ -381,7 +388,7 @@ export default function DashboardPage() {
       setError("Search failed. Check your connection and try again.")
       return []
     }
-  }, [router])
+  }, [])
 
   async function handleAddItem(product: SearchProduct) {
     setAddingItem(true); setError("")
@@ -769,6 +776,46 @@ export default function DashboardPage() {
               </p>
             </>
           )}
+          {/* ── Routines section ── */}
+          <div>
+            <div className="flex items-center justify-between mb-2 px-1">
+              <span className="text-white text-sm font-semibold">Routines</span>
+              <button onClick={() => router.push("/routines")} className="text-[#D8F3DC] text-xs">View all →</button>
+            </div>
+            {activeRoutines.length === 0 ? (
+              <Card>
+                <div className="px-5 py-4 flex items-center justify-between">
+                  <p className="text-sm text-gray-500">No active routines</p>
+                  <button onClick={() => router.push("/routines/new")} className="text-xs text-[#2D6A4F] font-semibold">
+                    + New
+                  </button>
+                </div>
+              </Card>
+            ) : (
+              <div className="space-y-2">
+                {activeRoutines.map(r => (
+                  <Card key={r.id}>
+                    <button className="w-full text-left px-5 py-3 flex items-center gap-3"
+                      onClick={() => router.push(`/routines/${r.id}`)}>
+                      <span className="text-xl">🔄</span>
+                      <div className="flex-1 min-w-0">
+                        <p className="text-sm font-medium text-gray-800 truncate">{r.name}</p>
+                        <p className="text-xs text-gray-400 truncate">{r.items.map(i => i.item_name).join(", ")}</p>
+                      </div>
+                      {r.next_run_at && (
+                        <p className="text-xs text-[#2D6A4F] font-medium flex-shrink-0">
+                          {new Date(r.next_run_at).toLocaleDateString("en-IN", { day: "numeric", month: "short" })}
+                        </p>
+                      )}
+                    </button>
+                  </Card>
+                ))}
+                <button onClick={() => router.push("/routines/new")} className="w-full text-center text-xs text-[#D8F3DC] py-1">
+                  + New routine
+                </button>
+              </div>
+            )}
+          </div>
         </div>
       )}
     </AppShell>
