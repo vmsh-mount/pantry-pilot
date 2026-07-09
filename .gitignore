@@ -22,6 +22,7 @@ htmlcov/
 app/cockpit/node_modules/
 app/cockpit/.next/
 app/cockpit/out/
+app/cockpit/tsconfig.tsbuildinfo
 
 # macOS
 .DS_Store
