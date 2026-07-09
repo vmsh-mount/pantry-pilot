@@ -7,6 +7,16 @@
 
 ---
 
+## Feature docs
+
+Full-stack feature specifications (frontend + backend + data model).
+
+| Feature | Status | File |
+|---------|--------|------|
+| Routines | ⏳ Pending | [features/routines.md](features/routines.md) |
+
+---
+
 ## Active
 
 | ID | Title | Area | Status | File |
