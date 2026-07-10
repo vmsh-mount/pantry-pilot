@@ -1,10 +1,10 @@
 import uuid
 from datetime import datetime, time
 from sqlalchemy import (
-    String, Integer, Boolean, Text, ARRAY,
+    String, Integer, Float, Boolean, Text, ARRAY,
     Numeric, DateTime, Time, ForeignKey, UniqueConstraint, Index
 )
-from sqlalchemy.dialects.postgresql import UUID
+from sqlalchemy.dialects.postgresql import UUID, JSONB
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 from sqlalchemy.sql import func
 from app.database import Base
@@ -464,3 +464,62 @@ class RoutineRun(Base):
     __table_args__ = (
         Index("idx_routine_runs_routine_id", "routine_id"),
     )
+
+
+# ─────────────────────────────────────────────
+# Flow: Household Model
+# ─────────────────────────────────────────────
+class HouseholdModel(Base):
+    __tablename__ = "household_models"
+
+    id:                      Mapped[str] = mapped_column(UUID(as_uuid=False), primary_key=True, default=gen_uuid)
+    household_id:            Mapped[str] = mapped_column(UUID(as_uuid=False), ForeignKey("households.id", ondelete="CASCADE"), unique=True, nullable=False)
+
+    anchors:                 Mapped[dict] = mapped_column(JSONB, default=list)   # [{item_name, status, promoted_by, promoted_at}]
+    preferences:             Mapped[dict] = mapped_column(JSONB, default=dict)   # per-category: {loyalty_score, preferred_brand, known_brands, rejected_brands, oos_fallbacks}
+    confirmation_behaviour:  Mapped[dict] = mapped_column(JSONB, default=dict)   # {typical_confirm_hour_start, typical_confirm_hour_end, typical_confirm_days, avg_response_lag_minutes, preferred_delivery_lead_hours}
+
+    avg_edit_count:          Mapped[float | None] = mapped_column(Float, nullable=True)
+    reorder_horizon_days:    Mapped[int | None] = mapped_column(Integer, nullable=True)
+    last_evaluated_at:       Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    last_updated:            Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now(), onupdate=func.now())
+
+
+# ─────────────────────────────────────────────
+# Flow: Flow Basket
+# ─────────────────────────────────────────────
+class FlowBasket(Base):
+    __tablename__ = "flow_baskets"
+
+    id:               Mapped[str] = mapped_column(UUID(as_uuid=False), primary_key=True, default=gen_uuid)
+    household_id:     Mapped[str] = mapped_column(UUID(as_uuid=False), ForeignKey("households.id", ondelete="CASCADE"), nullable=False)
+    loop_run_id:      Mapped[str | None] = mapped_column(UUID(as_uuid=False), ForeignKey("loop_runs.id"), nullable=True)
+
+    generated_at:     Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    validated_at:     Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    delivered_at:     Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+
+    generated_items:  Mapped[list] = mapped_column(JSONB, default=list)   # [{item_name, sku_id, brand, quantity, unit, price_at_generation}]
+    validated_items:  Mapped[list] = mapped_column(JSONB, default=list)
+    dropped_items:    Mapped[list] = mapped_column(JSONB, default=list)   # [{item_name, reason: "oos"|"already_ordered"}]
+
+    status:           Mapped[str] = mapped_column(String, default="held")  # "held"|"delivered"|"confirmed"|"expired"|"replaced"
+
+
+# ─────────────────────────────────────────────
+# Flow: Item Signal
+# ─────────────────────────────────────────────
+class ItemSignal(Base):
+    __tablename__ = "item_signals"
+
+    id:              Mapped[str] = mapped_column(UUID(as_uuid=False), primary_key=True, default=gen_uuid)
+    household_id:    Mapped[str] = mapped_column(UUID(as_uuid=False), ForeignKey("households.id", ondelete="CASCADE"), nullable=False)
+    loop_run_id:     Mapped[str | None] = mapped_column(UUID(as_uuid=False), ForeignKey("loop_runs.id"), nullable=True)
+
+    item_name:       Mapped[str] = mapped_column(String, nullable=False)
+    signal_type:     Mapped[str] = mapped_column(String, nullable=False)  # "added"|"removed"|"qty_increased"|"qty_decreased"|"brand_changed"|"accepted"
+
+    previous_value:  Mapped[dict | None] = mapped_column(JSONB, nullable=True)
+    new_value:       Mapped[dict | None] = mapped_column(JSONB, nullable=True)
+
+    recorded_at:     Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
