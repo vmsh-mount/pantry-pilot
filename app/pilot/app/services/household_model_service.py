@@ -17,6 +17,8 @@ from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm.attributes import flag_modified
 
+from app.database import AsyncSessionLocal
+
 from app.models.db import HouseholdModel, ItemSignal, LoopRun
 from app.utils.logging import get_logger
 
@@ -100,48 +102,50 @@ async def build_context(household_id: UUID, db: AsyncSession) -> dict:
 async def process_signals(
     loop_run_id: UUID,
     signals: list[dict],
-    db: AsyncSession,
 ) -> None:
     """
     Persist ItemSignal rows for valid signal_types, then update the HouseholdModel.
 
+    Opens its own DB session so it can be fired as a background task after the
+    caller's session has already committed and closed.
+
     signals shape: [{item_name, signal_type, previous_value, new_value}]
     """
-    # Resolve household_id from LoopRun
-    run_result = await db.execute(
-        select(LoopRun).where(LoopRun.id == str(loop_run_id))
-    )
-    loop_run = run_result.scalars().first()
-    if loop_run is None:
-        logger.warning("process_signals_loop_run_not_found", loop_run_id=str(loop_run_id))
-        return
-
-    household_id = loop_run.household_id
-
-    for sig in signals:
-        signal_type = sig.get("signal_type")
-        if signal_type not in _VALID_SIGNAL_TYPES:
-            logger.warning(
-                "process_signals_unknown_signal_type",
-                signal_type=signal_type,
-                loop_run_id=str(loop_run_id),
-            )
-            continue
-
-        db.add(
-            ItemSignal(
-                household_id=str(household_id),
-                loop_run_id=str(loop_run_id),
-                item_name=sig.get("item_name", ""),
-                signal_type=signal_type,
-                previous_value=sig.get("previous_value"),
-                new_value=sig.get("new_value"),
-            )
+    async with AsyncSessionLocal() as db:
+        run_result = await db.execute(
+            select(LoopRun).where(LoopRun.id == str(loop_run_id))
         )
+        loop_run = run_result.scalars().first()
+        if loop_run is None:
+            logger.warning("process_signals_loop_run_not_found", loop_run_id=str(loop_run_id))
+            return
 
-    await db.flush()
-    await update_model(household_id, loop_run_id, db)
-    await db.commit()
+        household_id = loop_run.household_id
+
+        for sig in signals:
+            signal_type = sig.get("signal_type")
+            if signal_type not in _VALID_SIGNAL_TYPES:
+                logger.warning(
+                    "process_signals_unknown_signal_type",
+                    signal_type=signal_type,
+                    loop_run_id=str(loop_run_id),
+                )
+                continue
+
+            db.add(
+                ItemSignal(
+                    household_id=str(household_id),
+                    loop_run_id=str(loop_run_id),
+                    item_name=sig.get("item_name", ""),
+                    signal_type=signal_type,
+                    previous_value=sig.get("previous_value"),
+                    new_value=sig.get("new_value"),
+                )
+            )
+
+        await db.flush()
+        await update_model(household_id, loop_run_id, db)
+        await db.commit()
 
     logger.info(
         "process_signals_complete",
