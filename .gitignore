@@ -28,6 +28,9 @@ app/cockpit/tsconfig.tsbuildinfo
 .DS_Store
 .idea/
 
+# Claude Code internal state
+.claude/
+
 # Alembic auto-generated (keep migrations, not pycache)
 app/pilot/migrations/__pycache__/
 app/pilot/migrations/versions/__pycache__/

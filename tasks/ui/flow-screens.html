@@ -1,0 +1,492 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<title>Flow — Mobile UI Screens</title>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;background:#F3F4F6;padding:32px 24px;display:flex;flex-wrap:wrap;gap:32px;justify-content:flex-start}
+.frame-wrap{display:flex;flex-direction:column;align-items:center}
+.screen-tag{font-size:10px;font-weight:700;color:#6B7280;text-transform:uppercase;letter-spacing:.08em;margin-bottom:8px;text-align:center;max-width:360px}
+.phone{width:360px;border-radius:36px;overflow:hidden;border:8px solid #1a1a1a;background:#1B4332}
+.statusbar{background:#1B4332;padding:10px 20px 4px;display:flex;align-items:center;justify-content:space-between}
+.sb-time{font-size:13px;font-weight:600;color:white}
+.sb-icons{font-size:11px;color:white;display:flex;gap:5px}
+.shell{background:#1B4332;padding:16px 16px 40px}
+/* shared */
+.logo-bar{display:flex;align-items:center;justify-content:space-between;margin-bottom:16px}
+.logo{display:flex;align-items:center;gap:8px;color:white;font-weight:700;font-size:16px}
+.white-card{background:white;border-radius:20px;overflow:hidden;margin-bottom:12px}
+.card-header{background:#2D6A4F;padding:16px 20px}
+.ch-title{font-size:17px;font-weight:700;color:white}
+.ch-sub{font-size:13px;color:#D8F3DC;margin-top:2px}
+.cat-hdr{display:flex;align-items:center;gap:8px;padding:7px 16px;background:#F7F8F5}
+.cat-lbl{font-size:10px;font-weight:700;color:#6B7280;text-transform:uppercase;letter-spacing:.06em}
+.item-row{display:flex;align-items:flex-start;gap:10px;padding:9px 16px;border-bottom:.5px solid #F9FAFB}
+.item-name{font-size:13px;font-weight:500;color:#111827}
+.item-brand{font-size:11px;color:#9CA3AF;margin-top:1px}
+.item-price{font-size:13px;font-weight:700;color:#111827}
+.item-qty{font-size:11px;color:#9CA3AF;text-align:right;margin-top:1px}
+.total-row{padding:12px 20px;border-top:.5px solid #F3F4F6;display:flex;justify-content:space-between;align-items:center}
+.total-lbl{font-size:13px;font-weight:500;color:#6B7280}
+.total-val{font-size:17px;font-weight:700;color:#111827}
+.approve-btn{width:100%;padding:14px;border-radius:16px;background:#2D6A4F;color:white;font-size:15px;font-weight:700;border:none;margin-bottom:10px;cursor:pointer;text-align:center}
+.skip-btn{width:100%;padding:14px;border-radius:16px;background:white;color:#374151;font-size:14px;font-weight:500;border:none;cursor:pointer;text-align:center}
+.stats-row{display:flex;gap:8px;margin-bottom:12px}
+.stat-chip{flex:1;background:rgba(255,255,255,.10);border-radius:12px;padding:10px 8px;text-align:center}
+.stat-val{font-size:17px;font-weight:700;color:white}
+.stat-lbl{font-size:10px;color:#D8F3DC;margin-top:2px}
+.budget-bar-track{height:6px;background:rgba(255,255,255,.2);border-radius:3px;overflow:hidden;margin-top:10px}
+.budget-bar-fill{height:6px;background:#D8F3DC;border-radius:3px}
+.next-run-card{background:rgba(255,255,255,.08);border-radius:16px;padding:12px 16px;margin-bottom:12px;display:flex;align-items:center;justify-content:space-between}
+.nr-label{font-size:12px;color:#D8F3DC}
+.nr-val{font-size:13px;font-weight:600;color:white}
+.section-title{font-size:12px;font-weight:700;color:#D8F3DC;text-transform:uppercase;letter-spacing:.06em;margin-bottom:8px}
+.routine-chip{background:rgba(255,255,255,.08);border-radius:12px;padding:8px 12px;margin-bottom:8px;display:flex;align-items:center;justify-content:space-between}
+.rc-name{font-size:13px;color:white;font-weight:500}
+.rc-next{font-size:11px;color:#D8F3DC}
+.empty-cart{background:rgba(255,255,255,.06);border-radius:16px;padding:20px;text-align:center;margin-bottom:12px}
+.ec-icon{font-size:28px;margin-bottom:8px}
+.ec-text{font-size:13px;color:#D8F3DC}
+</style>
+</head>
+<body>
+
+<!-- SCREEN 1: Dashboard idle -->
+<div class="frame-wrap">
+  <div class="screen-tag">Screen 1 — Dashboard idle (no basket pending)</div>
+  <div class="phone">
+    <div class="statusbar"><span class="sb-time">9:41</span><div class="sb-icons"><span>●●●</span><span>WiFi</span><span>🔋</span></div></div>
+    <div class="shell">
+      <div class="logo-bar">
+        <div class="logo"><span>🥦</span> PantryPilot</div>
+        <span style="font-size:20px;color:white">⚙</span>
+      </div>
+      <div class="next-run-card">
+        <div><div class="nr-label">Next run</div><div class="nr-val">Thursday, 8:00 AM</div></div>
+        <div style="font-size:11px;color:#D8F3DC;background:rgba(255,255,255,.1);padding:4px 10px;border-radius:20px">Flow on</div>
+      </div>
+      <div class="stats-row">
+        <div class="stat-chip"><div class="stat-val">₹1,240</div><div class="stat-lbl">Last order</div></div>
+        <div class="stat-chip"><div class="stat-val">14</div><div class="stat-lbl">Items</div></div>
+        <div class="stat-chip"><div class="stat-val">6</div><div class="stat-lbl">Routines</div></div>
+      </div>
+      <div class="empty-cart">
+        <div class="ec-icon">🛒</div>
+        <div class="ec-text">No basket yet — Flow will build one before Thursday.</div>
+      </div>
+      <div class="section-title">Routines</div>
+      <div class="routine-chip"><span class="rc-name">🥛 Dairy top-up</span><span class="rc-next">Tomorrow 7 AM</span></div>
+      <div class="routine-chip"><span class="rc-name">🧃 Weekend juices</span><span class="rc-next">Sat 9 AM</span></div>
+    </div>
+  </div>
+</div>
+
+<!-- SCREEN 2: Dashboard generating -->
+<div class="frame-wrap">
+  <div class="screen-tag">Screen 2 — Dashboard generating (in progress)</div>
+  <div class="phone">
+    <div class="statusbar"><span class="sb-time">8:02</span><div class="sb-icons"><span>●●●</span><span>WiFi</span><span>🔋</span></div></div>
+    <div class="shell">
+      <div class="logo-bar">
+        <div class="logo"><span>🥦</span> PantryPilot</div>
+        <span style="font-size:20px;color:white">⚙</span>
+      </div>
+      <div style="background:#FEF3C7;border-radius:14px;padding:12px 16px;margin-bottom:12px;display:flex;align-items:center;gap:10px">
+        <span style="font-size:18px">⏳</span>
+        <div>
+          <div style="font-size:13px;font-weight:700;color:#78350F">Building your basket…</div>
+          <div style="font-size:11px;color:#92400E;margin-top:2px">Checking pantry levels and recent orders</div>
+        </div>
+      </div>
+      <div class="white-card" style="padding:16px 20px">
+        <div style="font-size:13px;font-weight:600;color:#374151;margin-bottom:12px">Planning pipeline</div>
+        <div style="display:flex;gap:4px;align-items:center;margin-bottom:8px">
+          <div style="flex:1;height:6px;background:#2D6A4F;border-radius:3px 0 0 3px"></div>
+          <div style="flex:1;height:6px;background:#2D6A4F"></div>
+          <div style="flex:1;height:6px;background:#D1FAE5"></div>
+          <div style="flex:1;height:6px;background:#E5E7EB;border-radius:0 3px 3px 0"></div>
+        </div>
+        <div style="display:flex;justify-content:space-between;font-size:10px;color:#9CA3AF">
+          <span>Sense</span><span>Plan</span><span style="color:#2D6A4F;font-weight:600">Optimize</span><span>Confirm</span>
+        </div>
+      </div>
+      <div class="stats-row">
+        <div class="stat-chip"><div class="stat-val">₹1,240</div><div class="stat-lbl">Last order</div></div>
+        <div class="stat-chip"><div class="stat-val">14</div><div class="stat-lbl">Items</div></div>
+        <div class="stat-chip"><div class="stat-val">6</div><div class="stat-lbl">Routines</div></div>
+      </div>
+      <div class="empty-cart" style="padding:14px">
+        <div class="ec-icon" style="font-size:22px">🛒</div>
+        <div class="ec-text" style="font-size:12px">Items will appear here when ready</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- SCREEN 3: Basket ready -->
+<div class="frame-wrap">
+  <div class="screen-tag">Screen 3 — Basket ready for review</div>
+  <div class="phone">
+    <div class="statusbar"><span class="sb-time">8:10</span><div class="sb-icons"><span>●●●</span><span>WiFi</span><span>🔋</span></div></div>
+    <div class="shell">
+      <div class="logo-bar">
+        <div class="logo"><span>🥦</span> PantryPilot</div>
+        <span style="font-size:20px;color:white">⚙</span>
+      </div>
+      <div class="white-card">
+        <div class="card-header">
+          <div class="ch-title">Your basket is ready</div>
+          <div class="ch-sub">12 items · ₹1,180 of ₹1,500 budget</div>
+          <div class="budget-bar-track"><div class="budget-bar-fill" style="width:79%"></div></div>
+        </div>
+        <div class="cat-hdr"><span style="font-size:12px">🌾</span><span class="cat-lbl">Staples</span></div>
+        <div class="item-row">
+          <div style="flex:1"><div class="item-name">Toor Dal 1kg</div><div class="item-brand">Fortune</div></div>
+          <div style="text-align:right"><div class="item-price">₹140</div><div class="item-qty">1 kg</div></div>
+        </div>
+        <div class="item-row">
+          <div style="flex:1"><div class="item-name">Basmati Rice 5kg</div><div class="item-brand">India Gate</div></div>
+          <div style="text-align:right"><div class="item-price">₹420</div><div class="item-qty">5 kg</div></div>
+        </div>
+        <div class="cat-hdr"><span style="font-size:12px">🥛</span><span class="cat-lbl">Dairy</span></div>
+        <div class="item-row">
+          <div style="flex:1"><div class="item-name">Full cream milk 500ml</div><div class="item-brand">Amul</div></div>
+          <div style="text-align:right"><div class="item-price">₹30</div><div class="item-qty">×6</div></div>
+        </div>
+        <div class="item-row">
+          <div style="flex:1"><div class="item-name">Curd 400g</div><div class="item-brand">Mother Dairy</div></div>
+          <div style="text-align:right"><div class="item-price">₹50</div><div class="item-qty">1</div></div>
+        </div>
+        <div class="cat-hdr"><span style="font-size:12px">🥦</span><span class="cat-lbl">Vegetables</span></div>
+        <div class="item-row">
+          <div style="flex:1"><div class="item-name">Onions 1kg</div><div class="item-brand">Fresh</div></div>
+          <div style="text-align:right"><div class="item-price">₹40</div><div class="item-qty">1 kg</div></div>
+        </div>
+        <div class="total-row"><span class="total-lbl">Estimated total</span><span class="total-val">₹1,180</span></div>
+      </div>
+      <button class="approve-btn">✅ Approve &amp; order</button>
+      <button class="skip-btn">Skip this week</button>
+    </div>
+  </div>
+</div>
+
+<!-- SCREEN 4: Order confirmed -->
+<div class="frame-wrap">
+  <div class="screen-tag">Screen 4 — Order confirmed</div>
+  <div class="phone">
+    <div class="statusbar"><span class="sb-time">8:11</span><div class="sb-icons"><span>●●●</span><span>WiFi</span><span>🔋</span></div></div>
+    <div class="shell">
+      <div class="logo-bar">
+        <div class="logo"><span>🥦</span> PantryPilot</div>
+        <span style="font-size:20px;color:white">⚙</span>
+      </div>
+      <div style="background:#D1FAE5;border-radius:18px;padding:20px;text-align:center;margin-bottom:12px">
+        <div style="font-size:36px;margin-bottom:8px">✅</div>
+        <div style="font-size:17px;font-weight:700;color:#065F46">Order placed!</div>
+        <div style="font-size:13px;color:#065F46;margin-top:4px">₹1,180 · 12 items</div>
+        <div style="font-size:12px;color:#047857;margin-top:6px">Estimated delivery: 20–30 min</div>
+      </div>
+      <div class="next-run-card">
+        <div><div class="nr-label">Next run</div><div class="nr-val">Next Thursday, 8:00 AM</div></div>
+        <div style="font-size:11px;color:#D8F3DC;background:rgba(255,255,255,.1);padding:4px 10px;border-radius:20px">Flow on</div>
+      </div>
+      <div class="stats-row">
+        <div class="stat-chip"><div class="stat-val">₹1,180</div><div class="stat-lbl">This order</div></div>
+        <div class="stat-chip"><div class="stat-val">12</div><div class="stat-lbl">Items</div></div>
+        <div class="stat-chip"><div class="stat-val">₹320</div><div class="stat-lbl">Saved</div></div>
+      </div>
+      <div class="section-title">Routines</div>
+      <div class="routine-chip"><span class="rc-name">🥛 Dairy top-up</span><span class="rc-next">Tomorrow 7 AM</span></div>
+    </div>
+  </div>
+</div>
+
+<!-- SCREEN 5: Anchor removal prompt -->
+<div class="frame-wrap">
+  <div class="screen-tag">Screen 5 — Anchor removal prompt (single item)</div>
+  <div class="phone">
+    <div class="statusbar"><span class="sb-time">8:12</span><div class="sb-icons"><span>●●●</span><span>WiFi</span><span>🔋</span></div></div>
+    <div class="shell">
+      <div class="logo-bar">
+        <div class="logo"><span>🥦</span> PantryPilot</div>
+      </div>
+      <div class="white-card">
+        <div class="card-header">
+          <div class="ch-title">Your basket is ready</div>
+          <div class="ch-sub">12 items · ₹1,180</div>
+        </div>
+        <div class="cat-hdr"><span style="font-size:12px">🥛</span><span class="cat-lbl">Dairy</span></div>
+        <!-- anchor item being removed -->
+        <div class="item-row" style="background:#FFF7ED;flex-direction:column;gap:6px">
+          <div style="display:flex;align-items:flex-start;gap:10px;width:100%">
+            <div style="flex:1">
+              <div class="item-name" style="text-decoration:line-through;color:#9CA3AF">Full cream milk 500ml ×6</div>
+              <div class="item-brand">Amul</div>
+            </div>
+            <div style="text-align:right"><div class="item-price" style="text-decoration:line-through;color:#9CA3AF">₹180</div></div>
+          </div>
+          <div style="background:white;border-radius:10px;padding:10px;border:.5px solid #FDE68A">
+            <div style="font-size:12px;font-weight:600;color:#78350F;margin-bottom:6px">Skip milk going forward?</div>
+            <div style="font-size:11px;color:#92400E;margin-bottom:8px">It's usually in every basket — let us know if this is a change.</div>
+            <div style="display:flex;gap:6px">
+              <button style="flex:1;padding:7px;border-radius:8px;background:#2D6A4F;color:white;font-size:12px;font-weight:600;border:none;cursor:pointer">Yes, skip it</button>
+              <button style="flex:1;padding:7px;border-radius:8px;background:#F3F4F6;color:#374151;font-size:12px;font-weight:500;border:none;cursor:pointer">Just this once</button>
+            </div>
+          </div>
+        </div>
+        <div class="item-row">
+          <div style="flex:1"><div class="item-name">Curd 400g</div><div class="item-brand">Mother Dairy</div></div>
+          <div style="text-align:right"><div class="item-price">₹50</div><div class="item-qty">1</div></div>
+        </div>
+        <div class="total-row"><span class="total-lbl">Estimated total</span><span class="total-val">₹1,000</span></div>
+      </div>
+      <button class="approve-btn">✅ Approve &amp; order</button>
+      <button class="skip-btn">Skip this week</button>
+    </div>
+  </div>
+</div>
+
+<!-- SCREEN 6: Discontinuity prompt (3+ anchors removed) -->
+<div class="frame-wrap">
+  <div class="screen-tag">Screen 6 — Discontinuity prompt (3+ anchors removed)</div>
+  <div class="phone">
+    <div class="statusbar"><span class="sb-time">8:14</span><div class="sb-icons"><span>●●●</span><span>WiFi</span><span>🔋</span></div></div>
+    <div class="shell">
+      <div class="logo-bar">
+        <div class="logo"><span>🥦</span> PantryPilot</div>
+      </div>
+      <div class="white-card">
+        <div class="card-header">
+          <div class="ch-title">Your basket is ready</div>
+          <div class="ch-sub">9 items · ₹940</div>
+        </div>
+        <div style="margin:10px 12px 0;background:#D8F3DC;border:.5px solid rgba(45,106,79,.25);border-radius:10px;padding:8px 12px;display:flex;justify-content:space-between;align-items:center">
+          <span style="font-size:12px;font-weight:600;color:#1B4332">Removed 3 items</span>
+          <span style="font-size:11px;color:#2D6A4F">✕</span>
+        </div>
+        <div style="margin:10px 12px;background:#FEF3C7;border:.5px solid #FDE68A;border-radius:14px;padding:14px">
+          <div style="font-size:13px;font-weight:700;color:#78350F;margin-bottom:4px">A lot changed this order</div>
+          <div style="font-size:12px;color:#92400E;margin-bottom:10px;line-height:1.4">Did something shift for your household? Let us know so your next basket is right straight away.</div>
+          <button style="width:100%;padding:9px;border-radius:10px;background:#2D6A4F;color:white;font-size:13px;font-weight:600;border:none;cursor:pointer;text-align:center">Tell us what changed →</button>
+        </div>
+        <div class="cat-hdr"><span style="font-size:12px">🥩</span><span class="cat-lbl">Meat &amp; fish</span></div>
+        <div class="item-row" style="opacity:.35">
+          <div style="flex:1"><div class="item-name">Chicken breast 500g</div><div style="display:inline-flex;align-items:center;gap:3px;padding:2px 7px;background:#FEE2E2;border-radius:20px;font-size:10px;font-weight:600;color:#B91C1C;margin-top:3px">✕ removed</div></div>
+          <div style="text-align:right"><div class="item-price" style="text-decoration:line-through;color:#9CA3AF">₹280</div></div>
+        </div>
+        <div class="item-row" style="opacity:.35">
+          <div style="flex:1"><div class="item-name">Eggs tray ×30</div><div style="display:inline-flex;align-items:center;gap:3px;padding:2px 7px;background:#FEE2E2;border-radius:20px;font-size:10px;font-weight:600;color:#B91C1C;margin-top:3px">✕ removed</div></div>
+          <div style="text-align:right"><div class="item-price" style="text-decoration:line-through;color:#9CA3AF">₹189</div></div>
+        </div>
+        <div class="cat-hdr"><span style="font-size:12px">🌾</span><span class="cat-lbl">Staples</span></div>
+        <div class="item-row">
+          <div style="flex:1"><div class="item-name">Toor Dal 1kg</div><div class="item-brand">Fortune</div></div>
+          <div style="text-align:right"><div class="item-price">₹140</div><div class="item-qty">1 kg</div></div>
+        </div>
+        <div class="total-row"><span class="total-lbl">Estimated total</span><span class="total-val">₹940</span></div>
+      </div>
+      <button class="approve-btn">✅ Approve &amp; order</button>
+      <button class="skip-btn">Skip this week</button>
+    </div>
+  </div>
+</div>
+
+<!-- SCREEN 7: Something changed settings -->
+<div class="frame-wrap">
+  <div class="screen-tag">Screen 7 — "Something changed" lifecycle menu</div>
+  <div class="phone">
+    <div class="statusbar"><span class="sb-time">8:14</span><div class="sb-icons"><span>●●●</span><span>WiFi</span><span>🔋</span></div></div>
+    <div class="shell">
+      <div style="display:flex;align-items:center;gap:8px;margin-bottom:20px">
+        <span style="font-size:14px;color:#D8F3DC;font-weight:500;cursor:pointer">← Settings</span>
+      </div>
+      <div style="font-size:20px;font-weight:700;color:white;margin-bottom:4px">Something changed?</div>
+      <div style="font-size:13px;color:#D8F3DC;margin-bottom:20px;line-height:1.4">Tell us what shifted so we can recalibrate your basket straight away.</div>
+
+      <div style="background:white;border-radius:16px;margin-bottom:10px;padding:16px;display:flex;align-items:flex-start;gap:12px;cursor:pointer">
+        <div style="width:36px;height:36px;border-radius:10px;background:#FEF3C7;display:flex;align-items:center;justify-content:center;font-size:18px;flex-shrink:0">🥗</div>
+        <div style="flex:1"><div style="font-size:14px;font-weight:600;color:#111827;margin-bottom:2px">Diet or eating habits</div><div style="font-size:12px;color:#6B7280;line-height:1.4">Went vegetarian, stopped eating meat, started keto, etc.</div></div>
+        <span style="font-size:16px;color:#9CA3AF;align-self:center">›</span>
+      </div>
+
+      <div style="background:white;border-radius:16px;margin-bottom:10px;padding:16px;display:flex;align-items:flex-start;gap:12px;cursor:pointer">
+        <div style="width:36px;height:36px;border-radius:10px;background:#EDE9FE;display:flex;align-items:center;justify-content:center;font-size:18px;flex-shrink:0">👤</div>
+        <div style="flex:1"><div style="font-size:14px;font-weight:600;color:#111827;margin-bottom:2px">Household size changed</div><div style="font-size:12px;color:#6B7280;line-height:1.4">Someone moved in or out — new baby, roommate, partner.</div></div>
+        <span style="font-size:16px;color:#9CA3AF;align-self:center">›</span>
+      </div>
+
+      <div style="background:white;border-radius:16px;margin-bottom:10px;padding:16px;display:flex;align-items:flex-start;gap:12px;cursor:pointer">
+        <div style="width:36px;height:36px;border-radius:10px;background:#DBEAFE;display:flex;align-items:center;justify-content:center;font-size:18px;flex-shrink:0">✈️</div>
+        <div style="flex:1"><div style="font-size:14px;font-weight:600;color:#111827;margin-bottom:2px">Back from a trip</div><div style="font-size:12px;color:#6B7280;line-height:1.4">Reset recent-order history — pantry is emptier than usual.</div></div>
+        <span style="font-size:16px;color:#9CA3AF;align-self:center">›</span>
+      </div>
+
+      <div style="background:white;border-radius:16px;margin-bottom:10px;padding:16px;display:flex;align-items:flex-start;gap:12px;cursor:pointer">
+        <div style="width:36px;height:36px;border-radius:10px;background:#D1FAE5;display:flex;align-items:center;justify-content:center;font-size:18px;flex-shrink:0">📦</div>
+        <div style="flex:1"><div style="font-size:14px;font-weight:600;color:#111827;margin-bottom:2px">Did a big stock-up</div><div style="font-size:12px;color:#6B7280;line-height:1.4">Bought in bulk outside the app — quantities are higher than tracked.</div></div>
+        <span style="font-size:16px;color:#9CA3AF;align-self:center">›</span>
+      </div>
+
+      <button style="width:100%;padding:14px;border-radius:16px;background:transparent;color:#D8F3DC;font-size:14px;font-weight:500;border:1px solid rgba(255,255,255,.2);cursor:pointer;margin-top:4px;text-align:center">Nothing specific — just adjusting</button>
+    </div>
+  </div>
+</div>
+
+<!-- SCREEN 8: First basket / cold start -->
+<div class="frame-wrap">
+  <div class="screen-tag">Screen 8 — First basket (cold start / calibration)</div>
+  <div class="phone">
+    <div class="statusbar"><span class="sb-time">9:00</span><div class="sb-icons"><span>●●●</span><span>WiFi</span><span>🔋</span></div></div>
+    <div class="shell">
+      <div class="logo-bar">
+        <div class="logo"><span>🥦</span> PantryPilot</div>
+      </div>
+      <div style="background:#DBEAFE;border-radius:14px;padding:12px 16px;margin-bottom:12px">
+        <div style="font-size:13px;font-weight:700;color:#1E3A5F;margin-bottom:4px">Your first basket</div>
+        <div style="font-size:12px;color:#1E40AF;line-height:1.4">Edit freely — every change helps us get to know your kitchen. We'll get sharper with each order.</div>
+      </div>
+      <div class="white-card">
+        <div class="card-header">
+          <div class="ch-title">We think you need…</div>
+          <div class="ch-sub">11 items · ₹1,050 est.</div>
+        </div>
+        <div class="cat-hdr"><span style="font-size:12px">🌾</span><span class="cat-lbl">Staples</span></div>
+        <div class="item-row">
+          <div style="flex:1">
+            <div class="item-name">Atta 10kg</div>
+            <div class="item-brand">Aashirvaad · based on your profile</div>
+          </div>
+          <div style="text-align:right"><div class="item-price">₹380</div><div class="item-qty">10 kg</div></div>
+        </div>
+        <div class="item-row">
+          <div style="flex:1">
+            <div class="item-name">Toor Dal 1kg</div>
+            <div class="item-brand">Fortune · based on your profile</div>
+          </div>
+          <div style="text-align:right"><div class="item-price">₹140</div><div class="item-qty">1 kg</div></div>
+        </div>
+        <div class="cat-hdr"><span style="font-size:12px">🥛</span><span class="cat-lbl">Dairy</span></div>
+        <div class="item-row">
+          <div style="flex:1"><div class="item-name">Full cream milk 500ml</div><div class="item-brand">Amul</div></div>
+          <div style="text-align:right"><div class="item-price">₹30</div><div class="item-qty">×6</div></div>
+        </div>
+        <div class="total-row"><span class="total-lbl">Estimated total</span><span class="total-val">₹1,050</span></div>
+      </div>
+      <button class="approve-btn">✅ Looks good — place order</button>
+      <button class="skip-btn">Edit before ordering</button>
+    </div>
+  </div>
+</div>
+
+<!-- SCREEN 9: Onboarding kitchen questions -->
+<div class="frame-wrap">
+  <div class="screen-tag">Screen 9 — Onboarding "Tell us about your kitchen"</div>
+  <div class="phone">
+    <div class="statusbar"><span class="sb-time">9:00</span><div class="sb-icons"><span>●●●</span><span>WiFi</span><span>🔋</span></div></div>
+    <div class="shell">
+      <!-- progress dots -->
+      <div style="display:flex;gap:6px;justify-content:center;margin-bottom:24px">
+        <div style="width:8px;height:8px;border-radius:50%;background:#D8F3DC"></div>
+        <div style="width:8px;height:8px;border-radius:50%;background:#D8F3DC"></div>
+        <div style="width:24px;height:8px;border-radius:4px;background:white"></div>
+        <div style="width:8px;height:8px;border-radius:50%;background:rgba(255,255,255,.3)"></div>
+        <div style="width:8px;height:8px;border-radius:50%;background:rgba(255,255,255,.3)"></div>
+      </div>
+      <div style="font-size:21px;font-weight:700;color:white;margin-bottom:6px">Your kitchen style</div>
+      <div style="font-size:13px;color:#D8F3DC;margin-bottom:20px;line-height:1.4">Two quick questions — helps your first basket land closer to home.</div>
+
+      <div style="font-size:12px;font-weight:700;color:#D8F3DC;text-transform:uppercase;letter-spacing:.06em;margin-bottom:10px">How do you usually cook?</div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:20px">
+        <div style="background:white;border-radius:14px;padding:14px;text-align:center;border:2px solid #2D6A4F">
+          <div style="font-size:22px;margin-bottom:6px">🍲</div>
+          <div style="font-size:13px;font-weight:600;color:#111827">Traditional</div>
+          <div style="font-size:11px;color:#6B7280;margin-top:2px">Dal, sabzi, roti daily</div>
+        </div>
+        <div style="background:rgba(255,255,255,.08);border-radius:14px;padding:14px;text-align:center;border:2px solid transparent">
+          <div style="font-size:22px;margin-bottom:6px">🥗</div>
+          <div style="font-size:13px;font-weight:600;color:white">Mix &amp; match</div>
+          <div style="font-size:11px;color:#D8F3DC;margin-top:2px">Varies week to week</div>
+        </div>
+        <div style="background:rgba(255,255,255,.08);border-radius:14px;padding:14px;text-align:center;border:2px solid transparent">
+          <div style="font-size:22px;margin-bottom:6px">⚡</div>
+          <div style="font-size:13px;font-weight:600;color:white">Quick meals</div>
+          <div style="font-size:11px;color:#D8F3DC;margin-top:2px">Fast, minimal prep</div>
+        </div>
+        <div style="background:rgba(255,255,255,.08);border-radius:14px;padding:14px;text-align:center;border:2px solid transparent">
+          <div style="font-size:22px;margin-bottom:6px">🌍</div>
+          <div style="font-size:13px;font-weight:600;color:white">Experimental</div>
+          <div style="font-size:11px;color:#D8F3DC;margin-top:2px">International, varied</div>
+        </div>
+      </div>
+
+      <div style="font-size:12px;font-weight:700;color:#D8F3DC;text-transform:uppercase;letter-spacing:.06em;margin-bottom:10px">Onion &amp; garlic?</div>
+      <div style="display:flex;gap:8px;margin-bottom:24px">
+        <div style="flex:1;background:white;border-radius:14px;padding:12px;text-align:center;border:2px solid #2D6A4F">
+          <div style="font-size:13px;font-weight:600;color:#111827">Yes, always</div>
+        </div>
+        <div style="flex:1;background:rgba(255,255,255,.08);border-radius:14px;padding:12px;text-align:center;border:2px solid transparent">
+          <div style="font-size:13px;font-weight:600;color:white">No — Jain/Satvik</div>
+        </div>
+      </div>
+
+      <button style="width:100%;padding:14px;border-radius:16px;background:white;color:#1B4332;font-size:15px;font-weight:700;border:none;cursor:pointer;text-align:center">Show my first basket →</button>
+    </div>
+  </div>
+</div>
+
+<!-- SCREEN 10: Delivery validation drops -->
+<div class="frame-wrap">
+  <div class="screen-tag">Screen 10 — Validation drops at delivery time (OOS + already ordered)</div>
+  <div class="phone">
+    <div class="statusbar"><span class="sb-time">7:55</span><div class="sb-icons"><span>●●●</span><span>WiFi</span><span>🔋</span></div></div>
+    <div class="shell">
+      <div class="logo-bar">
+        <div class="logo"><span>🥦</span> PantryPilot</div>
+      </div>
+      <div style="background:#FEE2E2;border-radius:14px;padding:12px 14px;margin-bottom:8px">
+        <div style="font-size:13px;font-weight:700;color:#7F1D1D;margin-bottom:4px">2 items removed before placing</div>
+        <div style="font-size:12px;color:#B91C1C;line-height:1.4">One is out of stock, one you already ordered today. We've adjusted the total.</div>
+      </div>
+      <div class="white-card">
+        <div class="card-header">
+          <div class="ch-title">Placing your order…</div>
+          <div class="ch-sub">10 items · ₹890 (adjusted)</div>
+        </div>
+        <!-- dropped items -->
+        <div style="background:#FFF7F7;padding:10px 16px;border-bottom:.5px solid #FEE2E2">
+          <div style="font-size:10px;font-weight:700;color:#B91C1C;text-transform:uppercase;letter-spacing:.06em;margin-bottom:8px">Dropped</div>
+          <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px">
+            <div>
+              <div style="font-size:13px;font-weight:500;color:#9CA3AF;text-decoration:line-through">Paneer 200g</div>
+              <div style="display:inline-flex;align-items:center;gap:3px;padding:2px 7px;background:#FEE2E2;border-radius:20px;font-size:10px;font-weight:600;color:#B91C1C;margin-top:2px">Out of stock</div>
+            </div>
+            <div style="font-size:13px;color:#9CA3AF;text-decoration:line-through">₹90</div>
+          </div>
+          <div style="display:flex;justify-content:space-between;align-items:center">
+            <div>
+              <div style="font-size:13px;font-weight:500;color:#9CA3AF;text-decoration:line-through">Eggs tray ×30</div>
+              <div style="display:inline-flex;align-items:center;gap:3px;padding:2px 7px;background:#FEE2E2;border-radius:20px;font-size:10px;font-weight:600;color:#B91C1C;margin-top:2px">Already ordered today</div>
+            </div>
+            <div style="font-size:13px;color:#9CA3AF;text-decoration:line-through">₹189</div>
+          </div>
+        </div>
+        <div class="cat-hdr"><span style="font-size:12px">🌾</span><span class="cat-lbl">Staples</span></div>
+        <div class="item-row">
+          <div style="flex:1"><div class="item-name">Atta 10kg</div><div class="item-brand">Aashirvaad</div></div>
+          <div style="text-align:right"><div class="item-price">₹380</div><div class="item-qty">10 kg</div></div>
+        </div>
+        <div class="item-row">
+          <div style="flex:1"><div class="item-name">Toor Dal 1kg</div><div class="item-brand">Fortune</div></div>
+          <div style="text-align:right"><div class="item-price">₹140</div><div class="item-qty">1 kg</div></div>
+        </div>
+        <div class="total-row"><span class="total-lbl">Adjusted total</span><span class="total-val">₹890</span></div>
+      </div>
+      <button class="approve-btn">✅ Place adjusted order</button>
+      <button class="skip-btn">Cancel</button>
+    </div>
+  </div>
+</div>
+
+</body>
+</html>
