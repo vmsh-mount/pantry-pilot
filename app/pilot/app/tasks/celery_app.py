@@ -15,6 +15,7 @@ celery_app = Celery(
         "app.tasks.whatsapp",
         "app.tasks.maintenance",
         "app.tasks.routines",
+        "app.tasks.flow",
     ]
 )
 
@@ -63,6 +64,7 @@ celery_app.conf.update(
         "app.tasks.whatsapp.*":    {"queue": "whatsapp"},
         "app.tasks.maintenance.*": {"queue": "maintenance"},
         "app.tasks.routines.*":    {"queue": "planning"},
+        "app.tasks.flow.*":        {"queue": "planning"},
     },
     beat_schedule={
         "daily-token-expiry-check": {
@@ -76,6 +78,10 @@ celery_app.conf.update(
         "routine-due-check": {
             "task": "app.tasks.routines.check_due_routines",
             "schedule": crontab(minute="*/15"),       # every 15 minutes
+        },
+        "evaluate-flow-signals": {
+            "task": "app.tasks.flow.evaluate_flow_signals",
+            "schedule": crontab(hour="*/4"),          # every 4 hours
         },
     }
 )
