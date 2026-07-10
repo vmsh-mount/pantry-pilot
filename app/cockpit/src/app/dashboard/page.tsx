@@ -427,6 +427,10 @@ export default function DashboardPage() {
         <div className="flex items-center gap-2 text-white">
           <span className="text-xl">🥦</span>
           <span className="font-bold">PantryPilot</span>
+          {/* Flow on badge */}
+          <span className="px-2 py-0.5 rounded-full bg-white/10 text-[#D8F3DC] text-[10px] font-semibold tracking-wide">
+            Flow
+          </span>
         </div>
         <button onClick={() => router.push("/runs")} className="text-[#D8F3DC] text-xs">
           Run history →
@@ -548,6 +552,36 @@ export default function DashboardPage() {
               {successMsg}
             </div>
           )}
+
+          {/* ── Flow status chip ── */}
+          {(() => {
+            const b = basket as NoPendingBasket | null
+            const isInProgress = basket && !basket.pending && b?.in_progress
+            const nextRunAt = b?.next_run_at ?? runsData?.next_run_at ?? null
+            if (isInProgress) {
+              return (
+                <div className="flex items-center gap-2 px-4 py-2.5 rounded-2xl bg-white/10 border border-white/20">
+                  <span className="w-2 h-2 rounded-full bg-amber-400 animate-pulse shrink-0" />
+                  <p className="text-[#D8F3DC] text-sm font-medium">Building your basket…</p>
+                </div>
+              )
+            }
+            if (basket?.pending) return null
+            if (nextRunAt) {
+              const d = new Date(nextRunAt)
+              const dayName = d.toLocaleDateString("en-IN", { weekday: "long" })
+              const hour = d.toLocaleTimeString("en-IN", { hour: "numeric", hour12: true })
+              return (
+                <div className="flex items-center gap-2 px-4 py-2.5 rounded-2xl bg-white/10 border border-white/20">
+                  <span className="w-2 h-2 rounded-full bg-[#52B788] shrink-0" />
+                  <p className="text-[#D8F3DC] text-sm font-medium">
+                    Next run: <span className="text-white font-semibold">{dayName}, {hour}</span>
+                  </p>
+                </div>
+              )
+            }
+            return null
+          })()}
 
           {basket === null || !basket?.pending ? (
             /* ── No pending basket / in-progress / failed ── */

@@ -13,7 +13,7 @@
  * Pause/resume and delete are deliberate actions with confirmation.
  */
 
-import { useEffect, useState, useCallback } from "react"
+import { useEffect, useState, useCallback, useRef } from "react"
 import { useRouter } from "next/navigation"
 import { api } from "@/lib/api"
 import {
@@ -123,6 +123,12 @@ export default function SettingsPage() {
   const [error,    setError]    = useState("")
   const [dialog,   setDialog]   = useState<"pause" | "resume" | "delete" | null>(null)
   const [actionLoading, setActionLoading] = useState(false)
+  const [lifecycleOpen,    setLifecycleOpen]    = useState(false)
+  const [lifecycleSuccess, setLifecycleSuccess] = useState("")
+  const [lifecycleLoading, setLifecycleLoading] = useState<string | null>(null)
+  const [dietSubOpen,      setDietSubOpen]      = useState(false)
+  const [pendingDietEvent, setPendingDietEvent] = useState<string | null>(null)
+  const successTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
 
   // Load settings on mount
   useEffect(() => {
@@ -189,6 +195,33 @@ export default function SettingsPage() {
     const next = { ...settings, preferences: { ...settings.preferences, [key]: value } }
     setSettings(next)
     save({ [key]: value })
+  }
+
+  async function sendLifecycleSignal(eventType: string) {
+    setLifecycleLoading(eventType)
+    try {
+      await fetch("/api/v1/settings/lifecycle-signal", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ event_type: eventType }),
+        credentials: "include",
+      })
+    } catch { /* non-critical */ }
+    setLifecycleLoading(null)
+    setLifecycleSuccess("Got it — your next basket will reflect this.")
+    setLifecycleOpen(false)
+    setDietSubOpen(false)
+    if (successTimerRef.current) clearTimeout(successTimerRef.current)
+    successTimerRef.current = setTimeout(() => setLifecycleSuccess(""), 4000)
+  }
+
+  async function handleDietLifecycle(newDiet: string) {
+    // First PATCH the diet type in settings
+    update("diet_type", newDiet as HouseholdSettings["diet_type"])
+    // Then send lifecycle signal
+    if (pendingDietEvent) await sendLifecycleSignal(pendingDietEvent)
+    setDietSubOpen(false)
+    setPendingDietEvent(null)
   }
 
   async function handlePause() {
@@ -386,6 +419,86 @@ export default function SettingsPage() {
             }
             hint="Separate with commas"
           />
+        </Section>
+
+        {/* Something changed */}
+        <Section title="Something changed?">
+          {lifecycleSuccess ? (
+            <div className="bg-[#D8F3DC] border border-[#2D6A4F]/30 text-[#1B4332] text-sm rounded-2xl px-4 py-3">
+              {lifecycleSuccess}
+            </div>
+          ) : !lifecycleOpen ? (
+            <button
+              onClick={() => setLifecycleOpen(true)}
+              className="w-full flex items-center justify-between px-4 py-3 rounded-2xl border-2 border-dashed border-gray-200 text-sm font-medium text-gray-600 hover:border-[#2D6A4F] hover:text-[#2D6A4F] transition-colors"
+            >
+              <span>Tell us what shifted</span>
+              <span className="text-gray-400">→</span>
+            </button>
+          ) : (
+            <div className="space-y-2">
+              {[
+                { emoji: "🥗", label: "Diet or eating habits",  eventType: "diet_change",    isDiet: true  },
+                { emoji: "👤", label: "Household size changed",  eventType: "new_member",     isDiet: false },
+                { emoji: "✈️", label: "Back from a trip",        eventType: "vacation_return", isDiet: false },
+                { emoji: "📦", label: "Did a big stock-up",      eventType: "major_restock",  isDiet: false },
+              ].map((opt) => (
+                <button
+                  key={opt.eventType}
+                  disabled={!!lifecycleLoading}
+                  onClick={() => {
+                    if (opt.isDiet) {
+                      setPendingDietEvent(opt.eventType)
+                      setDietSubOpen(true)
+                    } else {
+                      sendLifecycleSignal(opt.eventType)
+                    }
+                  }}
+                  className="w-full flex items-center gap-3 px-4 py-3 rounded-2xl bg-[#F7F8F5] hover:bg-[#D8F3DC] transition-colors text-left disabled:opacity-50"
+                >
+                  <span className="text-xl">{opt.emoji}</span>
+                  <span className="text-sm font-medium text-gray-700">{opt.label}</span>
+                  {lifecycleLoading === opt.eventType && (
+                    <Spinner size="sm" />
+                  )}
+                </button>
+              ))}
+              <button
+                onClick={() => { setLifecycleOpen(false); setDietSubOpen(false) }}
+                className="w-full text-center text-xs text-gray-400 py-1 hover:text-gray-600"
+              >
+                Never mind
+              </button>
+            </div>
+          )}
+
+          {/* Diet sub-selection (shown inline below options when diet is picked) */}
+          {dietSubOpen && (
+            <div className="mt-3 space-y-2">
+              <p className="text-xs font-semibold text-gray-500 uppercase tracking-wider">New diet preference</p>
+              {[
+                { value: "vegetarian",     emoji: "🥗", label: "Vegetarian"    },
+                { value: "vegan",          emoji: "🌱", label: "Vegan"          },
+                { value: "jain",           emoji: "🕊️", label: "Jain"           },
+                { value: "non_vegetarian", emoji: "🍗", label: "Non-vegetarian" },
+              ].map((d) => (
+                <button
+                  key={d.value}
+                  onClick={() => handleDietLifecycle(d.value)}
+                  className="w-full flex items-center gap-3 px-4 py-3 rounded-2xl border border-gray-200 bg-white hover:border-[#2D6A4F] transition-colors text-left"
+                >
+                  <span className="text-xl">{d.emoji}</span>
+                  <span className="text-sm font-medium text-gray-700">{d.label}</span>
+                </button>
+              ))}
+              <button
+                onClick={() => { setDietSubOpen(false); setPendingDietEvent(null) }}
+                className="w-full text-center text-xs text-gray-400 py-1 hover:text-gray-600"
+              >
+                Cancel
+              </button>
+            </div>
+          )}
         </Section>
 
         {/* Account */}
