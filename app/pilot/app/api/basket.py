@@ -8,13 +8,47 @@ from sqlalchemy import select, desc
 
 from app.database import get_db
 from app.schemas.common import APIResponse, BasketItemAdd, BasketSearchResult
-from app.models.db import LoopRun, LoopRunItem, HouseholdPreferences, Household
+from app.models.db import LoopRun, LoopRunItem, HouseholdPreferences, Household, FlowBasket, ItemSignal
 from app.services.basket_editing_service import BasketEditingService
 from app.utils.exceptions import TokenExpiredError, SwiggyMCPError
 from app.utils.logging import get_logger
 
 logger = get_logger(__name__)
 router = APIRouter(prefix="/basket", tags=["basket"])
+
+
+def _build_confirm_signals(loop_run_id: str, final_items: list, generated_items: list) -> list[dict]:
+    """Compare final confirmed basket to AI-generated items and return signal dicts."""
+    generated_names = {i.get("item_name", "").lower(): i for i in generated_items}
+    final_names = {i.item_name.lower(): i for i in final_items}
+
+    signals = []
+    for name_lower, item in final_names.items():
+        if name_lower in generated_names:
+            signals.append({
+                "item_name": item.item_name,
+                "signal_type": "accepted",
+                "previous_value": None,
+                "new_value": {"quantity": float(item.quantity or 0), "brand": item.brand},
+            })
+        else:
+            signals.append({
+                "item_name": item.item_name,
+                "signal_type": "added",
+                "previous_value": None,
+                "new_value": {"quantity": float(item.quantity or 0), "brand": item.brand},
+            })
+
+    for name_lower, gen_item in generated_names.items():
+        if name_lower not in final_names:
+            signals.append({
+                "item_name": gen_item.get("item_name", name_lower),
+                "signal_type": "removed",
+                "previous_value": {"quantity": gen_item.get("quantity"), "brand": gen_item.get("brand")},
+                "new_value": None,
+            })
+
+    return signals
 
 
 def _household_id(request: Request) -> str | None:
@@ -165,6 +199,24 @@ async def confirm_basket(request: Request, db: AsyncSession = Depends(get_db)):
     if not items_check.scalar_one_or_none():
         return APIResponse.fail("EMPTY_BASKET", "Cannot confirm an empty basket — no items were resolved.")
 
+    # Load final basket items
+    final_items_result = await db.execute(
+        select(LoopRunItem).where(LoopRunItem.loop_run_id == loop_run.id)
+    )
+    final_items = final_items_result.scalars().all()
+
+    # Look up FlowBasket for generated_items reference
+    flow_basket_result = await db.execute(
+        select(FlowBasket).where(FlowBasket.loop_run_id == loop_run.id).limit(1)
+    )
+    flow_basket = flow_basket_result.scalar_one_or_none()
+    generated_items = flow_basket.generated_items if flow_basket else []
+
+    # Emit ItemSignals for confirm diff
+    from app.services.household_model_service import process_signals
+    signals = _build_confirm_signals(loop_run.id, final_items, generated_items)
+    await process_signals(loop_run.id, signals, db)
+
     # Enqueue placement task
     from app.tasks.planning import place_confirmed_order
     place_confirmed_order.delay(household_id, loop_run.id)
@@ -172,8 +224,15 @@ async def confirm_basket(request: Request, db: AsyncSession = Depends(get_db)):
     loop_run.state       = "confirmed"
     loop_run.user_action = "confirmed"
     from datetime import datetime, timezone
-    loop_run.confirm_responded_at = datetime.now(timezone.utc)
+    now = datetime.now(timezone.utc)
+    loop_run.confirm_responded_at = now
     await db.commit()
+
+    # Update FlowBasket status
+    if flow_basket:
+        flow_basket.status = "confirmed"
+        flow_basket.delivered_at = now
+        await db.commit()
 
     logger.info("basket_confirmed_via_ui", household_id=household_id, loop_run_id=loop_run.id)
     return APIResponse.ok({"confirmed": True, "loop_run_id": loop_run.id})
@@ -271,6 +330,25 @@ async def remove_basket_item(item_id: str, request: Request, db: AsyncSession = 
     if not loop_run:
         return APIResponse.fail("NO_PENDING_BASKET", "No basket is waiting for confirmation.")
 
+    # Fetch item before removal to capture previous_value
+    item_before_result = await db.execute(
+        select(LoopRunItem).where(LoopRunItem.id == item_id)
+    )
+    item_before = item_before_result.scalar_one_or_none()
+
+    # Write signal before applying the edit
+    if item_before:
+        signal = ItemSignal(
+            household_id=household_id,
+            loop_run_id=loop_run.id,
+            item_name=item_before.item_name,
+            signal_type="removed",
+            previous_value={"quantity": float(item_before.quantity or 0), "brand": item_before.brand},
+            new_value=None,
+        )
+        db.add(signal)
+        await db.flush()
+
     svc     = BasketEditingService()
     removed = await svc.remove_item(db, loop_run.id, item_id)
     if removed is None:
@@ -346,6 +424,18 @@ async def add_basket_item(body: BasketItemAdd, request: Request, db: AsyncSessio
         "brand":     body.brand,
         "in_stock":  True,
     }
+
+    # Write signal before adding (previous_value = None for new adds)
+    signal = ItemSignal(
+        household_id=household_id,
+        loop_run_id=loop_run.id,
+        item_name=body.name,
+        signal_type="added",
+        previous_value=None,
+        new_value={"quantity": 1, "brand": body.brand, "sku_id": body.swiggy_product_id},
+    )
+    db.add(signal)
+    await db.flush()
 
     new_item = await svc.add_item(
         db, loop_run, household_id, product,
