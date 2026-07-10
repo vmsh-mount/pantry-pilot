@@ -882,8 +882,10 @@ export default function OnboardPage() {
           if (d.household_type)   setHouseholdType(d.household_type as string)
           if (d.whatsapp_number)  setPhone(d.whatsapp_number as string)
 
-          if (d.whatsapp_verified) {
+          if (d.whatsapp_verified && d.cooking_style) {
             setCurrentStep("allset")
+          } else if (d.whatsapp_verified) {
+            setCurrentStep("kitchen")
           } else if (d.profile_saved) {
             setCurrentStep(waEnabled ? "phone" : "allset")
           } else {

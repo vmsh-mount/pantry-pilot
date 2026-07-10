@@ -216,8 +216,9 @@ export default function SettingsPage() {
   }
 
   async function handleDietLifecycle(newDiet: string) {
-    // First PATCH the diet type in settings
-    update("diet_type", newDiet as HouseholdSettings["diet_type"])
+    // PATCH diet type first, await completion before lifecycle signal
+    if (settings) setSettings({ ...settings, diet_type: newDiet as HouseholdSettings["diet_type"] })
+    await api.settings.update({ diet_type: newDiet })
     // Then send lifecycle signal
     if (pendingDietEvent) await sendLifecycleSignal(pendingDietEvent)
     setDietSubOpen(false)
