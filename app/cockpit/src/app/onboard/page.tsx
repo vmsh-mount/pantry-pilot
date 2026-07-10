@@ -472,6 +472,99 @@ function Step6Otp({
   )
 }
 
+// ── Step 6b: Kitchen questions ────────────────────────────────────────────────
+
+function StepKitchenQuestions({
+  cookingStyle,
+  usesOnionGarlic,
+  onChangeCookingStyle,
+  onChangeOnionGarlic,
+  onNext,
+  onBack,
+  loading,
+}: {
+  cookingStyle:        string
+  usesOnionGarlic:     boolean | null
+  onChangeCookingStyle: (v: string) => void
+  onChangeOnionGarlic:  (v: boolean) => void
+  onNext:  () => void
+  onBack?: () => void
+  loading: boolean
+}) {
+  const cookingOptions = [
+    { value: "south_indian", label: "South Indian", emoji: "🍛" },
+    { value: "north_indian", label: "North Indian",  emoji: "🫓" },
+    { value: "simple_quick", label: "Simple / Quick", emoji: "⚡" },
+    { value: "mixed_varied", label: "Mixed / Varied",  emoji: "🌍" },
+  ]
+
+  const canContinue = !!cookingStyle && usesOnionGarlic !== null
+
+  return (
+    <>
+      <div className="flex-1 overflow-y-auto px-6 pt-2 pb-2 space-y-6">
+        {/* Cooking style grid */}
+        <div>
+          <p className="text-sm font-semibold text-gray-700 mb-3">Cooking style</p>
+          <div className="grid grid-cols-2 gap-3">
+            {cookingOptions.map((opt) => (
+              <button
+                key={opt.value}
+                type="button"
+                onClick={() => onChangeCookingStyle(opt.value)}
+                className={`flex flex-col items-center gap-2 py-4 px-3 rounded-2xl border-2 transition-all
+                  ${cookingStyle === opt.value
+                    ? "border-[#2D6A4F] bg-[#D8F3DC]"
+                    : "border-gray-200 bg-white hover:border-gray-300"
+                  }`}
+              >
+                <span className="text-2xl">{opt.emoji}</span>
+                <span className={`text-xs font-semibold text-center leading-tight
+                  ${cookingStyle === opt.value ? "text-[#1B4332]" : "text-gray-700"}`}>
+                  {opt.label}
+                </span>
+              </button>
+            ))}
+          </div>
+        </div>
+
+        {/* Onion & garlic toggle */}
+        <div>
+          <p className="text-sm font-semibold text-gray-700 mb-3">Onion &amp; garlic?</p>
+          <div className="flex gap-3">
+            {[
+              { value: true,  label: "Yes, always",    emoji: "🧅" },
+              { value: false, label: "No (Jain/Satvik)", emoji: "🕊️" },
+            ].map((opt) => (
+              <button
+                key={String(opt.value)}
+                type="button"
+                onClick={() => onChangeOnionGarlic(opt.value)}
+                className={`flex-1 flex flex-col items-center gap-2 py-4 px-3 rounded-2xl border-2 transition-all
+                  ${usesOnionGarlic === opt.value
+                    ? "border-[#2D6A4F] bg-[#D8F3DC]"
+                    : "border-gray-200 bg-white hover:border-gray-300"
+                  }`}
+              >
+                <span className="text-2xl">{opt.emoji}</span>
+                <span className={`text-xs font-semibold text-center leading-tight
+                  ${usesOnionGarlic === opt.value ? "text-[#1B4332]" : "text-gray-700"}`}>
+                  {opt.label}
+                </span>
+              </button>
+            ))}
+          </div>
+        </div>
+      </div>
+
+      <div className="px-6 pb-6 pt-3 space-y-3 border-t border-gray-100">
+        <Button onClick={onNext} disabled={!canContinue} loading={loading}>Continue →</Button>
+        {onBack && <Button variant="ghost" onClick={onBack}>← Back</Button>}
+      </div>
+    </>
+  )
+}
+
 // ── Step 7: Basket preview ────────────────────────────────────────────────────
 
 function Step7BasketPreview({
@@ -687,6 +780,7 @@ function Step8AllSet({
 type StepKey =
   | "household" | "diet" | "budget"   // questionnaire (Flow B only)
   | "inference"                         // always present
+  | "kitchen"                           // always present (after OTP or after inference)
   | "phone"     | "otp"                 // WA steps, conditional
   | "allset"                            // always present
 
@@ -695,7 +789,7 @@ const QUESTIONNAIRE_STEP_KEYS: StepKey[] = ["household", "diet", "budget"]
 function computeFlow(hasHistory: boolean, whatsappEnabled: boolean): StepKey[] {
   const questionnaire: StepKey[] = hasHistory ? [] : ["household", "diet", "budget"]
   const wa: StepKey[]            = whatsappEnabled ? ["phone", "otp"] : []
-  return [...questionnaire, "inference", ...wa, "allset"]
+  return [...questionnaire, "inference", ...wa, "kitchen", "allset"]
 }
 
 const STEP_META: Record<StepKey, { icon: string; title: string; subtitle: (hasHistory: boolean) => string }> = {
@@ -709,6 +803,7 @@ const STEP_META: Record<StepKey, { icon: string; title: string; subtitle: (hasHi
       ? "Based on your Swiggy order history."
       : "No previous Swiggy orders found. We'll learn your preferences as you shop.",
   },
+  kitchen: { icon: "🍳", title: "Tell us about your kitchen", subtitle: () => "We'll tailor your basket to how you actually cook." },
   phone:  { icon: "📱", title: "Connect WhatsApp",           subtitle: () => "We'll send your basket here every week." },
   otp:    { icon: "🔒", title: "Enter verification code",    subtitle: () => "Check your WhatsApp messages." },
   allset: { icon: "🚀", title: "You're ready to go!",        subtitle: () => "" },
@@ -724,13 +819,16 @@ export default function OnboardPage() {
   const [whatsappEnabled, setWhatsappEnabled] = useState(true)
 
   // Form state
-  const [householdType, setHouseholdType] = useState("couple")
-  const [dietType,      setDietType]      = useState("vegetarian")
-  const [budgetMin,     setBudgetMin]     = useState(1500)
-  const [budgetMax,     setBudgetMax]     = useState(2500)
-  const [phone,         setPhone]         = useState("")
-  const [infer,         setInfer]         = useState<Record<string, unknown> | null>(null)
-  const [error,         setError]         = useState("")
+  const [householdType,    setHouseholdType]    = useState("couple")
+  const [dietType,         setDietType]         = useState("vegetarian")
+  const [budgetMin,        setBudgetMin]        = useState(1500)
+  const [budgetMax,        setBudgetMax]        = useState(2500)
+  const [phone,            setPhone]            = useState("")
+  const [infer,            setInfer]            = useState<Record<string, unknown> | null>(null)
+  const [error,            setError]            = useState("")
+  const [cookingStyle,     setCookingStyle]     = useState("")
+  const [usesOnionGarlic,  setUsesOnionGarlic]  = useState<boolean | null>(null)
+  const [kitchenSaving,    setKitchenSaving]    = useState(false)
 
   // On mount: inference first (sequential), then resume logic
   useEffect(() => {
@@ -784,8 +882,10 @@ export default function OnboardPage() {
           if (d.household_type)   setHouseholdType(d.household_type as string)
           if (d.whatsapp_number)  setPhone(d.whatsapp_number as string)
 
-          if (d.whatsapp_verified) {
+          if (d.whatsapp_verified && d.cooking_style) {
             setCurrentStep("allset")
+          } else if (d.whatsapp_verified) {
+            setCurrentStep("kitchen")
           } else if (d.profile_saved) {
             setCurrentStep(waEnabled ? "phone" : "allset")
           } else {
@@ -823,6 +923,26 @@ export default function OnboardPage() {
       goNext()
     } else {
       setError((res.error as { message?: string })?.message ?? "Could not save profile.")
+    }
+  }
+
+  async function saveKitchenAndAdvance() {
+    setKitchenSaving(true); setError("")
+    const res = await api.onboard.saveProfile({
+      household_type:    householdType as "solo" | "couple" | "family" | "joint_family",
+      member_count:      householdType === "solo" ? 1 : householdType === "couple" ? 2 : householdType === "family" ? 4 : 8,
+      diet_type:         dietType as "vegetarian" | "vegan" | "jain" | "non_vegetarian",
+      weekly_budget_min: budgetMin,
+      weekly_budget_max: budgetMax,
+      allergies:         [],
+      cooking_style:     cookingStyle,
+      uses_onion_garlic: usesOnionGarlic ?? true,
+    } as Parameters<typeof api.onboard.saveProfile>[0])
+    setKitchenSaving(false)
+    if (res.success) {
+      goNext()
+    } else {
+      setError((res.error as { message?: string })?.message ?? "Could not save kitchen preferences.")
     }
   }
 
@@ -950,6 +1070,18 @@ export default function OnboardPage() {
                 phone={phone}
                 onVerified={goNext}
                 onChangeNumber={goBack}
+              />
+            )}
+
+            {currentStep === "kitchen" && (
+              <StepKitchenQuestions
+                cookingStyle={cookingStyle}
+                usesOnionGarlic={usesOnionGarlic}
+                onChangeCookingStyle={setCookingStyle}
+                onChangeOnionGarlic={setUsesOnionGarlic}
+                onNext={saveKitchenAndAdvance}
+                onBack={isFirstStep ? undefined : goBack}
+                loading={kitchenSaving}
               />
             )}
 
