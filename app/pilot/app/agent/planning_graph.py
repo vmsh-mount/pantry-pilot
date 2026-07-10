@@ -750,6 +750,16 @@ async def optimize(state: PlanningState) -> dict:
             db.add(fb)
             await db.commit()
 
+    async with _db_context() as db:
+        from app.models.db import LoopRun
+        from sqlalchemy import update as sa_update
+        await db.execute(
+            sa_update(LoopRun)
+            .where(LoopRun.id == state["loop_run_id"])
+            .values(optimize_completed_at=datetime.now(timezone.utc))
+        )
+        await db.commit()
+
     return {
         "resolved_basket":    resolved_basket,
         "substitutions_made": substitutions_made,
@@ -880,7 +890,6 @@ async def confirm(state: PlanningState) -> dict:
             .where(LoopRun.id == loop_run_id)
             .values(
                 state                = "awaiting_confirmation",
-                optimize_completed_at = now,
                 confirm_sent_at      = now,
                 substitutions_count  = state.get("substitutions_made", 0),
                 items_unavailable    = len(state.get("items_unavailable", [])),
