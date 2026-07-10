@@ -763,13 +763,17 @@ async def optimize(state: PlanningState) -> dict:
 # ══════════════════════════════════════════════════════════════════════════════
 
 async def validate(state: PlanningState) -> dict:
-    """Delivery-time validation: drop OOS items and already-ordered items."""
+    """Planning-pass validation: staleness check only.
+
+    Full OOS/price-refresh/reconciliation runs at delivery time (when basket
+    is sent to the user), not here. Doing per-item MCP searches inline adds
+    N × ~2s latency to every planning run, which is unacceptable.
+    """
     if state.get("should_abort"):
         return {}
 
     from app.models.db import FlowBasket
     items = list(state.get("resolved_basket", []))
-    dropped = []
 
     async with _db_context() as db:
         from sqlalchemy import select
@@ -778,73 +782,17 @@ async def validate(state: PlanningState) -> dict:
         )
         flow_basket = result.scalars().first()
 
-    # Staleness check
+    # Staleness check: if somehow validate runs on a basket >24h old, abort.
     if flow_basket and flow_basket.generated_at:
         age = (datetime.now(timezone.utc) - flow_basket.generated_at).total_seconds()
-        if age > 86400:  # 24 hours
-            return {"status": "failed", "failure_reason": "basket_stale_rerun_needed",
-                    "should_abort": True, "error": "basket_stale_rerun_needed",
-                    "error_stage": "validate"}
+        if age > 86400:
+            return {
+                "should_abort": True,
+                "error": "basket_stale_rerun_needed",
+                "error_stage": "validate",
+            }
 
-    # MCP validation (best-effort — don't fail run on MCP errors)
-    try:
-        from app.providers.factory import get_mcp_provider
-        mcp = get_mcp_provider(state.get("access_token"))
-        address_id = state.get("swiggy_address_id", "")
-
-        # OOS check
-        surviving = []
-        for item in items:
-            try:
-                results = await mcp.search_products(item.get("item_name", ""), address_id)
-                products = results if isinstance(results, list) else getattr(results, "products", [])
-                if products:
-                    # Price refresh
-                    item = dict(item)
-                    first = products[0]
-                    item["unit_price"] = getattr(first, "price", first.get("price", item.get("unit_price", 0))) if not isinstance(first, dict) else first.get("price", item.get("unit_price", 0))
-                    surviving.append(item)
-                else:
-                    dropped.append({**item, "reason": "oos"})
-            except Exception:
-                surviving.append(item)  # keep on error
-
-        # Direct order reconciliation
-        generated_at = flow_basket.generated_at if flow_basket else None
-        if generated_at:
-            try:
-                history = await mcp.get_order_history()
-                recent_items = set()
-                for order in (history or []):
-                    order_time = getattr(order, "created_at", None)
-                    if order_time and order_time > generated_at:
-                        for oi in getattr(order, "items", []):
-                            recent_items.add(getattr(oi, "item_name", "").lower())
-                final = []
-                for item in surviving:
-                    if item.get("item_name", "").lower() in recent_items:
-                        dropped.append({**item, "reason": "already_ordered"})
-                    else:
-                        final.append(item)
-                surviving = final
-            except Exception as e:
-                logger.warning("order_reconciliation_failed", error=str(e))
-
-        items = surviving
-    except Exception:
-        pass  # keep original basket on any validation error
-
-    # Basket collapse check
-    original_value = sum(i.get("unit_price", 0) * i.get("quantity", 1) for i in state.get("resolved_basket", []))
-    dropped_value = sum(i.get("unit_price", 0) * i.get("quantity", 1) for i in dropped)
-    if original_value > 0 and dropped_value / original_value > 0.5:
-        return {
-            "should_abort": True,
-            "error": "basket_collapsed_rerun_needed",
-            "error_stage": "validate",
-        }
-
-    # Persist validated basket
+    # Mark FlowBasket as validated (no MCP calls here)
     if flow_basket:
         async with _db_context() as db:
             from sqlalchemy import select
@@ -855,13 +803,13 @@ async def validate(state: PlanningState) -> dict:
             fb = result.scalars().first()
             if fb:
                 fb.validated_items = items
-                fb.dropped_items = dropped
+                fb.dropped_items = []
                 fb.validated_at = datetime.now(timezone.utc)
                 flag_modified(fb, "validated_items")
                 flag_modified(fb, "dropped_items")
                 await db.commit()
 
-    return {"resolved_basket": items, "dropped_items": dropped}
+    return {"resolved_basket": items, "dropped_items": []}
 
 
 # ══════════════════════════════════════════════════════════════════════════════
