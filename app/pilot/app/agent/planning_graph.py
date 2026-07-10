@@ -2,9 +2,9 @@
 LangGraph planning graph — the five-stage pipeline.
 
 Graph topology:
-  sense → plan_rules → plan_llm → optimize → confirm → place → END
-                                                  ↓ (skip/abort)
-                                                 END
+  build_household_context → sense → plan_rules → plan_llm → optimize → validate → confirm → place → END
+                                                                                        ↓ (skip/abort)
+                                                                                       END
 
 Each node is an async function that receives PlanningState, mutates it,
 and returns the updated state. LangGraph merges returned dicts into state.
@@ -47,6 +47,18 @@ _MIN_BASKET_SIZE = 8
 
 # ── Recent order recency guard (days) ────────────────────────────────────────
 _RECENCY_GUARD_DAYS = 3
+
+
+# ══════════════════════════════════════════════════════════════════════════════
+# Node 0 — BUILD HOUSEHOLD CONTEXT
+# ══════════════════════════════════════════════════════════════════════════════
+
+async def build_household_context(state: PlanningState) -> dict:
+    """Assembles household model context for the planning LLM."""
+    from app.services.household_model_service import build_context
+    async with _db_context() as db:
+        ctx = await build_context(state["household_id"], db)
+    return {"household_context": ctx}
 
 
 # ══════════════════════════════════════════════════════════════════════════════
@@ -429,6 +441,17 @@ Respond with ONLY valid JSON in this exact format:
 If no additions are needed, return an empty additions list.
 """
 
+    hh_ctx = state.get("household_context") or {}
+    if hh_ctx.get("anchors") or hh_ctx.get("exclusions"):
+        household_section = f"""
+--- Household Model ---
+Anchors (always include unless clearly overstocked): {hh_ctx.get('anchors', [])}
+Exclusions (do NOT suggest these): {hh_ctx.get('exclusions', [])}
+Brand preferences: {hh_ctx.get('brand_preferences', {})}
+Average user edits per basket: {hh_ctx.get('avg_edit_count', 0)}
+"""
+        user_prompt = user_prompt + household_section
+
     from app.providers.factory import get_llm_provider
     llm = get_llm_provider()
     start_ms = int(time.monotonic() * 1000)
@@ -699,6 +722,34 @@ async def optimize(state: PlanningState) -> dict:
         estimated_total    = estimated_total,
     )
 
+    # Create FlowBasket to track this generation
+    from app.models.db import FlowBasket
+    async with _db_context() as db:
+        from sqlalchemy import select
+        existing = await db.execute(
+            select(FlowBasket).where(FlowBasket.loop_run_id == state["loop_run_id"])
+        )
+        if not existing.scalars().first():
+            fb = FlowBasket(
+                household_id=state["household_id"],
+                loop_run_id=state["loop_run_id"],
+                generated_at=datetime.now(timezone.utc),
+                generated_items=[
+                    {
+                        "item_name": item.get("item_name", ""),
+                        "sku_id": item.get("sku_id", ""),
+                        "brand": item.get("brand", ""),
+                        "quantity": item.get("quantity", 1),
+                        "unit": item.get("unit", ""),
+                        "price_at_generation": item.get("unit_price", 0),
+                    }
+                    for item in resolved_basket
+                ],
+                status="held",
+            )
+            db.add(fb)
+            await db.commit()
+
     return {
         "resolved_basket":    resolved_basket,
         "substitutions_made": substitutions_made,
@@ -708,7 +759,113 @@ async def optimize(state: PlanningState) -> dict:
 
 
 # ══════════════════════════════════════════════════════════════════════════════
-# Node 4 — CONFIRM
+# Node 4 — VALIDATE
+# ══════════════════════════════════════════════════════════════════════════════
+
+async def validate(state: PlanningState) -> dict:
+    """Delivery-time validation: drop OOS items and already-ordered items."""
+    if state.get("should_abort"):
+        return {}
+
+    from app.models.db import FlowBasket
+    items = list(state.get("resolved_basket", []))
+    dropped = []
+
+    async with _db_context() as db:
+        from sqlalchemy import select
+        result = await db.execute(
+            select(FlowBasket).where(FlowBasket.loop_run_id == state["loop_run_id"])
+        )
+        flow_basket = result.scalars().first()
+
+    # Staleness check
+    if flow_basket and flow_basket.generated_at:
+        age = (datetime.now(timezone.utc) - flow_basket.generated_at).total_seconds()
+        if age > 86400:  # 24 hours
+            return {"status": "failed", "failure_reason": "basket_stale_rerun_needed",
+                    "should_abort": True, "error": "basket_stale_rerun_needed",
+                    "error_stage": "validate"}
+
+    # MCP validation (best-effort — don't fail run on MCP errors)
+    try:
+        from app.providers.factory import get_mcp_provider
+        mcp = get_mcp_provider(state.get("access_token"))
+        address_id = state.get("swiggy_address_id", "")
+
+        # OOS check
+        surviving = []
+        for item in items:
+            try:
+                results = await mcp.search_products(item.get("item_name", ""), address_id)
+                products = results if isinstance(results, list) else getattr(results, "products", [])
+                if products:
+                    # Price refresh
+                    item = dict(item)
+                    first = products[0]
+                    item["unit_price"] = getattr(first, "price", first.get("price", item.get("unit_price", 0))) if not isinstance(first, dict) else first.get("price", item.get("unit_price", 0))
+                    surviving.append(item)
+                else:
+                    dropped.append({**item, "reason": "oos"})
+            except Exception:
+                surviving.append(item)  # keep on error
+
+        # Direct order reconciliation
+        generated_at = flow_basket.generated_at if flow_basket else None
+        if generated_at:
+            try:
+                history = await mcp.get_order_history()
+                recent_items = set()
+                for order in (history or []):
+                    order_time = getattr(order, "created_at", None)
+                    if order_time and order_time > generated_at:
+                        for oi in getattr(order, "items", []):
+                            recent_items.add(getattr(oi, "item_name", "").lower())
+                final = []
+                for item in surviving:
+                    if item.get("item_name", "").lower() in recent_items:
+                        dropped.append({**item, "reason": "already_ordered"})
+                    else:
+                        final.append(item)
+                surviving = final
+            except Exception as e:
+                logger.warning("order_reconciliation_failed", error=str(e))
+
+        items = surviving
+    except Exception:
+        pass  # keep original basket on any validation error
+
+    # Basket collapse check
+    original_value = sum(i.get("unit_price", 0) * i.get("quantity", 1) for i in state.get("resolved_basket", []))
+    dropped_value = sum(i.get("unit_price", 0) * i.get("quantity", 1) for i in dropped)
+    if original_value > 0 and dropped_value / original_value > 0.5:
+        return {
+            "should_abort": True,
+            "error": "basket_collapsed_rerun_needed",
+            "error_stage": "validate",
+        }
+
+    # Persist validated basket
+    if flow_basket:
+        async with _db_context() as db:
+            from sqlalchemy import select
+            from sqlalchemy.orm.attributes import flag_modified
+            result = await db.execute(
+                select(FlowBasket).where(FlowBasket.loop_run_id == state["loop_run_id"])
+            )
+            fb = result.scalars().first()
+            if fb:
+                fb.validated_items = items
+                fb.dropped_items = dropped
+                fb.validated_at = datetime.now(timezone.utc)
+                flag_modified(fb, "validated_items")
+                flag_modified(fb, "dropped_items")
+                await db.commit()
+
+    return {"resolved_basket": items, "dropped_items": dropped}
+
+
+# ══════════════════════════════════════════════════════════════════════════════
+# Node 5 — CONFIRM
 # ══════════════════════════════════════════════════════════════════════════════
 
 async def confirm(state: PlanningState) -> dict:
@@ -1100,19 +1257,22 @@ def build_planning_graph() -> StateGraph:
     """
     Assemble the LangGraph StateGraph for the planning pipeline.
 
-    Nodes: sense → plan_rules → plan_llm → optimize → confirm
+    Nodes: build_household_context → sense → plan_rules → plan_llm → optimize → validate → confirm
     (place is called separately by PlanningService.run_place())
     """
     graph = StateGraph(PlanningState)
 
+    graph.add_node("build_household_context", build_household_context)
     graph.add_node("sense",      sense)
     graph.add_node("plan_rules", plan_rules)
     graph.add_node("plan_llm",   plan_llm)
     graph.add_node("optimize",   optimize)
+    graph.add_node("validate",   validate)
     graph.add_node("confirm",    confirm)
 
     # Edges
-    graph.set_entry_point("sense")
+    graph.set_entry_point("build_household_context")
+    graph.add_edge("build_household_context", "sense")
 
     graph.add_conditional_edges(
         "sense",
@@ -1131,6 +1291,11 @@ def build_planning_graph() -> StateGraph:
     )
     graph.add_conditional_edges(
         "optimize",
+        should_continue,
+        {"continue": "validate", "abort": END},
+    )
+    graph.add_conditional_edges(
+        "validate",
         should_continue,
         {"continue": "confirm", "abort": END},
     )

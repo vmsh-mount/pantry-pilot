@@ -122,6 +122,10 @@ class PlanningState(TypedDict, total=False):
     final_total:            float
     estimated_delivery:     Optional[str]
 
+    # FLOW
+    household_context:      dict   # assembled by build_household_context node; default {}
+    dropped_items:          list   # items dropped by validate node; default []
+
     # Control
     error:                  Optional[str]
     error_stage:            Optional[str]
