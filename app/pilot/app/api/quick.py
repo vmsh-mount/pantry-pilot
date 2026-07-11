@@ -112,8 +112,8 @@ async def search_products(
         return APIResponse.fail("NOT_AUTHENTICATED", "Not authenticated.")
 
     try:
-        svc = BasketEditingService(db)
-        results = await svc.search_products(household_id, q, limit=limit)
+        svc = BasketEditingService()
+        results = await svc.search_items(db, household_id, q, limit=limit)
     except TokenExpiredError:
         return APIResponse.fail("TOKEN_EXPIRED", "Swiggy session expired.")
     except SwiggyMCPError as e:
