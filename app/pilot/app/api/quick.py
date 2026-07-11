@@ -129,7 +129,7 @@ async def search_products(
                 "sku_id":     _p(r, "sku_id"),
                 "item_name":  _p(r, "name") or _p(r, "item_name", ""),
                 "brand":      _p(r, "brand"),
-                "unit":       _p(r, "unit", "units"),
+                "unit":       _p(r, "unit", None) or _p(r, "quantity", None) or "units",
                 "unit_price": float(_p(r, "price") or _p(r, "unit_price", 0)),
                 "in_stock":   _p(r, "in_stock", True),
                 "image_url":  _p(r, "image_url"),

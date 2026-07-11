@@ -4,11 +4,12 @@ import { useEffect, useRef, useState } from "react"
 import { useRouter } from "next/navigation"
 import {
   api,
+  type ProductSearchResult,
   type QuickBasketItem,
-  type QuickSearchResult,
   type QuickOrderResult,
 } from "@/lib/api"
 import { AppShell, Spinner } from "@/components/ui"
+import { BasketItemRow } from "@/components/basket/BasketItemRow"
 
 type View = "search" | "basket" | "confirmed"
 
@@ -17,7 +18,7 @@ export default function QuickOrderPage() {
   const [view, setView]             = useState<View>("search")
   const [query, setQuery]           = useState("")
   const [searching, setSearching]   = useState(false)
-  const [results, setResults]       = useState<QuickSearchResult[]>([])
+  const [results, setResults]       = useState<ProductSearchResult[]>([])
   const [basket, setBasket]         = useState<QuickBasketItem[]>([])
   const [total, setTotal]           = useState(0)
   const [placing, setPlacing]       = useState(false)
@@ -25,10 +26,9 @@ export default function QuickOrderPage() {
   const [error, setError]           = useState<string | null>(null)
   const [searchError, setSearchError] = useState<string | null>(null)
   const [addingSkus, setAddingSkus] = useState<Set<string>>(new Set())
-  const searchTimer                 = useRef<ReturnType<typeof setTimeout>>()
+  const searchTimer                 = useRef<ReturnType<typeof setTimeout> | undefined>(undefined)
   const inputRef                    = useRef<HTMLInputElement>(null)
 
-  // Load basket on mount
   useEffect(() => {
     api.quick.getBasket().then(res => {
       if (res.success && res.data) {
@@ -59,7 +59,7 @@ export default function QuickOrderPage() {
     return () => clearTimeout(searchTimer.current)
   }, [query])
 
-  async function addToBasket(item: QuickSearchResult) {
+  async function addToBasket(item: ProductSearchResult) {
     if (!item.sku_id) return
     setAddingSkus(prev => new Set(prev).add(item.sku_id!))
     const res = await api.quick.addItem({
@@ -76,7 +76,7 @@ export default function QuickOrderPage() {
       setBasket(updated)
       setTotal(updated.reduce((s, i) => s + i.unit_price * i.quantity, 0))
     } else {
-      setError("Could not add item. Please try again.")
+      setError(res.error?.message ?? "Could not add item. Please try again.")
     }
   }
 
@@ -88,7 +88,7 @@ export default function QuickOrderPage() {
       setBasket(updated)
       setTotal(updated.reduce((s, i) => s + i.unit_price * i.quantity, 0))
     } else {
-      setError("Could not update quantity. Please try again.")
+      setError(res.error?.message ?? "Could not update quantity.")
     }
   }
 
@@ -99,15 +99,13 @@ export default function QuickOrderPage() {
       setBasket(updated)
       setTotal(updated.reduce((s, i) => s + i.unit_price * i.quantity, 0))
     } else {
-      setError("Could not remove item. Please try again.")
+      setError(res.error?.message ?? "Could not remove item.")
     }
   }
 
   async function placeOrder() {
     setPlacing(true)
     setError(null)
-    // No address passed — backend uses household's preferred_address_id.
-    // Address picker (api.quick.addresses) is available for a future "change address" flow.
     const res = await api.quick.checkout()
     setPlacing(false)
     if (res.success && res.data) {
@@ -136,9 +134,9 @@ export default function QuickOrderPage() {
             <p className="font-bold text-gray-900 text-lg">Order confirmed!</p>
             <p className="text-gray-500 text-sm mt-1">Swiggy ID: {order.swiggy_order_id}</p>
           </div>
-          <div className="space-y-2">
+          <div className="divide-y divide-gray-50">
             {order.items.map(i => (
-              <div key={i.id} className="flex justify-between text-sm text-gray-700">
+              <div key={i.id} className="flex justify-between py-2 text-sm text-gray-700">
                 <span>{i.item_name}{i.brand ? ` · ${i.brand}` : ""} ×{i.quantity}</span>
                 <span>₹{(i.unit_price * i.quantity).toFixed(0)}</span>
               </div>
@@ -174,29 +172,22 @@ export default function QuickOrderPage() {
           <div className="text-center text-white/60 py-16">Basket is empty</div>
         ) : (
           <div className="space-y-3">
-            {basket.map(item => (
-              <div key={item.id} className="bg-white rounded-2xl px-4 py-3 flex items-center justify-between gap-3">
-                <div className="flex-1 min-w-0">
-                  <p className="font-semibold text-gray-900 text-sm truncate">{item.item_name}</p>
-                  {item.brand && <p className="text-gray-400 text-xs">{item.brand}</p>}
-                  <p className="text-[#2D6A4F] text-xs mt-0.5">₹{item.unit_price} / {item.unit}</p>
-                </div>
-                <div className="flex items-center gap-2 shrink-0">
-                  <button
-                    onClick={() => updateQty(item.id, item.quantity - 1)}
-                    className="w-7 h-7 rounded-full bg-gray-100 text-gray-600 font-bold text-base flex items-center justify-center"
-                  >−</button>
-                  <span className="w-5 text-center text-sm font-semibold text-gray-900">{item.quantity}</span>
-                  <button
-                    onClick={() => updateQty(item.id, item.quantity + 1)}
-                    className="w-7 h-7 rounded-full bg-[#2D6A4F] text-white font-bold text-base flex items-center justify-center"
-                  >+</button>
-                </div>
-                <span className="text-sm font-semibold text-gray-900 w-12 text-right shrink-0">
-                  ₹{(item.unit_price * item.quantity).toFixed(0)}
-                </span>
-              </div>
-            ))}
+            <div className="bg-white rounded-2xl overflow-hidden divide-y divide-gray-50">
+              {basket.map(item => (
+                <BasketItemRow
+                  key={item.id}
+                  id={item.id}
+                  item_name={item.item_name}
+                  brand={item.brand}
+                  unit={item.unit}
+                  unit_price={item.unit_price}
+                  quantity={item.quantity}
+                  showStepper
+                  onRemove={removeItem}
+                  onQtyChange={updateQty}
+                />
+              ))}
+            </div>
 
             <div className="bg-white/10 rounded-2xl px-4 py-3 flex justify-between text-white font-semibold">
               <span>Total</span>
@@ -223,13 +214,11 @@ export default function QuickOrderPage() {
   // ── Search ─────────────────────────────────────────────────────────────────
   return (
     <AppShell>
-      {/* Header */}
       <div className="flex items-center gap-2 px-1 mb-5">
         <button onClick={() => router.push("/dashboard")} className="text-[#D8F3DC] text-lg">←</button>
         <span className="text-white font-bold text-lg">Quick Order</span>
       </div>
 
-      {/* Search bar */}
       <div className="relative mb-4">
         <span className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400 text-lg">🔍</span>
         <input
@@ -247,45 +236,53 @@ export default function QuickOrderPage() {
         )}
       </div>
 
-      {/* Results */}
-      <div className="space-y-2 pb-24">
+      <div className="pb-24">
         {searchError && (
           <p className="text-center text-red-300 text-sm py-4">{searchError}</p>
         )}
         {!searchError && results.length === 0 && query && !searching && (
           <p className="text-center text-white/50 text-sm py-8">No results for "{query}"</p>
         )}
-        {results.map((r, idx) => {
-          const inBasket = !!r.sku_id && basket.some(b => b.sku_id === r.sku_id)
-          const isAdding = !!r.sku_id && addingSkus.has(r.sku_id)
-          const noSku    = !r.sku_id
-          const disabled = !r.in_stock || inBasket || isAdding || noSku
-          return (
-            <div key={r.sku_id ?? idx} className="bg-white rounded-2xl px-4 py-3 flex items-center gap-3">
-              <div className="flex-1 min-w-0">
-                <p className="font-semibold text-gray-900 text-sm truncate">{r.item_name}</p>
-                {r.brand && <p className="text-gray-400 text-xs">{r.brand}</p>}
-                <p className="text-[#2D6A4F] text-xs mt-0.5">₹{r.unit_price} / {r.unit}</p>
-              </div>
-              <button
-                onClick={() => addToBasket(r)}
-                disabled={disabled}
-                className={`shrink-0 px-4 py-2 rounded-xl text-sm font-semibold transition-colors ${
-                  inBasket
-                    ? "bg-gray-100 text-gray-400 cursor-default"
-                    : r.in_stock && !noSku
-                    ? "bg-[#2D6A4F] text-white"
-                    : "bg-gray-100 text-gray-400 cursor-not-allowed"
-                }`}
-              >
-                {isAdding ? "…" : inBasket ? "Added" : r.in_stock && !noSku ? "Add" : "OOS"}
-              </button>
-            </div>
-          )
-        })}
+
+        {results.length > 0 && (
+          <div className="bg-white rounded-2xl overflow-hidden divide-y divide-gray-50">
+            {results.map((r, idx) => {
+              const inBasket = !!r.sku_id && basket.some(b => b.sku_id === r.sku_id)
+              const isAdding = !!r.sku_id && addingSkus.has(r.sku_id)
+              const disabled = !r.in_stock || inBasket || isAdding || !r.sku_id
+              return (
+                <div key={r.sku_id ?? idx} className="flex items-center gap-3 px-4 py-3">
+                  {r.image_url ? (
+                    /* eslint-disable-next-line @next/next/no-img-element */
+                    <img src={r.image_url} alt={r.item_name} className="w-10 h-10 rounded-xl object-cover shrink-0" />
+                  ) : (
+                    <div className="w-10 h-10 rounded-xl bg-gray-100 flex items-center justify-center text-xl shrink-0">🛒</div>
+                  )}
+                  <div className="flex-1 min-w-0">
+                    <p className="font-medium text-gray-900 text-sm truncate">{r.item_name}</p>
+                    {r.brand && <p className="text-gray-400 text-xs">{r.brand}</p>}
+                    <p className="text-[#2D6A4F] text-xs mt-0.5">₹{r.unit_price} / {r.unit}</p>
+                  </div>
+                  <button
+                    onClick={() => addToBasket(r)}
+                    disabled={disabled}
+                    className={`shrink-0 px-4 py-2 rounded-xl text-sm font-semibold transition-colors ${
+                      inBasket
+                        ? "bg-gray-100 text-gray-400 cursor-default"
+                        : r.in_stock && r.sku_id
+                        ? "bg-[#2D6A4F] text-white"
+                        : "bg-gray-100 text-gray-400 cursor-not-allowed"
+                    }`}
+                  >
+                    {isAdding ? "…" : inBasket ? "Added" : r.in_stock && r.sku_id ? "Add" : "OOS"}
+                  </button>
+                </div>
+              )
+            })}
+          </div>
+        )}
       </div>
 
-      {/* Sticky basket chip */}
       {basketCount > 0 && (
         <div className="fixed bottom-6 left-0 right-0 px-6 z-10">
           <button

@@ -185,7 +185,7 @@ def _serialize(routine: Routine) -> RoutineOut:
                 item_name=item.item_name,
                 quantity=float(item.quantity),
                 unit=item.unit,
-                swiggy_product_id=item.swiggy_product_id,
+                sku_id=item.swiggy_product_id,
                 swiggy_product_name=item.swiggy_product_name,
             )
             for item in routine.items
@@ -255,7 +255,7 @@ class RoutinesService:
                 item_name=item_in.item_name,
                 quantity=item_in.quantity,
                 unit=item_in.unit,
-                swiggy_product_id=item_in.swiggy_product_id,
+                swiggy_product_id=item_in.sku_id,
                 swiggy_product_name=item_in.swiggy_product_name,
             ))
 
@@ -296,7 +296,7 @@ class RoutinesService:
                     item_name=item_in.item_name,
                     quantity=item_in.quantity,
                     unit=item_in.unit,
-                    swiggy_product_id=item_in.swiggy_product_id,
+                    swiggy_product_id=item_in.sku_id,
                     swiggy_product_name=item_in.swiggy_product_name,
                 ))
 

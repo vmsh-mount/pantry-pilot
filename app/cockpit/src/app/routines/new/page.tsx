@@ -2,15 +2,15 @@
 
 import { useState, useEffect, useRef } from "react"
 import { useRouter } from "next/navigation"
-import { api } from "@/lib/api"
+import { api, type ProductSearchResult } from "@/lib/api"
 import { AppShell, Button, Alert, Spinner } from "@/components/ui"
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 
-interface SearchResult { swiggy_product_id: string; name: string; price: number; brand?: string }
+type SearchResult = ProductSearchResult
 interface SelectedItem {
   item_name: string; quantity: number; unit: string
-  swiggy_product_id?: string; swiggy_product_name?: string
+  sku_id?: string | null; swiggy_product_name?: string
 }
 
 // ── Step bar ──────────────────────────────────────────────────────────────────
@@ -48,20 +48,20 @@ function Step1({
     debounceRef.current = setTimeout(async () => {
       setSearching(true)
       const res = await api.products.search(q)
-      if (res.success && res.data) setResults(res.data as SearchResult[])
+      if (res.success && res.data) setResults(Array.isArray(res.data) ? res.data : [])
       setSearching(false)
     }, 400)
   }
 
   function addItem(r: SearchResult) {
-    if (items.some(i => i.swiggy_product_id === r.swiggy_product_id)) return
+    if (items.some(i => i.sku_id === r.sku_id)) return
     if (debounceRef.current) clearTimeout(debounceRef.current)
     setItems([...items, {
-      item_name: r.name,
+      item_name: r.item_name,
       quantity: 1,
-      unit: "unit",
-      swiggy_product_id: r.swiggy_product_id,
-      swiggy_product_name: r.name,
+      unit: r.unit || "unit",
+      sku_id: r.sku_id,
+      swiggy_product_name: r.item_name,
     }])
     setQuery("")
     setResults([])
@@ -104,15 +104,17 @@ function Step1({
 
           {results.length > 0 && (
             <div className="mt-1 border border-gray-100 rounded-xl overflow-hidden shadow-sm">
-              {results.slice(0, 5).map(r => (
+              {results.slice(0, 5).map((r, idx) => (
                 <button
-                  key={r.swiggy_product_id}
-                  className="w-full text-left px-4 py-2.5 text-sm hover:bg-gray-50 border-b border-gray-50 last:border-0"
+                  key={r.sku_id ?? idx}
+                  className="w-full text-left px-4 py-2.5 text-sm hover:bg-gray-50 border-b border-gray-50 last:border-0 disabled:opacity-40"
                   onClick={() => addItem(r)}
+                  disabled={!r.in_stock}
                 >
-                  <span className="font-medium text-gray-800">{r.name}</span>
+                  <span className="font-medium text-gray-800">{r.item_name}</span>
                   {r.brand && <span className="text-gray-400 ml-1 text-xs">· {r.brand}</span>}
-                  <span className="float-right text-[#2D6A4F] font-medium">₹{r.price}</span>
+                  {!r.in_stock && <span className="text-red-400 ml-1 text-xs">out of stock</span>}
+                  <span className="float-right text-[#2D6A4F] font-medium">₹{r.unit_price} / {r.unit}</span>
                 </button>
               ))}
             </div>
@@ -421,7 +423,7 @@ export default function NewRoutinePage() {
         item_name: i.item_name,
         quantity: i.quantity,
         unit: i.unit,
-        swiggy_product_id: i.swiggy_product_id,
+        sku_id: i.sku_id,
         swiggy_product_name: i.swiggy_product_name,
       })),
       frequency_type: freqType,

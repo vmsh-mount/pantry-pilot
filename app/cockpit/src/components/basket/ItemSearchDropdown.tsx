@@ -1,30 +1,25 @@
 "use client"
 
 import { useEffect, useRef, useState } from "react"
+import type { ProductSearchResult } from "@/lib/api"
 
-export interface SearchProduct {
-  swiggy_product_id: string
-  name:              string
-  price:             number
-  image_url:         string | null
-  brand:             string | null
-}
+// Keep the old name exported so any existing import still compiles.
+export type SearchProduct = ProductSearchResult
 
 interface Props {
-  onSelect: (product: SearchProduct) => void
-  onSearch: (q: string) => Promise<SearchProduct[]>
+  onSelect:  (product: ProductSearchResult) => void
+  onSearch:  (q: string) => Promise<ProductSearchResult[]>
   disabled?: boolean
 }
 
 export function ItemSearchDropdown({ onSelect, onSearch, disabled }: Props) {
   const [open,    setOpen]    = useState(false)
   const [query,   setQuery]   = useState("")
-  const [results, setResults] = useState<SearchProduct[]>([])
+  const [results, setResults] = useState<ProductSearchResult[]>([])
   const [loading, setLoading] = useState(false)
   const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
   const inputRef = useRef<HTMLInputElement>(null)
 
-  // Debounced search
   useEffect(() => {
     if (!query || query.trim().length < 2) {
       setResults([])
@@ -46,7 +41,7 @@ export function ItemSearchDropdown({ onSelect, onSearch, disabled }: Props) {
     return () => { if (timerRef.current) clearTimeout(timerRef.current) }
   }, [query, onSearch])
 
-  function handleSelect(product: SearchProduct) {
+  function handleSelect(product: ProductSearchResult) {
     onSelect(product)
     setQuery("")
     setResults([])
@@ -68,7 +63,6 @@ export function ItemSearchDropdown({ onSelect, onSearch, disabled }: Props) {
 
   return (
     <div className="rounded-xl border border-[#2D6A4F]/30 overflow-hidden">
-      {/* Search input */}
       <div className="flex items-center gap-2 px-3 py-2.5 border-b border-gray-100">
         <span className="text-gray-400 text-sm">🔍</span>
         <input
@@ -87,7 +81,6 @@ export function ItemSearchDropdown({ onSelect, onSearch, disabled }: Props) {
         </button>
       </div>
 
-      {/* Results */}
       {loading && (
         <div className="px-4 py-3 text-xs text-gray-400">Searching…</div>
       )}
@@ -98,23 +91,28 @@ export function ItemSearchDropdown({ onSelect, onSearch, disabled }: Props) {
 
       {!loading && results.length > 0 && (
         <ul className="divide-y divide-gray-50 max-h-56 overflow-y-auto">
-          {results.map((p) => (
-            <li key={p.swiggy_product_id}>
+          {results.map((p, idx) => (
+            <li key={p.sku_id ?? idx}>
               <button
                 onClick={() => handleSelect(p)}
-                className="w-full flex items-center gap-3 px-4 py-3 text-left hover:bg-[#D8F3DC]/40 transition-colors"
+                disabled={!p.in_stock}
+                className="w-full flex items-center gap-3 px-4 py-3 text-left hover:bg-[#D8F3DC]/40 transition-colors disabled:opacity-40"
               >
                 {p.image_url ? (
                   /* eslint-disable-next-line @next/next/no-img-element */
-                  <img src={p.image_url} alt={p.name} className="w-9 h-9 rounded-lg object-cover shrink-0" />
+                  <img src={p.image_url} alt={p.item_name} className="w-9 h-9 rounded-lg object-cover shrink-0" />
                 ) : (
                   <div className="w-9 h-9 rounded-lg bg-gray-100 flex items-center justify-center text-lg shrink-0">🛒</div>
                 )}
                 <div className="flex-1 min-w-0">
-                  <p className="text-sm font-medium text-gray-900 truncate">{p.name}</p>
+                  <p className="text-sm font-medium text-gray-900 truncate">{p.item_name}</p>
                   {p.brand && <p className="text-xs text-gray-400 truncate">{p.brand}</p>}
+                  {!p.in_stock && <p className="text-xs text-red-400">Out of stock</p>}
                 </div>
-                <span className="text-sm font-semibold text-gray-900 shrink-0">₹{Math.round(p.price)}</span>
+                <div className="text-right shrink-0">
+                  <p className="text-sm font-semibold text-gray-900">₹{Math.round(p.unit_price)}</p>
+                  <p className="text-xs text-gray-400">{p.unit}</p>
+                </div>
               </button>
             </li>
           ))}

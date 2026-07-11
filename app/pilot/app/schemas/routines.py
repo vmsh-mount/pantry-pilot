@@ -7,7 +7,7 @@ class RoutineItemIn(BaseModel):
     item_name:           str
     quantity:            float = 1.0
     unit:                str = "unit"
-    swiggy_product_id:   Optional[str] = None
+    sku_id:   Optional[str] = None
     swiggy_product_name: Optional[str] = None
 
 
@@ -56,7 +56,7 @@ class RoutineItemOut(BaseModel):
     item_name:            str
     quantity:             float
     unit:                 str
-    swiggy_product_id:    Optional[str]
+    sku_id:    Optional[str]
     swiggy_product_name:  Optional[str]
 
 

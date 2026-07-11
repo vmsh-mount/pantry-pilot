@@ -72,8 +72,8 @@ export interface SettingsResponse {
   next_run_at:        string | null
 }
 
-// ── Quick Order types ─────────────────────────────────────────────────────────
-export interface QuickSearchResult {
+// ── Shared product search result — used by Flow, Quick Order, and Routines ────
+export interface ProductSearchResult {
   sku_id:     string | null
   item_name:  string
   brand:      string | null
@@ -82,7 +82,10 @@ export interface QuickSearchResult {
   in_stock:   boolean
   image_url:  string | null
 }
-export interface QuickSearchResponse { query: string; results: QuickSearchResult[] }
+
+// Keep alias for backward compat within Quick Order
+export type QuickSearchResult = ProductSearchResult
+export interface QuickSearchResponse { query: string; results: ProductSearchResult[] }
 
 export interface QuickBasketItem {
   id:         string
@@ -143,15 +146,18 @@ export const api = {
     skip:           () => request("/basket/skip",    { method: "POST" }),
     trigger:        () => request("/basket/trigger", { method: "POST" }),
     removeItem:     (itemId: string) => request(`/basket/item/${itemId}`, { method: "DELETE" }),
-    searchItems:    (q: string)      => request<{ results: import("@/components/basket/ItemSearchDropdown").SearchProduct[] }>(`/basket/search?q=${encodeURIComponent(q)}`),
+    searchItems:    (q: string)      => request<{ results: ProductSearchResult[] }>(`/basket/search?q=${encodeURIComponent(q)}`),
     addItem:        (body: {
-      swiggy_product_id: string
-      name:    string
-      price:   number
+      sku_id:     string
+      item_name:  string
+      unit_price: number
+      unit?:      string
       image_url?: string | null
-      category?: string | null
-      brand?:    string | null
+      category?:  string | null
+      brand?:     string | null
     }) => request("/basket/item", { method: "POST", body: JSON.stringify(body) }),
+    editItem:       (id: string, body: { quantity?: number; brand?: string }) =>
+                      request(`/basket/item/${id}`, { method: "PATCH", body: JSON.stringify(body) }),
   },
   orders: {
     list: () => request("/orders"),
@@ -186,7 +192,7 @@ export const api = {
     runs:     (id: string)               => request(`/routines/${id}/runs`),
   },
   products: {
-    search: (q: string) => request(`/products/search?q=${encodeURIComponent(q)}`),
+    search: (q: string) => request<ProductSearchResult[]>(`/products/search?q=${encodeURIComponent(q)}`),
   },
   quick: {
     search:     (q: string, limit = 20) => request<QuickSearchResponse>(`/quick/search?q=${encodeURIComponent(q)}&limit=${limit}`),

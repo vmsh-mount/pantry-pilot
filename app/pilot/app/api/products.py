@@ -55,11 +55,13 @@ async def search_products(
     items = []
     for r in (results.products if results else []):
         items.append({
-            "swiggy_product_id": r.sku_id,
-            "name": r.name,
-            "price": r.price or 0,
-            "brand": r.brand,
-            "image_url": r.image_url,
+            "sku_id":     r.sku_id,
+            "item_name":  r.name,
+            "unit_price": r.price or 0,
+            "unit":       r.unit or r.quantity or "units",
+            "in_stock":   r.in_stock,
+            "brand":      r.brand,
+            "image_url":  r.image_url,
         })
 
     return APIResponse.ok(items)

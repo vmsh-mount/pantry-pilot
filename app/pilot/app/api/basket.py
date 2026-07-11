@@ -393,13 +393,22 @@ async def search_basket_items(q: str, request: Request, db: AsyncSession = Depen
     except SwiggyMCPError as e:
         return APIResponse.fail("SEARCH_FAILED", str(e), retryable=True)
 
+    def _ga(obj, *keys, default=None):
+        for k in keys:
+            v = obj.get(k, None) if isinstance(obj, dict) else getattr(obj, k, None)
+            if v is not None:
+                return v
+        return default
+
     results = [
         BasketSearchResult(
-            swiggy_product_id = getattr(p, "sku_id", None) or (p.get("sku_id") if isinstance(p, dict) else ""),
-            name              = getattr(p, "name", None) or (p.get("name", "") if isinstance(p, dict) else ""),
-            price             = float(getattr(p, "price", 0) or (p.get("price", 0) if isinstance(p, dict) else 0)),
-            image_url         = getattr(p, "image_url", None) or (p.get("image_url") if isinstance(p, dict) else None),
-            brand             = getattr(p, "brand", None) or (p.get("brand") if isinstance(p, dict) else None),
+            sku_id     = _ga(p, "sku_id") or "",
+            item_name  = _ga(p, "name", "item_name") or "",
+            unit_price = float(_ga(p, "price", "unit_price", default=0)),
+            unit       = _ga(p, "unit", "quantity", default=None) or "units",
+            in_stock   = _ga(p, "in_stock", default=True),
+            image_url  = _ga(p, "image_url"),
+            brand      = _ga(p, "brand"),
         )
         for p in products
     ]
@@ -422,9 +431,9 @@ async def add_basket_item(body: BasketItemAdd, request: Request, db: AsyncSessio
 
     # Build a product-like dict from the request body
     product = {
-        "sku_id":    body.swiggy_product_id,
-        "name":      body.name,
-        "price":     body.price,
+        "sku_id":    body.sku_id,
+        "name":      body.item_name,
+        "price":     body.unit_price,
         "image_url": body.image_url,
         "category":  body.category,
         "brand":     body.brand,
@@ -435,17 +444,17 @@ async def add_basket_item(body: BasketItemAdd, request: Request, db: AsyncSessio
     signal = ItemSignal(
         household_id=household_id,
         loop_run_id=loop_run.id,
-        item_name=body.name,
+        item_name=body.item_name,
         signal_type="added",
         previous_value=None,
-        new_value={"quantity": 1, "brand": body.brand, "sku_id": body.swiggy_product_id},
+        new_value={"quantity": 1, "brand": body.brand, "sku_id": body.sku_id},
     )
     db.add(signal)
     await db.flush()
 
     new_item = await svc.add_item(
         db, loop_run, household_id, product,
-        item_query=body.name,
+        item_query=body.item_name,
         add_reason="User added via app",
     )
 
@@ -454,7 +463,7 @@ async def add_basket_item(body: BasketItemAdd, request: Request, db: AsyncSessio
     )
     all_items = items_result.scalars().all()
 
-    logger.info("basket_item_added_via_ui", household_id=household_id, item_name=body.name)
+    logger.info("basket_item_added_via_ui", household_id=household_id, item_name=body.item_name)
     return APIResponse.ok({
         "added": True,
         "item": {
