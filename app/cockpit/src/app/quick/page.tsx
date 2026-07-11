@@ -52,7 +52,7 @@ export default function QuickOrderPage() {
       if (res.success && res.data) {
         setResults(res.data.results)
       } else {
-        setSearchError("Search failed. Check your connection.")
+        setSearchError(res.error?.message ?? "Search failed. Please try again.")
         setResults([])
       }
     }, 350)
