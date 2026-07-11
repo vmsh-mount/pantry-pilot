@@ -194,7 +194,7 @@ export const api = {
     addItem:    (body: QuickAddItem)    => request<{ item: QuickBasketItem }>("/quick/basket/add", { method: "POST", body: JSON.stringify(body) }),
     updateItem: (id: string, body: { quantity?: number; brand?: string }) =>
                                           request<{ item: QuickBasketItem }>(`/quick/basket/item/${id}`, { method: "PATCH", body: JSON.stringify(body) }),
-    removeItem: (id: string)            => request(`/quick/basket/item/${id}`, { method: "DELETE" }),
+    removeItem: (id: string)            => request<{ removed: boolean }>(`/quick/basket/item/${id}`, { method: "DELETE" }),
     addresses:  ()                      => request<{ addresses: QuickAddress[] }>("/quick/addresses"),
     checkout:   (body?: { swiggy_address_id?: string }) =>
                                           request<QuickOrderResult>("/quick/checkout", { method: "POST", body: JSON.stringify(body ?? {}) }),
