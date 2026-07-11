@@ -2,7 +2,7 @@
 Basket API — dashboard endpoints for viewing and acting on pending baskets.
 """
 
-from fastapi import APIRouter, Request, Depends
+from fastapi import APIRouter, BackgroundTasks, Request, Depends
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select, desc
 
@@ -176,7 +176,7 @@ async def get_pending_basket(request: Request, db: AsyncSession = Depends(get_db
 
 
 @router.post("/confirm", response_model=APIResponse)
-async def confirm_basket(request: Request, db: AsyncSession = Depends(get_db)):
+async def confirm_basket(request: Request, background_tasks: BackgroundTasks, db: AsyncSession = Depends(get_db)):
     """User approves the pending basket — triggers order placement."""
     household_id = _household_id(request)
     if not household_id:
@@ -212,27 +212,33 @@ async def confirm_basket(request: Request, db: AsyncSession = Depends(get_db)):
     flow_basket = flow_basket_result.scalar_one_or_none()
     generated_items = flow_basket.generated_items if flow_basket else []
 
-    # Emit ItemSignals for confirm diff
-    from app.services.household_model_service import process_signals
-    signals = _build_confirm_signals(loop_run.id, final_items, generated_items)
-    await process_signals(loop_run.id, signals, db)
-
-    # Enqueue placement task
-    from app.tasks.planning import place_confirmed_order
-    place_confirmed_order.delay(household_id, loop_run.id)
-
+    # Transition state and commit FIRST — placement task must see "confirmed"
     loop_run.state       = "confirmed"
     loop_run.user_action = "confirmed"
     from datetime import datetime, timezone
     now = datetime.now(timezone.utc)
     loop_run.confirm_responded_at = now
-    await db.commit()
 
-    # Update FlowBasket status
     if flow_basket:
         flow_basket.status = "confirmed"
         flow_basket.delivered_at = now
-        await db.commit()
+
+    await db.commit()
+
+    # Enqueue placement task after commit so worker sees confirmed state
+    from app.tasks.planning import place_confirmed_order
+    place_confirmed_order.delay(household_id, loop_run.id)
+
+    # Emit ItemSignals after successful commit — decoupled from main transaction
+    # so a signal-processing failure cannot roll back the confirmation.
+    from app.services.household_model_service import process_signals
+    signals = _build_confirm_signals(loop_run.id, final_items, generated_items)
+    background_tasks.add_task(
+        process_signals, signals,
+        household_id=loop_run.household_id,
+        loop_run_id=loop_run.id,
+        source="flow",
+    )
 
     logger.info("basket_confirmed_via_ui", household_id=household_id, loop_run_id=loop_run.id)
     return APIResponse.ok({"confirmed": True, "loop_run_id": loop_run.id})

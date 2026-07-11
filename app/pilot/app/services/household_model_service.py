@@ -17,6 +17,8 @@ from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm.attributes import flag_modified
 
+from app.database import AsyncSessionLocal
+
 from app.models.db import HouseholdModel, ItemSignal, LoopRun
 from app.utils.logging import get_logger
 
@@ -98,62 +100,62 @@ async def build_context(household_id: UUID, db: AsyncSession) -> dict:
 
 
 async def process_signals(
-    loop_run_id: UUID,
     signals: list[dict],
-    db: AsyncSession,
+    household_id: UUID,
+    loop_run_id: UUID | None = None,
+    source: str = "flow",
 ) -> None:
     """
     Persist ItemSignal rows for valid signal_types, then update the HouseholdModel.
 
+    Opens its own DB session so it can be fired as a background task after the
+    caller's session has already committed and closed.
+
     signals shape: [{item_name, signal_type, previous_value, new_value}]
+
+    household_id is passed directly — no LoopRun lookup needed.
+    loop_run_id is None for Quick Order (no associated planning run).
+    source: "flow" | "quick_order"
     """
-    # Resolve household_id from LoopRun
-    run_result = await db.execute(
-        select(LoopRun).where(LoopRun.id == str(loop_run_id))
-    )
-    loop_run = run_result.scalars().first()
-    if loop_run is None:
-        logger.warning("process_signals_loop_run_not_found", loop_run_id=str(loop_run_id))
-        return
+    async with AsyncSessionLocal() as db:
+        for sig in signals:
+            signal_type = sig.get("signal_type")
+            if signal_type not in _VALID_SIGNAL_TYPES:
+                logger.warning(
+                    "process_signals_unknown_signal_type",
+                    signal_type=signal_type,
+                    household_id=str(household_id),
+                )
+                continue
 
-    household_id = loop_run.household_id
-
-    for sig in signals:
-        signal_type = sig.get("signal_type")
-        if signal_type not in _VALID_SIGNAL_TYPES:
-            logger.warning(
-                "process_signals_unknown_signal_type",
-                signal_type=signal_type,
-                loop_run_id=str(loop_run_id),
+            db.add(
+                ItemSignal(
+                    household_id=str(household_id),
+                    loop_run_id=str(loop_run_id) if loop_run_id is not None else None,
+                    item_name=sig.get("item_name", ""),
+                    signal_type=signal_type,
+                    source=source,
+                    previous_value=sig.get("previous_value"),
+                    new_value=sig.get("new_value"),
+                )
             )
-            continue
 
-        db.add(
-            ItemSignal(
-                household_id=str(household_id),
-                loop_run_id=str(loop_run_id),
-                item_name=sig.get("item_name", ""),
-                signal_type=signal_type,
-                previous_value=sig.get("previous_value"),
-                new_value=sig.get("new_value"),
-            )
-        )
-
-    await db.flush()
-    await update_model(household_id, loop_run_id, db)
-    await db.commit()
+        await db.flush()
+        await update_model(household_id, loop_run_id, db)
+        await db.commit()
 
     logger.info(
         "process_signals_complete",
-        loop_run_id=str(loop_run_id),
         household_id=str(household_id),
+        loop_run_id=str(loop_run_id) if loop_run_id is not None else None,
+        source=source,
         signal_count=len(signals),
     )
 
 
 async def update_model(
     household_id: UUID,
-    loop_run_id: UUID,
+    loop_run_id: UUID | None,
     db: AsyncSession,
 ) -> None:
     """
@@ -179,11 +181,18 @@ async def update_model(
         db.add(model)
         await db.flush()
 
-    # Fetch all signals for this loop_run
+    # Fetch signals: for Flow runs filter by loop_run_id; for Quick Order (loop_run_id=None)
+    # filter by household and NULL loop_run_id to avoid str(None) = "None" mismatch.
+    from sqlalchemy import null as sql_null
+    loop_run_filter = (
+        ItemSignal.loop_run_id == str(loop_run_id)
+        if loop_run_id is not None
+        else ItemSignal.loop_run_id.is_(None)
+    )
     sig_result = await db.execute(
         select(ItemSignal).where(
             ItemSignal.household_id == str(household_id),
-            ItemSignal.loop_run_id == str(loop_run_id),
+            loop_run_filter,
         )
     )
     current_signals = sig_result.scalars().all()

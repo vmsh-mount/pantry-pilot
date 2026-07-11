@@ -156,6 +156,24 @@ export default function DashboardPage() {
             </div>
           </button>
 
+          {/* ── Quick Order card ── */}
+          <button
+            onClick={() => router.push("/quick")}
+            className="w-full text-left bg-white rounded-2xl overflow-hidden shadow-sm"
+          >
+            <div className="bg-[#2D6A4F] px-5 py-4 flex items-center justify-between">
+              <div>
+                <span className="text-white font-bold text-base">Quick Order</span>
+                <p className="text-[#D8F3DC] text-xs mt-0.5">Order anything from Swiggy now</p>
+              </div>
+              <span className="text-2xl">🛒</span>
+            </div>
+            <div className="px-5 py-3 flex items-center justify-between">
+              <span className="text-sm text-gray-500">Search and order in minutes</span>
+              <span className="text-gray-300 text-sm">›</span>
+            </div>
+          </button>
+
           {/* ── Quick stats ── */}
           {(runsData?.stats?.total_runs ?? 0) > 0 && (
             <div className="grid grid-cols-3 gap-2 pt-1">
