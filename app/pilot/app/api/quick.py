@@ -222,6 +222,11 @@ async def update_basket_item(
         brand=body.brand,
     )
 
+    # Guard before writing signals — item may have been removed from Redis
+    # between the get_basket read above and the update_item call.
+    if updated is None:
+        return APIResponse.fail("NOT_FOUND", "Item no longer in basket.")
+
     # Determine signal type
     if body.brand is not None and body.brand != before.get("brand"):
         await _write_signal(
@@ -243,8 +248,6 @@ async def update_basket_item(
             )
 
     await db.commit()
-    if updated is None:
-        return APIResponse.fail("NOT_FOUND", "Item no longer in basket.")
     return APIResponse.ok({"item": updated})
 
 
@@ -383,10 +386,12 @@ async def checkout(
         return obj.get(key, default) if isinstance(obj, dict) else getattr(obj, key, default)
 
     swiggy_order_id = _o(order_result, "order_id") or _o(order_result, "swiggy_order_id", "")
-    item_total  = float(sum(i["unit_price"] * i["quantity"] for i in items))
+    item_total   = float(sum(i["unit_price"] * i["quantity"] for i in items))
     delivery_fee = float(_o(order_result, "delivery_fee", 0))
     taxes        = float(_o(order_result, "taxes", 0))
-    grand_total  = item_total + delivery_fee + taxes
+    # Prefer Swiggy's confirmed grand_total (captures promos/discounts applied at checkout).
+    # Fall back to local sum only when the checkout response omits it.
+    grand_total  = float(_o(order_result, "grand_total", 0)) or (item_total + delivery_fee + taxes)
 
     now = datetime.now(timezone.utc)
 
