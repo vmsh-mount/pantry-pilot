@@ -59,16 +59,69 @@ export interface RunItem {
   original_item_name:  string | null
 }
 
-export interface RunItemsResponse {
-  items: RunItem[]
-}
+export interface RunItemsResponse { items: RunItem[]; total_price: number | null }
 
 export interface SettingsResponse {
-  dry_run:          boolean
-  whatsapp_enabled: boolean
-  [key: string]: unknown
+  diet_type:          string | null
+  household_type:     string | null
+  member_count:       number | null
+  weekly_budget_min:  number | null
+  weekly_budget_max:  number | null
+  preferred_order_day: string | null
+  is_paused:          boolean
+  next_run_at:        string | null
 }
 
+// ── Quick Order types ─────────────────────────────────────────────────────────
+export interface QuickSearchResult {
+  sku_id:     string | null
+  item_name:  string
+  brand:      string | null
+  unit:       string
+  unit_price: number
+  in_stock:   boolean
+  image_url:  string | null
+}
+export interface QuickSearchResponse { query: string; results: QuickSearchResult[] }
+
+export interface QuickBasketItem {
+  id:         string
+  item_name:  string
+  brand:      string | null
+  sku_id:     string | null
+  unit:       string
+  quantity:   number
+  unit_price: number
+}
+export interface QuickBasketResponse { items: QuickBasketItem[]; estimated_total: number }
+
+export interface QuickAddItem {
+  item_name:   string
+  brand?:      string | null
+  sku_id?:     string | null
+  unit?:       string
+  quantity?:   number
+  unit_price?: number
+}
+
+export interface QuickAddress {
+  id:                string
+  swiggy_address_id: string
+  label:             string | null
+  is_default:        boolean
+}
+
+export interface QuickOrderResult {
+  order_id:        string
+  swiggy_order_id: string
+  item_total:      number
+  delivery_fee:    number
+  taxes:           number
+  grand_total:     number
+  items:           QuickBasketItem[]
+}
+
+// ── API client ────────────────────────────────────────────────────────────────
 export const api = {
   auth: {
     initiate: () => request<{ redirect_url: string }>("/auth/initiate", { method: "POST" }),
@@ -134,5 +187,16 @@ export const api = {
   },
   products: {
     search: (q: string) => request(`/products/search?q=${encodeURIComponent(q)}`),
+  },
+  quick: {
+    search:     (q: string, limit = 20) => request<QuickSearchResponse>(`/quick/search?q=${encodeURIComponent(q)}&limit=${limit}`),
+    getBasket:  ()                      => request<QuickBasketResponse>("/quick/basket"),
+    addItem:    (body: QuickAddItem)    => request<{ item: QuickBasketItem }>("/quick/basket/add", { method: "POST", body: JSON.stringify(body) }),
+    updateItem: (id: string, body: { quantity?: number; brand?: string }) =>
+                                          request<{ item: QuickBasketItem }>(`/quick/basket/item/${id}`, { method: "PATCH", body: JSON.stringify(body) }),
+    removeItem: (id: string)            => request(`/quick/basket/item/${id}`, { method: "DELETE" }),
+    addresses:  ()                      => request<{ addresses: QuickAddress[] }>("/quick/addresses"),
+    checkout:   (body?: { swiggy_address_id?: string }) =>
+                                          request<QuickOrderResult>("/quick/checkout", { method: "POST", body: JSON.stringify(body ?? {}) }),
   },
 }
