@@ -2,7 +2,7 @@
 Basket API — dashboard endpoints for viewing and acting on pending baskets.
 """
 
-from fastapi import APIRouter, Request, Depends
+from fastapi import APIRouter, BackgroundTasks, Request, Depends
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select, desc
 
@@ -176,7 +176,7 @@ async def get_pending_basket(request: Request, db: AsyncSession = Depends(get_db
 
 
 @router.post("/confirm", response_model=APIResponse)
-async def confirm_basket(request: Request, db: AsyncSession = Depends(get_db)):
+async def confirm_basket(request: Request, background_tasks: BackgroundTasks, db: AsyncSession = Depends(get_db)):
     """User approves the pending basket — triggers order placement."""
     household_id = _household_id(request)
     if not household_id:
@@ -231,10 +231,14 @@ async def confirm_basket(request: Request, db: AsyncSession = Depends(get_db)):
 
     # Emit ItemSignals after successful commit — decoupled from main transaction
     # so a signal-processing failure cannot roll back the confirmation.
-    import asyncio
     from app.services.household_model_service import process_signals
     signals = _build_confirm_signals(loop_run.id, final_items, generated_items)
-    asyncio.create_task(process_signals(loop_run.id, signals))
+    background_tasks.add_task(
+        process_signals, signals,
+        household_id=loop_run.household_id,
+        loop_run_id=loop_run.id,
+        source="flow",
+    )
 
     logger.info("basket_confirmed_via_ui", household_id=household_id, loop_run_id=loop_run.id)
     return APIResponse.ok({"confirmed": True, "loop_run_id": loop_run.id})
