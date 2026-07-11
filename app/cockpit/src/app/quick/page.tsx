@@ -87,6 +87,8 @@ export default function QuickOrderPage() {
       const updated = basket.map(i => i.id === id ? res.data!.item : i)
       setBasket(updated)
       setTotal(updated.reduce((s, i) => s + i.unit_price * i.quantity, 0))
+    } else {
+      setError("Could not update quantity. Please try again.")
     }
   }
 
