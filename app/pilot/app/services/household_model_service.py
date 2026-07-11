@@ -100,8 +100,10 @@ async def build_context(household_id: UUID, db: AsyncSession) -> dict:
 
 
 async def process_signals(
-    loop_run_id: UUID,
     signals: list[dict],
+    household_id: UUID,
+    loop_run_id: UUID | None = None,
+    source: str = "flow",
 ) -> None:
     """
     Persist ItemSignal rows for valid signal_types, then update the HouseholdModel.
@@ -110,34 +112,29 @@ async def process_signals(
     caller's session has already committed and closed.
 
     signals shape: [{item_name, signal_type, previous_value, new_value}]
+
+    household_id is passed directly — no LoopRun lookup needed.
+    loop_run_id is None for Quick Order (no associated planning run).
+    source: "flow" | "quick_order"
     """
     async with AsyncSessionLocal() as db:
-        run_result = await db.execute(
-            select(LoopRun).where(LoopRun.id == str(loop_run_id))
-        )
-        loop_run = run_result.scalars().first()
-        if loop_run is None:
-            logger.warning("process_signals_loop_run_not_found", loop_run_id=str(loop_run_id))
-            return
-
-        household_id = loop_run.household_id
-
         for sig in signals:
             signal_type = sig.get("signal_type")
             if signal_type not in _VALID_SIGNAL_TYPES:
                 logger.warning(
                     "process_signals_unknown_signal_type",
                     signal_type=signal_type,
-                    loop_run_id=str(loop_run_id),
+                    household_id=str(household_id),
                 )
                 continue
 
             db.add(
                 ItemSignal(
                     household_id=str(household_id),
-                    loop_run_id=str(loop_run_id),
+                    loop_run_id=str(loop_run_id) if loop_run_id is not None else None,
                     item_name=sig.get("item_name", ""),
                     signal_type=signal_type,
+                    source=source,
                     previous_value=sig.get("previous_value"),
                     new_value=sig.get("new_value"),
                 )
@@ -149,8 +146,9 @@ async def process_signals(
 
     logger.info(
         "process_signals_complete",
-        loop_run_id=str(loop_run_id),
         household_id=str(household_id),
+        loop_run_id=str(loop_run_id) if loop_run_id is not None else None,
+        source=source,
         signal_count=len(signals),
     )
 
