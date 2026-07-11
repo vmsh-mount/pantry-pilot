@@ -23,6 +23,8 @@ export default function QuickOrderPage() {
   const [placing, setPlacing]       = useState(false)
   const [order, setOrder]           = useState<QuickOrderResult | null>(null)
   const [error, setError]           = useState<string | null>(null)
+  const [searchError, setSearchError] = useState<string | null>(null)
+  const [addingSkus, setAddingSkus] = useState<Set<string>>(new Set())
   const searchTimer                 = useRef<ReturnType<typeof setTimeout>>()
   const inputRef                    = useRef<HTMLInputElement>(null)
 
@@ -32,6 +34,8 @@ export default function QuickOrderPage() {
       if (res.success && res.data) {
         setBasket(res.data.items)
         setTotal(res.data.estimated_total)
+      } else if (!res.success) {
+        setError("Could not load your basket. Please refresh.")
       }
     })
   }, [])
@@ -42,15 +46,22 @@ export default function QuickOrderPage() {
     if (!query.trim()) { setResults([]); return }
     searchTimer.current = setTimeout(async () => {
       setSearching(true)
+      setSearchError(null)
       const res = await api.quick.search(query)
       setSearching(false)
-      if (res.success && res.data) setResults(res.data.results)
+      if (res.success && res.data) {
+        setResults(res.data.results)
+      } else {
+        setSearchError("Search failed. Check your connection.")
+        setResults([])
+      }
     }, 350)
     return () => clearTimeout(searchTimer.current)
   }, [query])
 
   async function addToBasket(item: QuickSearchResult) {
     if (!item.sku_id) return
+    setAddingSkus(prev => new Set(prev).add(item.sku_id!))
     const res = await api.quick.addItem({
       item_name:  item.item_name,
       brand:      item.brand,
@@ -59,10 +70,13 @@ export default function QuickOrderPage() {
       quantity:   1,
       unit_price: item.unit_price,
     })
+    setAddingSkus(prev => { const s = new Set(prev); s.delete(item.sku_id!); return s })
     if (res.success && res.data) {
       const updated = [...basket, res.data.item]
       setBasket(updated)
       setTotal(updated.reduce((s, i) => s + i.unit_price * i.quantity, 0))
+    } else {
+      setError("Could not add item. Please try again.")
     }
   }
 
@@ -77,15 +91,21 @@ export default function QuickOrderPage() {
   }
 
   async function removeItem(id: string) {
-    await api.quick.removeItem(id)
-    const updated = basket.filter(i => i.id !== id)
-    setBasket(updated)
-    setTotal(updated.reduce((s, i) => s + i.unit_price * i.quantity, 0))
+    const res = await api.quick.removeItem(id)
+    if (res.success) {
+      const updated = basket.filter(i => i.id !== id)
+      setBasket(updated)
+      setTotal(updated.reduce((s, i) => s + i.unit_price * i.quantity, 0))
+    } else {
+      setError("Could not remove item. Please try again.")
+    }
   }
 
   async function placeOrder() {
     setPlacing(true)
     setError(null)
+    // No address passed — backend uses household's preferred_address_id.
+    // Address picker (api.quick.addresses) is available for a future "change address" flow.
     const res = await api.quick.checkout()
     setPlacing(false)
     if (res.success && res.data) {
@@ -227,11 +247,17 @@ export default function QuickOrderPage() {
 
       {/* Results */}
       <div className="space-y-2 pb-24">
-        {results.length === 0 && query && !searching && (
+        {searchError && (
+          <p className="text-center text-red-300 text-sm py-4">{searchError}</p>
+        )}
+        {!searchError && results.length === 0 && query && !searching && (
           <p className="text-center text-white/50 text-sm py-8">No results for "{query}"</p>
         )}
         {results.map((r, idx) => {
-          const inBasket = basket.some(b => b.sku_id === r.sku_id)
+          const inBasket = !!r.sku_id && basket.some(b => b.sku_id === r.sku_id)
+          const isAdding = !!r.sku_id && addingSkus.has(r.sku_id)
+          const noSku    = !r.sku_id
+          const disabled = !r.in_stock || inBasket || isAdding || noSku
           return (
             <div key={r.sku_id ?? idx} className="bg-white rounded-2xl px-4 py-3 flex items-center gap-3">
               <div className="flex-1 min-w-0">
@@ -241,16 +267,16 @@ export default function QuickOrderPage() {
               </div>
               <button
                 onClick={() => addToBasket(r)}
-                disabled={!r.in_stock || inBasket}
+                disabled={disabled}
                 className={`shrink-0 px-4 py-2 rounded-xl text-sm font-semibold transition-colors ${
                   inBasket
                     ? "bg-gray-100 text-gray-400 cursor-default"
-                    : r.in_stock
+                    : r.in_stock && !noSku
                     ? "bg-[#2D6A4F] text-white"
                     : "bg-gray-100 text-gray-400 cursor-not-allowed"
                 }`}
               >
-                {inBasket ? "Added" : r.in_stock ? "Add" : "OOS"}
+                {isAdding ? "…" : inBasket ? "Added" : r.in_stock && !noSku ? "Add" : "OOS"}
               </button>
             </div>
           )
