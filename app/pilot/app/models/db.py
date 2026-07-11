@@ -356,6 +356,7 @@ class Order(Base):
     grand_total:        Mapped[float] = mapped_column(Numeric(10, 2), nullable=False)
 
     status:             Mapped[str] = mapped_column(String, default="placed")
+    source:             Mapped[str] = mapped_column(String, nullable=False, server_default="flow")  # "flow"|"quick_order"
 
     placed_at:          Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
     delivered_at:       Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
@@ -518,6 +519,7 @@ class ItemSignal(Base):
 
     item_name:       Mapped[str] = mapped_column(String, nullable=False)
     signal_type:     Mapped[str] = mapped_column(String, nullable=False)  # "added"|"removed"|"qty_increased"|"qty_decreased"|"brand_changed"|"accepted"
+    source:          Mapped[str] = mapped_column(String, nullable=False, server_default="flow")  # "flow"|"quick_order"
 
     previous_value:  Mapped[dict | None] = mapped_column(JSONB, nullable=True)
     new_value:       Mapped[dict | None] = mapped_column(JSONB, nullable=True)
