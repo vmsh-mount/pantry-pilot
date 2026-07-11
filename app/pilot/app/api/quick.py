@@ -13,12 +13,11 @@ Endpoints (all under /v1/quick):
 
 from __future__ import annotations
 
-import asyncio
 from datetime import datetime, timezone
 from typing import Optional
 
-from fastapi import APIRouter, Request, Depends
-from pydantic import BaseModel
+from fastapi import APIRouter, BackgroundTasks, Request, Depends
+from pydantic import BaseModel, Field
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -160,7 +159,7 @@ async def get_basket(request: Request):
 # ══════════════════════════════════════════════════════════════════════════════
 
 class AddItemRequest(BaseModel):
-    item_name: str
+    item_name: str = Field(..., min_length=1)
     brand: Optional[str] = None
     sku_id: Optional[str] = None
     unit: str = "units"
@@ -244,6 +243,8 @@ async def update_basket_item(
             )
 
     await db.commit()
+    if updated is None:
+        return APIResponse.fail("NOT_FOUND", "Item no longer in basket.")
     return APIResponse.ok({"item": updated})
 
 
@@ -317,6 +318,7 @@ class CheckoutRequest(BaseModel):
 async def checkout(
     request: Request,
     body: CheckoutRequest,
+    background_tasks: BackgroundTasks,
     db: AsyncSession = Depends(get_db),
 ):
     household_id = _household_id(request)
@@ -438,7 +440,7 @@ async def checkout(
     from app.tasks.pantry import update_pantry_from_order
     update_pantry_from_order.delay(str(order.id))
 
-    asyncio.create_task(_run_model_update(household_id))
+    background_tasks.add_task(_run_model_update, household_id)
 
     logger.info(
         "quick_order_placed",

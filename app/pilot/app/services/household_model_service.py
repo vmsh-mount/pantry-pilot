@@ -183,11 +183,18 @@ async def update_model(
         db.add(model)
         await db.flush()
 
-    # Fetch all signals for this loop_run
+    # Fetch signals: for Flow runs filter by loop_run_id; for Quick Order (loop_run_id=None)
+    # filter by household and NULL loop_run_id to avoid str(None) = "None" mismatch.
+    from sqlalchemy import null as sql_null
+    loop_run_filter = (
+        ItemSignal.loop_run_id == str(loop_run_id)
+        if loop_run_id is not None
+        else ItemSignal.loop_run_id.is_(None)
+    )
     sig_result = await db.execute(
         select(ItemSignal).where(
             ItemSignal.household_id == str(household_id),
-            ItemSignal.loop_run_id == str(loop_run_id),
+            loop_run_filter,
         )
     )
     current_signals = sig_result.scalars().all()
