@@ -50,10 +50,16 @@ async def clear_basket(household_id: str) -> None:
 
 async def add_item(household_id: str, item: dict[str, Any]) -> dict:
     """Add an item; returns the basket entry with its generated id."""
+    item_name = item.get("item_name") or ""
+    if not item_name:
+        raise ValueError("item_name is required")
+
+    # NOTE: get→mutate→set is not atomic. Acceptable for a single-user basket;
+    # revisit if concurrent edits become an issue.
     items = await get_basket(household_id)
     entry = {
         "id":         str(uuid.uuid4()),
-        "item_name":  item["item_name"],
+        "item_name":  item_name,
         "brand":      item.get("brand"),
         "sku_id":     item.get("sku_id"),
         "unit":       item.get("unit", "units"),
@@ -72,6 +78,7 @@ async def update_item(
     brand: str | None = None,
 ) -> dict | None:
     """Update qty or brand on an existing basket item. Returns updated entry or None if not found."""
+    # NOTE: get→mutate→set is not atomic. Acceptable for a single-user basket.
     items = await get_basket(household_id)
     for item in items:
         if item["id"] == item_id:
@@ -86,6 +93,7 @@ async def update_item(
 
 async def remove_item(household_id: str, item_id: str) -> dict | None:
     """Remove item by id. Returns the removed entry or None if not found."""
+    # NOTE: get→mutate→set is not atomic. Acceptable for a single-user basket.
     items = await get_basket(household_id)
     for i, item in enumerate(items):
         if item["id"] == item_id:
