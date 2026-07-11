@@ -284,10 +284,10 @@ export default function QuickOrderPage() {
       </div>
 
       {basketCount > 0 && (
-        <div className="fixed bottom-6 left-0 right-0 px-6 z-10">
+        <div className="fixed bottom-24 left-0 right-0 flex justify-center px-4 z-[60]">
           <button
             onClick={() => setView("basket")}
-            className="w-full bg-white text-[#2D6A4F] rounded-2xl py-4 font-bold text-base shadow-lg flex items-center justify-between px-5"
+            className="w-full max-w-[390px] bg-white text-[#2D6A4F] rounded-2xl py-4 font-bold text-base shadow-lg flex items-center justify-between px-5"
           >
             <span className="bg-[#2D6A4F] text-white text-xs font-bold rounded-full w-6 h-6 flex items-center justify-center">{basketCount}</span>
             <span>Review basket</span>
