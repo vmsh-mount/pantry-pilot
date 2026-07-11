@@ -23,7 +23,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.database import get_db
 from app.models.db import (
-    Address, Household, HouseholdPreferences, ItemSignal, Order, OrderItem,
+    Address, HouseholdPreferences, ItemSignal, Order, OrderItem,
 )
 from app.redis import get_redis
 from app.schemas.common import APIResponse
@@ -391,7 +391,8 @@ async def checkout(
     taxes        = float(_o(order_result, "taxes", 0))
     # Prefer Swiggy's confirmed grand_total (captures promos/discounts applied at checkout).
     # Fall back to local sum only when the checkout response omits it.
-    grand_total  = float(_o(order_result, "grand_total", 0)) or (item_total + delivery_fee + taxes)
+    _gt = _o(order_result, "grand_total", None)
+    grand_total  = float(_gt) if _gt is not None else (item_total + delivery_fee + taxes)
 
     now = datetime.now(timezone.utc)
 
