@@ -785,39 +785,33 @@ async def validate(state: PlanningState) -> dict:
     from app.models.db import FlowBasket
     items = list(state.get("resolved_basket", []))
 
+    # Single session: fetch, staleness-check, and update in one transaction.
     async with _db_context() as db:
         from sqlalchemy import select
+        from sqlalchemy.orm.attributes import flag_modified
         result = await db.execute(
             select(FlowBasket).where(FlowBasket.loop_run_id == state["loop_run_id"])
         )
         flow_basket = result.scalars().first()
 
-    # Staleness check: if somehow validate runs on a basket >24h old, abort.
-    if flow_basket and flow_basket.generated_at:
-        age = (datetime.now(timezone.utc) - flow_basket.generated_at).total_seconds()
-        if age > 86400:
-            return {
-                "should_abort": True,
-                "error": "basket_stale_rerun_needed",
-                "error_stage": "validate",
-            }
+        # Staleness check: if validate runs on a basket >24h old, abort.
+        if flow_basket and flow_basket.generated_at:
+            age = (datetime.now(timezone.utc) - flow_basket.generated_at).total_seconds()
+            if age > 86400:
+                return {
+                    "should_abort": True,
+                    "error": "basket_stale_rerun_needed",
+                    "error_stage": "validate",
+                }
 
-    # Mark FlowBasket as validated (no MCP calls here)
-    if flow_basket:
-        async with _db_context() as db:
-            from sqlalchemy import select
-            from sqlalchemy.orm.attributes import flag_modified
-            result = await db.execute(
-                select(FlowBasket).where(FlowBasket.loop_run_id == state["loop_run_id"])
-            )
-            fb = result.scalars().first()
-            if fb:
-                fb.validated_items = items
-                fb.dropped_items = []
-                fb.validated_at = datetime.now(timezone.utc)
-                flag_modified(fb, "validated_items")
-                flag_modified(fb, "dropped_items")
-                await db.commit()
+        # Mark as validated within the same session — no concurrent-write window.
+        if flow_basket:
+            flow_basket.validated_items = items
+            flow_basket.dropped_items = []
+            flow_basket.validated_at = datetime.now(timezone.utc)
+            flag_modified(flow_basket, "validated_items")
+            flag_modified(flow_basket, "dropped_items")
+            await db.commit()
 
     return {"resolved_basket": items, "dropped_items": []}
 
