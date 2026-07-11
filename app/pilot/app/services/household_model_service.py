@@ -157,7 +157,7 @@ async def process_signals(
 
 async def update_model(
     household_id: UUID,
-    loop_run_id: UUID,
+    loop_run_id: UUID | None,
     db: AsyncSession,
 ) -> None:
     """
