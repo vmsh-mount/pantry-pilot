@@ -127,6 +127,7 @@ async def search_products(
         "results": [
             {
                 "sku_id":     _p(r, "sku_id"),
+                "spin_id":    _p(r, "spin_id", "") or "",
                 "item_name":  _p(r, "name") or _p(r, "item_name", ""),
                 "brand":      _p(r, "brand"),
                 "unit":       _p(r, "unit", None) or _p(r, "quantity", None) or "units",
@@ -150,6 +151,8 @@ async def get_basket(request: Request):
         return APIResponse.fail("NOT_AUTHENTICATED", "Not authenticated.")
 
     items = await basket_svc.get_basket(household_id)
+    for item in items:
+        item.setdefault("in_stock", True)
     total = sum(i["unit_price"] * i["quantity"] for i in items)
     return APIResponse.ok({"items": items, "estimated_total": round(total, 2)})
 
@@ -162,9 +165,11 @@ class AddItemRequest(BaseModel):
     item_name: str = Field(..., min_length=1)
     brand: Optional[str] = None
     sku_id: Optional[str] = None
+    spin_id: Optional[str] = None
     unit: str = "units"
     quantity: int = 1
     unit_price: float = 0.0
+    in_stock: bool = True
 
 
 @router.post("/basket/add", response_model=APIResponse)
@@ -280,6 +285,19 @@ async def remove_basket_item(
 
 
 # ══════════════════════════════════════════════════════════════════════════════
+# DELETE /basket  — clear entire basket
+# ══════════════════════════════════════════════════════════════════════════════
+
+@router.delete("/basket", response_model=APIResponse)
+async def clear_basket(request: Request):
+    household_id = _household_id(request)
+    if not household_id:
+        return APIResponse.fail("NOT_AUTHENTICATED", "Not authenticated.")
+    await basket_svc.clear_basket(household_id)
+    return APIResponse.ok({"cleared": True})
+
+
+# ══════════════════════════════════════════════════════════════════════════════
 # GET /addresses
 # ══════════════════════════════════════════════════════════════════════════════
 
@@ -356,21 +374,32 @@ async def checkout(
         return APIResponse.fail("CART_LOCKED", "Another order is in progress. Please try again shortly.")
 
     try:
+        from app.config import get_settings
         from app.providers.factory import get_mcp_provider
-        client = get_mcp_provider(access_token)
 
-        # Build cart payload
+        # Build cart payload — both spinId and skuId required by Swiggy MCP
         cart_items = [
-            {"sku_id": i["sku_id"], "quantity": i["quantity"]}
+            {"sku_id": i["sku_id"], "spin_id": i.get("spin_id") or "", "quantity": i["quantity"]}
             for i in items
             if i.get("sku_id")
         ]
         if not cart_items:
             return APIResponse.fail("NO_SKUS", "No SKU IDs in basket — cannot place order.")
 
-        await client.clear_cart()
-        await client.update_cart(cart_items, swiggy_address_id)
-        order_result = await client.checkout(swiggy_address_id)
+        if get_settings().pantrypilot_dry_run:
+            import uuid as _uuid
+            fake_id = f"dry_run_{_uuid.uuid4().hex[:12]}"
+            logger.info("quick_order_dry_run", household_id=household_id, fake_order_id=fake_id)
+            from app.mcp.types import MCPCheckoutResult
+            order_result = MCPCheckoutResult(
+                order_id=fake_id, status="PLACED", grand_total=float(sum(i["unit_price"] * i["quantity"] for i in items)),
+                estimated_delivery="Dry run — no order placed",
+            )
+        else:
+            client = get_mcp_provider(access_token)
+            await client.clear_cart()
+            await client.update_cart(cart_items, swiggy_address_id)
+            order_result = await client.checkout(swiggy_address_id)
 
     except SwiggyMCPError as e:
         logger.error("quick_order_checkout_failed", household_id=household_id, error=str(e))
@@ -443,8 +472,8 @@ async def checkout(
     await basket_svc.clear_basket(household_id)
 
     # Post-order async tasks
-    from app.tasks.pantry import update_pantry_from_order
-    update_pantry_from_order.delay(str(order.id))
+    from app.tasks.pantry import update_pantry_post_order
+    update_pantry_post_order.delay(household_id, swiggy_order_id)
 
     background_tasks.add_task(_run_model_update, household_id)
 
@@ -464,6 +493,85 @@ async def checkout(
         "grand_total":     grand_total,
         "items":           items,
     })
+
+
+@router.get("/orders/recent", response_model=APIResponse)
+async def recent_quick_orders(request: Request, db: AsyncSession = Depends(get_db)):
+    """Return last 5 orders placed via Quick Order for the current household."""
+    from sqlalchemy import desc, func
+    household_id = _household_id(request)
+    if not household_id:
+        return APIResponse.fail("NOT_AUTHENTICATED", "Not authenticated.")
+
+    # Subquery: item count per order
+    item_count_sq = (
+        select(OrderItem.order_id, func.count().label("item_count"))
+        .group_by(OrderItem.order_id)
+        .subquery()
+    )
+    rows = await db.execute(
+        select(Order, item_count_sq.c.item_count)
+        .outerjoin(item_count_sq, Order.id == item_count_sq.c.order_id)
+        .where(Order.household_id == household_id, Order.source == "quick_order")
+        .order_by(desc(Order.placed_at))
+        .limit(5)
+    )
+    return APIResponse.ok({
+        "orders": [
+            {
+                "order_id":    str(o.id),
+                "placed_at":   o.placed_at.isoformat(),
+                "grand_total": float(o.grand_total or o.item_total or 0),
+                "item_count":  int(count or 0),
+            }
+            for o, count in rows.all()
+        ]
+    })
+
+
+@router.post("/orders/{order_id}/reorder", response_model=APIResponse)
+async def reorder(request: Request, order_id: str, db: AsyncSession = Depends(get_db)):
+    """Add all items from a past quick order back into the current basket."""
+    from uuid import UUID
+    household_id = _household_id(request)
+    if not household_id:
+        return APIResponse.fail("NOT_AUTHENTICATED", "Not authenticated.")
+
+    try:
+        oid = UUID(order_id)
+    except ValueError:
+        return APIResponse.fail("INVALID_ORDER_ID", "Invalid order ID.")
+
+    order_result = await db.execute(
+        select(Order).where(Order.id == oid, Order.household_id == household_id)
+    )
+    order = order_result.scalar_one_or_none()
+    if not order:
+        return APIResponse.fail("NOT_FOUND", "Order not found.")
+
+    items_result = await db.execute(
+        select(OrderItem).where(OrderItem.order_id == oid)
+    )
+    order_items = items_result.scalars().all()
+
+    existing_skus = {i["sku_id"] for i in await basket_svc.get_basket(household_id) if i.get("sku_id")}
+
+    added = []
+    for oi in order_items:
+        if oi.swiggy_sku_id and oi.swiggy_sku_id in existing_skus:
+            continue
+        entry = await basket_svc.add_item(household_id, {
+            "item_name":  oi.product_name,
+            "brand":      oi.brand,
+            "sku_id":     oi.swiggy_sku_id,
+            "unit":       oi.unit,
+            "quantity":   oi.quantity,
+            "unit_price": float(oi.unit_price or 0),
+            "in_stock":   True,
+        })
+        added.append(entry)
+
+    return APIResponse.ok({"added": len(added), "items": added})
 
 
 async def _run_model_update(household_id: str) -> None:

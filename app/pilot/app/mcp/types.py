@@ -23,7 +23,8 @@ class MCPAddress(BaseModel):
 # ── Product / SKU ─────────────────────────────────────────────────────────────
 
 class MCPProduct(BaseModel):
-    sku_id:           str
+    sku_id:           str   # Swiggy's skuId (canonical product identifier)
+    spin_id:          str = ""  # Swiggy's spinId (required alongside skuId in update_cart)
     name:             str
     brand:            Optional[str] = None
     category:         Optional[str] = None

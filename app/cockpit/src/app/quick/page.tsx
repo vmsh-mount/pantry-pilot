@@ -1,82 +1,146 @@
 "use client"
 
-import { useEffect, useRef, useState } from "react"
+import { useCallback, useEffect, useRef, useState } from "react"
 import { useRouter } from "next/navigation"
 import {
   api,
   type ProductSearchResult,
   type QuickBasketItem,
   type QuickOrderResult,
+  type QuickRecentOrder,
 } from "@/lib/api"
-import { AppShell, Spinner } from "@/components/ui"
-import { BasketItemRow } from "@/components/basket/BasketItemRow"
+import {
+  AppShell,
+  Card,
+  Button,
+  Alert,
+  Spinner,
+} from "@/components/ui"
+import { ItemSearchDropdown } from "@/components/basket/ItemSearchDropdown"
 
-type View = "search" | "basket" | "confirmed"
+// ── Qty stepper ────────────────────────────────────────────────────────────────
+
+function QtyStepper({
+  value,
+  onDecrement,
+  onIncrement,
+}: {
+  value: number
+  onDecrement: () => void
+  onIncrement: () => void
+}) {
+  return (
+    <div className="flex items-center gap-1.5">
+      <button
+        onClick={onDecrement}
+        className="w-7 h-7 rounded-full bg-gray-100 text-gray-600 font-bold flex items-center justify-center text-base leading-none transition-colors hover:bg-gray-200"
+      >
+        −
+      </button>
+      <span className="w-5 text-center text-sm font-semibold text-gray-900 tabular-nums">{value}</span>
+      <button
+        onClick={onIncrement}
+        className="w-7 h-7 rounded-full bg-[#2D6A4F] text-white font-bold flex items-center justify-center text-base leading-none transition-colors hover:bg-[#1B4332]"
+      >
+        +
+      </button>
+    </div>
+  )
+}
+
+// ── Basket item row ────────────────────────────────────────────────────────────
+
+function BasketRow({
+  item,
+  onQtyChange,
+  onRemove,
+}: {
+  item: QuickBasketItem
+  onQtyChange: (qty: number) => void
+  onRemove: () => void
+}) {
+  const lineTotal = Math.round(item.unit_price * item.quantity)
+  return (
+    <div className="flex items-center gap-3 px-4 py-3 border-b border-gray-50 last:border-b-0">
+      <div className="flex-1 min-w-0">
+        <p className="text-sm font-semibold text-gray-900 truncate">{item.item_name}</p>
+        {item.brand && <p className="text-xs text-gray-400">{item.brand}</p>}
+        <p className="text-xs text-[#2D6A4F] font-medium mt-0.5">₹{item.unit_price} / {item.unit}</p>
+      </div>
+      <QtyStepper
+        value={item.quantity}
+        onDecrement={() => onQtyChange(item.quantity - 1)}
+        onIncrement={() => onQtyChange(item.quantity + 1)}
+      />
+      <span className="text-sm font-bold text-gray-900 w-10 text-right shrink-0 tabular-nums">₹{lineTotal}</span>
+      <button
+        onClick={onRemove}
+        className="w-6 h-6 rounded-full text-gray-300 flex items-center justify-center text-xs hover:bg-red-50 hover:text-red-400 transition-colors shrink-0"
+      >
+        ✕
+      </button>
+    </div>
+  )
+}
+
+// ── Page ───────────────────────────────────────────────────────────────────────
 
 export default function QuickOrderPage() {
   const router = useRouter()
-  const [view, setView]             = useState<View>("search")
-  const [query, setQuery]           = useState("")
-  const [searching, setSearching]   = useState(false)
-  const [results, setResults]       = useState<ProductSearchResult[]>([])
-  const [basket, setBasket]         = useState<QuickBasketItem[]>([])
-  const [total, setTotal]           = useState(0)
-  const [placing, setPlacing]       = useState(false)
-  const [order, setOrder]           = useState<QuickOrderResult | null>(null)
-  const [error, setError]           = useState<string | null>(null)
-  const [searchError, setSearchError] = useState<string | null>(null)
-  const [addingSkus, setAddingSkus] = useState<Set<string>>(new Set())
-  const searchTimer                 = useRef<ReturnType<typeof setTimeout> | undefined>(undefined)
-  const inputRef                    = useRef<HTMLInputElement>(null)
+  const [basket, setBasket]               = useState<QuickBasketItem[]>([])
+  const [total, setTotal]                 = useState(0)
+  const [placing, setPlacing]             = useState(false)
+  const [order, setOrder]                 = useState<QuickOrderResult | null>(null)
+  const [error, setError]                 = useState<string | null>(null)
+  const [recentOrders, setRecentOrders]   = useState<QuickRecentOrder[]>([])
+  const [loadingBasket, setLoadingBasket] = useState(true)
+  const [reordering, setReordering]       = useState<string | null>(null)
+
+  // Stable search function for ItemSearchDropdown
+  const handleSearch = useCallback(async (q: string): Promise<ProductSearchResult[]> => {
+    const res = await api.quick.search(q)
+    if (res.success && res.data) return res.data.results
+    return []
+  }, [])
 
   useEffect(() => {
-    api.quick.getBasket().then(res => {
-      if (res.success && res.data) {
-        setBasket(res.data.items)
-        setTotal(res.data.estimated_total)
-      } else if (!res.success) {
-        setError("Could not load your basket. Please refresh.")
+    Promise.all([
+      api.quick.getBasket(),
+      api.quick.recentOrders(),
+    ]).then(([basketRes, recentRes]) => {
+      if (basketRes.success && basketRes.data) {
+        setBasket(basketRes.data.items)
+        setTotal(basketRes.data.estimated_total)
       }
+      if (recentRes.success && recentRes.data) {
+        setRecentOrders(recentRes.data.orders)
+      }
+      setLoadingBasket(false)
     })
   }, [])
 
-  // Debounced search
-  useEffect(() => {
-    clearTimeout(searchTimer.current)
-    if (!query.trim()) { setResults([]); return }
-    searchTimer.current = setTimeout(async () => {
-      setSearching(true)
-      setSearchError(null)
-      const res = await api.quick.search(query)
-      setSearching(false)
-      if (res.success && res.data) {
-        setResults(res.data.results)
-      } else {
-        setSearchError(res.error?.message ?? "Search failed. Please try again.")
-        setResults([])
-      }
-    }, 350)
-    return () => clearTimeout(searchTimer.current)
-  }, [query])
+  function recalcTotal(items: QuickBasketItem[]) {
+    return items.reduce((s, i) => s + i.unit_price * i.quantity, 0)
+  }
 
-  async function addToBasket(item: ProductSearchResult) {
-    if (!item.sku_id) return
-    setAddingSkus(prev => new Set(prev).add(item.sku_id!))
+  async function handleSelect(product: ProductSearchResult) {
+    if (!product.sku_id) return
     const res = await api.quick.addItem({
-      item_name:  item.item_name,
-      brand:      item.brand,
-      sku_id:     item.sku_id,
-      unit:       item.unit,
+      item_name:  product.item_name,
+      brand:      product.brand,
+      sku_id:     product.sku_id,
+      spin_id:    product.spin_id,
+      unit:       product.unit,
       quantity:   1,
-      unit_price: item.unit_price,
+      unit_price: product.unit_price,
+      in_stock:   product.in_stock,
     })
-    setAddingSkus(prev => { const s = new Set(prev); s.delete(item.sku_id!); return s })
     if (res.success && res.data) {
       const updated = [...basket, res.data.item]
       setBasket(updated)
-      setTotal(updated.reduce((s, i) => s + i.unit_price * i.quantity, 0))
+      setTotal(recalcTotal(updated))
     } else {
-      setError(res.error?.message ?? "Could not add item. Please try again.")
+      setError(res.error?.message ?? "Could not add item.")
     }
   }
 
@@ -86,19 +150,35 @@ export default function QuickOrderPage() {
     if (res.success && res.data) {
       const updated = basket.map(i => i.id === id ? res.data!.item : i)
       setBasket(updated)
-      setTotal(updated.reduce((s, i) => s + i.unit_price * i.quantity, 0))
+      setTotal(recalcTotal(updated))
     } else {
       setError(res.error?.message ?? "Could not update quantity.")
     }
   }
 
-  async function removeItem(id: string) {
-    const res = await api.quick.removeItem(id)
-    if (res.success) {
-      const updated = basket.filter(i => i.id !== id)
+  async function handleReorder(orderId: string) {
+    setReordering(orderId)
+    setError(null)
+    const res = await api.quick.reorder(orderId)
+    setReordering(null)
+    if (res.success && res.data) {
+      const updated = [...basket, ...res.data.items]
       setBasket(updated)
-      setTotal(updated.reduce((s, i) => s + i.unit_price * i.quantity, 0))
+      setTotal(recalcTotal(updated))
     } else {
+      setError(res.error?.message ?? "Could not reorder.")
+    }
+  }
+
+  async function removeItem(id: string) {
+    const prev = basket
+    const updated = basket.filter(i => i.id !== id)
+    setBasket(updated)
+    setTotal(recalcTotal(updated))
+    const res = await api.quick.removeItem(id)
+    if (!res.success) {
+      setBasket(prev)
+      setTotal(recalcTotal(prev))
       setError(res.error?.message ?? "Could not remove item.")
     }
   }
@@ -110,190 +190,181 @@ export default function QuickOrderPage() {
     setPlacing(false)
     if (res.success && res.data) {
       setOrder(res.data)
-      setBasket([])
-      setTotal(0)
       setView("confirmed")
     } else {
       setError(res.error?.message ?? "Checkout failed. Please try again.")
     }
   }
 
-  const basketCount = basket.reduce((s, i) => s + i.quantity, 0)
+  // view state only needed for confirmed screen
+  const [view, setView] = useState<"main" | "confirmed">("main")
 
-  // ── Confirmed ──────────────────────────────────────────────────────────────
+  // ── Confirmed ────────────────────────────────────────────────────────────────
   if (view === "confirmed" && order) {
     return (
       <AppShell>
-        <div className="flex items-center gap-2 px-1 mb-6">
+        <div className="flex items-center gap-2 mb-5">
           <button onClick={() => router.push("/dashboard")} className="text-[#D8F3DC] text-lg">←</button>
-          <span className="text-white font-bold text-lg">Order placed</span>
+          <h1 className="text-white font-bold text-lg">Order placed</h1>
         </div>
-        <div className="bg-white rounded-2xl p-5 space-y-4">
-          <div className="text-center">
-            <div className="text-4xl mb-2">✅</div>
-            <p className="font-bold text-gray-900 text-lg">Order confirmed!</p>
-            <p className="text-gray-500 text-sm mt-1">Swiggy ID: {order.swiggy_order_id}</p>
+
+        <Card>
+          {/* success header */}
+          <div className="bg-[#1B4332] px-5 py-6 text-center">
+            <div className="text-4xl mb-3">✅</div>
+            <p className="text-white font-bold text-lg">Order on its way!</p>
+            <p className="text-white/60 text-xs mt-1">Swiggy ID: {order.swiggy_order_id}</p>
           </div>
+
           <div className="divide-y divide-gray-50">
             {order.items.map(i => (
-              <div key={i.id} className="flex justify-between py-2 text-sm text-gray-700">
-                <span>{i.item_name}{i.brand ? ` · ${i.brand}` : ""} ×{i.quantity}</span>
-                <span>₹{(i.unit_price * i.quantity).toFixed(0)}</span>
+              <div key={i.id} className="flex justify-between items-center px-5 py-3 text-sm">
+                <div className="min-w-0">
+                  <span className="font-medium text-gray-800">{i.item_name}</span>
+                  {i.brand && <span className="text-gray-400"> · {i.brand}</span>}
+                  <span className="text-gray-400"> ×{i.quantity}</span>
+                </div>
+                <span className="font-semibold text-gray-800 shrink-0 ml-3 tabular-nums">
+                  ₹{Math.round(i.unit_price * i.quantity)}
+                </span>
               </div>
             ))}
           </div>
-          <div className="border-t pt-3 space-y-1 text-sm">
-            <div className="flex justify-between text-gray-600"><span>Items</span><span>₹{order.item_total.toFixed(0)}</span></div>
-            {order.delivery_fee > 0 && <div className="flex justify-between text-gray-600"><span>Delivery</span><span>₹{order.delivery_fee.toFixed(0)}</span></div>}
-            {order.taxes > 0 && <div className="flex justify-between text-gray-600"><span>Taxes</span><span>₹{order.taxes.toFixed(0)}</span></div>}
-            <div className="flex justify-between font-bold text-gray-900 pt-1"><span>Total</span><span>₹{order.grand_total.toFixed(0)}</span></div>
+
+          <div className="px-5 py-4 border-t border-gray-100 space-y-1.5 text-sm">
+            <div className="flex justify-between text-gray-500"><span>Items</span><span>₹{Math.round(order.item_total)}</span></div>
+            {order.delivery_fee > 0 && <div className="flex justify-between text-gray-500"><span>Delivery</span><span>₹{Math.round(order.delivery_fee)}</span></div>}
+            {order.taxes > 0 && <div className="flex justify-between text-gray-500"><span>Taxes</span><span>₹{Math.round(order.taxes)}</span></div>}
+            <div className="flex justify-between font-bold text-gray-900 text-base pt-1">
+              <span>Total</span>
+              <span className="tabular-nums">₹{Math.round(order.grand_total)}</span>
+            </div>
           </div>
-          <button
-            onClick={() => router.push("/dashboard")}
-            className="w-full bg-[#2D6A4F] text-white rounded-xl py-3 font-semibold text-sm"
-          >
-            Back to home
-          </button>
-        </div>
+
+          <div className="px-5 pb-5">
+            <Button onClick={() => router.push("/dashboard")}>Back to home</Button>
+          </div>
+        </Card>
       </AppShell>
     )
   }
 
-  // ── Basket ─────────────────────────────────────────────────────────────────
-  if (view === "basket") {
-    return (
-      <AppShell>
-        <div className="flex items-center gap-2 px-1 mb-6">
-          <button onClick={() => setView("search")} className="text-[#D8F3DC] text-lg">←</button>
-          <span className="text-white font-bold text-lg">Your basket</span>
-        </div>
+  // ── Main view ────────────────────────────────────────────────────────────────
+  const hasItems = basket.length > 0
+  const hasOos   = basket.some(i => i.in_stock === false)
 
-        {basket.length === 0 ? (
-          <div className="text-center text-white/60 py-16">Basket is empty</div>
-        ) : (
-          <div className="space-y-3">
-            <div className="bg-white rounded-2xl overflow-hidden divide-y divide-gray-50">
+  return (
+    <AppShell>
+      <div className="flex items-center gap-2 mb-5">
+        <button onClick={() => router.push("/dashboard")} className="text-[#D8F3DC] text-lg">←</button>
+        <h1 className="text-white font-bold text-lg">Quick Order</h1>
+      </div>
+
+      {error && <div className="mb-3"><Alert type="error" message={error} /></div>}
+
+      {loadingBasket ? (
+        <div className="flex justify-center py-12"><Spinner /></div>
+      ) : hasItems ? (
+        /* ── Basket card ─────────────────────────────────────────────────────── */
+        <>
+          <Card>
+            {/* Neutral header */}
+            <div className="px-4 py-3 border-b border-gray-100 flex items-center justify-between">
+              <span className="text-sm font-bold text-gray-900">Your basket</span>
+              <span className="text-xs text-gray-400">{basket.length} item{basket.length !== 1 ? "s" : ""}</span>
+            </div>
+
+            {/* OOS warning */}
+            {hasOos && (
+              <div className="px-4 pt-3">
+                <Alert type="error" message="Some items are out of stock. Remove them before placing your order." />
+              </div>
+            )}
+
+            {/* Item rows */}
+            <div className="pt-1">
               {basket.map(item => (
-                <BasketItemRow
+                <BasketRow
                   key={item.id}
-                  id={item.id}
-                  item_name={item.item_name}
-                  brand={item.brand}
-                  unit={item.unit}
-                  unit_price={item.unit_price}
-                  quantity={item.quantity}
-                  showStepper
-                  onRemove={removeItem}
-                  onQtyChange={updateQty}
+                  item={item}
+                  onQtyChange={(qty) => updateQty(item.id, qty)}
+                  onRemove={() => removeItem(item.id)}
                 />
               ))}
             </div>
 
-            <div className="bg-white/10 rounded-2xl px-4 py-3 flex justify-between text-white font-semibold">
-              <span>Total</span>
-              <span>₹{total.toFixed(0)}</span>
+            {/* Add more */}
+            <div className="px-4 py-3 border-t border-gray-50">
+              <ItemSearchDropdown onSearch={handleSearch} onSelect={handleSelect} />
             </div>
 
-            {error && (
-              <div className="bg-red-50 text-red-700 text-sm rounded-xl px-4 py-3">{error}</div>
-            )}
+            {/* Total */}
+            <div className="px-4 py-3 border-t border-gray-100 flex items-center justify-between">
+              <span className="text-sm text-gray-500 font-medium">Estimated total</span>
+              <span className="text-lg font-bold text-gray-900 tabular-nums">₹{Math.round(total)}</span>
+            </div>
+          </Card>
 
+          <div className="mt-4 space-y-2">
+            <Button onClick={placeOrder} loading={placing} disabled={hasOos}>
+              Place Order · ₹{Math.round(total)}
+            </Button>
             <button
-              onClick={placeOrder}
-              disabled={placing}
-              className="w-full bg-white text-[#2D6A4F] rounded-2xl py-4 font-bold text-base disabled:opacity-60"
+              onClick={async () => {
+                setBasket([]); setTotal(0)
+                await api.quick.clearBasket()
+              }}
+              className="w-full text-sm font-semibold text-[#D8F3DC]/60 py-2"
             >
-              {placing ? <Spinner size="sm" /> : `Confirm & Order · ₹${total.toFixed(0)}`}
+              Clear basket
             </button>
           </div>
-        )}
-      </AppShell>
-    )
-  }
+        </>
+      ) : (
+        /* ── Empty state ─────────────────────────────────────────────────────── */
+        <>
+          <Card>
+            <div className="px-5 py-8 text-center border-b border-gray-50">
+              <div className="text-4xl mb-3">🛒</div>
+              <p className="font-bold text-gray-900">Order anything, right now</p>
+              <p className="text-sm text-gray-400 mt-2 leading-relaxed">
+                Search Swiggy Instamart and build your basket.<br/>No planning needed.
+              </p>
+            </div>
+            <div className="p-4">
+              <ItemSearchDropdown onSearch={handleSearch} onSelect={handleSelect} />
+            </div>
+          </Card>
 
-  // ── Search ─────────────────────────────────────────────────────────────────
-  return (
-    <AppShell>
-      <div className="flex items-center gap-2 px-1 mb-5">
-        <button onClick={() => router.push("/dashboard")} className="text-[#D8F3DC] text-lg">←</button>
-        <span className="text-white font-bold text-lg">Quick Order</span>
-      </div>
-
-      <div className="relative mb-4">
-        <span className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400 text-lg">🔍</span>
-        <input
-          ref={inputRef}
-          autoFocus
-          value={query}
-          onChange={e => setQuery(e.target.value)}
-          placeholder="Search Swiggy Instamart…"
-          className="w-full bg-white rounded-2xl pl-11 pr-4 py-3.5 text-sm text-gray-900 placeholder-gray-400 focus:outline-none shadow-sm"
-        />
-        {searching && (
-          <span className="absolute right-4 top-1/2 -translate-y-1/2">
-            <Spinner size="sm" />
-          </span>
-        )}
-      </div>
-
-      <div className="pb-24">
-        {searchError && (
-          <p className="text-center text-red-300 text-sm py-4">{searchError}</p>
-        )}
-        {!searchError && results.length === 0 && query && !searching && (
-          <p className="text-center text-white/50 text-sm py-8">No results for "{query}"</p>
-        )}
-
-        {results.length > 0 && (
-          <div className="bg-white rounded-2xl overflow-hidden divide-y divide-gray-50">
-            {results.map((r, idx) => {
-              const inBasket = !!r.sku_id && basket.some(b => b.sku_id === r.sku_id)
-              const isAdding = !!r.sku_id && addingSkus.has(r.sku_id)
-              const disabled = !r.in_stock || inBasket || isAdding || !r.sku_id
-              return (
-                <div key={r.sku_id ?? idx} className="flex items-center gap-3 px-4 py-3">
-                  {r.image_url ? (
-                    /* eslint-disable-next-line @next/next/no-img-element */
-                    <img src={r.image_url} alt={r.item_name} className="w-10 h-10 rounded-xl object-cover shrink-0" />
-                  ) : (
-                    <div className="w-10 h-10 rounded-xl bg-gray-100 flex items-center justify-center text-xl shrink-0">🛒</div>
-                  )}
-                  <div className="flex-1 min-w-0">
-                    <p className="font-medium text-gray-900 text-sm truncate">{r.item_name}</p>
-                    {r.brand && <p className="text-gray-400 text-xs">{r.brand}</p>}
-                    <p className="text-[#2D6A4F] text-xs mt-0.5">₹{r.unit_price} / {r.unit}</p>
-                  </div>
-                  <button
-                    onClick={() => addToBasket(r)}
-                    disabled={disabled}
-                    className={`shrink-0 px-4 py-2 rounded-xl text-sm font-semibold transition-colors ${
-                      inBasket
-                        ? "bg-gray-100 text-gray-400 cursor-default"
-                        : r.in_stock && r.sku_id
-                        ? "bg-[#2D6A4F] text-white"
-                        : "bg-gray-100 text-gray-400 cursor-not-allowed"
-                    }`}
-                  >
-                    {isAdding ? "…" : inBasket ? "Added" : r.in_stock && r.sku_id ? "Add" : "OOS"}
-                  </button>
+          {/* Recent quick orders */}
+          {recentOrders.length > 0 && (
+            <div className="mt-4">
+              <p className="text-xs font-bold text-white/30 uppercase tracking-widest mb-2 px-1">Recent orders</p>
+              <Card>
+                <div className="divide-y divide-gray-50">
+                  {recentOrders.map(o => (
+                    <div key={o.order_id} className="flex items-center gap-3 px-4 py-3">
+                      <div className="flex-1 min-w-0">
+                        <p className="text-sm font-medium text-gray-800">
+                          {new Date(o.placed_at).toLocaleDateString("en-IN", { day: "numeric", month: "short" })}
+                          <span className="text-gray-400 font-normal"> · {o.item_count} item{o.item_count !== 1 ? "s" : ""}</span>
+                        </p>
+                        <p className="text-xs text-gray-400 tabular-nums">₹{Math.round(o.grand_total)}</p>
+                      </div>
+                      <button
+                        onClick={() => handleReorder(o.order_id)}
+                        disabled={reordering === o.order_id}
+                        className="text-xs font-semibold text-[#2D6A4F] border border-[#2D6A4F]/30 rounded-lg px-3 py-1.5 hover:bg-[#D8F3DC]/40 transition-colors disabled:opacity-40"
+                      >
+                        {reordering === o.order_id ? "…" : "Reorder"}
+                      </button>
+                    </div>
+                  ))}
                 </div>
-              )
-            })}
-          </div>
-        )}
-      </div>
-
-      {basketCount > 0 && (
-        <div className="fixed bottom-24 left-0 right-0 flex justify-center px-4 z-[60]">
-          <button
-            onClick={() => setView("basket")}
-            className="w-full max-w-[390px] bg-white text-[#2D6A4F] rounded-2xl py-4 font-bold text-base shadow-lg flex items-center justify-between px-5"
-          >
-            <span className="bg-[#2D6A4F] text-white text-xs font-bold rounded-full w-6 h-6 flex items-center justify-center">{basketCount}</span>
-            <span>Review basket</span>
-            <span>₹{total.toFixed(0)} →</span>
-          </button>
-        </div>
+              </Card>
+            </div>
+          )}
+        </>
       )}
     </AppShell>
   )

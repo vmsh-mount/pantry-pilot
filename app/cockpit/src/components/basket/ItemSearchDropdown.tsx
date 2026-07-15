@@ -91,7 +91,9 @@ export function ItemSearchDropdown({ onSelect, onSearch, disabled }: Props) {
 
       {!loading && results.length > 0 && (
         <ul className="divide-y divide-gray-50 max-h-56 overflow-y-auto">
-          {results.map((p, idx) => (
+          {results.filter((p, idx, arr) =>
+            !p.sku_id || arr.findIndex(r => r.sku_id === p.sku_id) === idx
+          ).map((p, idx) => (
             <li key={p.sku_id ?? idx}>
               <button
                 onClick={() => handleSelect(p)}
