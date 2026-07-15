@@ -25,17 +25,20 @@ class APIResponse(BaseModel, Generic[T]):
 
 
 class BasketItemAdd(BaseModel):
-    swiggy_product_id: str
-    name:              str
-    price:             float
-    image_url:         Optional[str] = None
-    category:          Optional[str] = None
-    brand:             Optional[str] = None
+    sku_id:     str
+    item_name:  str
+    unit_price: float
+    unit:       str = "units"
+    image_url:  Optional[str] = None
+    category:   Optional[str] = None
+    brand:      Optional[str] = None
 
 
 class BasketSearchResult(BaseModel):
-    swiggy_product_id: str
-    name:              str
-    price:             float
-    image_url:         Optional[str] = None
-    brand:             Optional[str] = None
+    sku_id:     str
+    item_name:  str
+    unit_price: float
+    unit:       str = "units"
+    in_stock:   bool = True
+    image_url:  Optional[str] = None
+    brand:      Optional[str] = None

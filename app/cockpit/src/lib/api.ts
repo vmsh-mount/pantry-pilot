@@ -72,9 +72,10 @@ export interface SettingsResponse {
   next_run_at:        string | null
 }
 
-// ── Quick Order types ─────────────────────────────────────────────────────────
-export interface QuickSearchResult {
+// ── Shared product search result — used by Flow, Quick Order, and Routines ────
+export interface ProductSearchResult {
   sku_id:     string | null
+  spin_id:    string
   item_name:  string
   brand:      string | null
   unit:       string
@@ -82,7 +83,10 @@ export interface QuickSearchResult {
   in_stock:   boolean
   image_url:  string | null
 }
-export interface QuickSearchResponse { query: string; results: QuickSearchResult[] }
+
+// Keep alias for backward compat within Quick Order
+export type QuickSearchResult = ProductSearchResult
+export interface QuickSearchResponse { query: string; results: ProductSearchResult[] }
 
 export interface QuickBasketItem {
   id:         string
@@ -92,6 +96,7 @@ export interface QuickBasketItem {
   unit:       string
   quantity:   number
   unit_price: number
+  in_stock:   boolean
 }
 export interface QuickBasketResponse { items: QuickBasketItem[]; estimated_total: number }
 
@@ -99,9 +104,11 @@ export interface QuickAddItem {
   item_name:   string
   brand?:      string | null
   sku_id?:     string | null
+  spin_id?:    string
   unit?:       string
   quantity?:   number
   unit_price?: number
+  in_stock?:   boolean
 }
 
 export interface QuickAddress {
@@ -109,6 +116,13 @@ export interface QuickAddress {
   swiggy_address_id: string
   label:             string | null
   is_default:        boolean
+}
+
+export interface QuickRecentOrder {
+  order_id:    string
+  placed_at:   string
+  grand_total: number
+  item_count:  number
 }
 
 export interface QuickOrderResult {
@@ -143,15 +157,18 @@ export const api = {
     skip:           () => request("/basket/skip",    { method: "POST" }),
     trigger:        () => request("/basket/trigger", { method: "POST" }),
     removeItem:     (itemId: string) => request(`/basket/item/${itemId}`, { method: "DELETE" }),
-    searchItems:    (q: string)      => request<{ results: import("@/components/basket/ItemSearchDropdown").SearchProduct[] }>(`/basket/search?q=${encodeURIComponent(q)}`),
+    searchItems:    (q: string)      => request<{ results: ProductSearchResult[] }>(`/basket/search?q=${encodeURIComponent(q)}`),
     addItem:        (body: {
-      swiggy_product_id: string
-      name:    string
-      price:   number
+      sku_id:     string
+      item_name:  string
+      unit_price: number
+      unit?:      string
       image_url?: string | null
-      category?: string | null
-      brand?:    string | null
+      category?:  string | null
+      brand?:     string | null
     }) => request("/basket/item", { method: "POST", body: JSON.stringify(body) }),
+    editItem:       (id: string, body: { quantity?: number; brand?: string }) =>
+                      request(`/basket/item/${id}`, { method: "PATCH", body: JSON.stringify(body) }),
   },
   orders: {
     list: () => request("/orders"),
@@ -186,7 +203,7 @@ export const api = {
     runs:     (id: string)               => request(`/routines/${id}/runs`),
   },
   products: {
-    search: (q: string) => request(`/products/search?q=${encodeURIComponent(q)}`),
+    search: (q: string) => request<ProductSearchResult[]>(`/products/search?q=${encodeURIComponent(q)}`),
   },
   quick: {
     search:     (q: string, limit = 20) => request<QuickSearchResponse>(`/quick/search?q=${encodeURIComponent(q)}&limit=${limit}`),
@@ -196,7 +213,10 @@ export const api = {
                                           request<{ item: QuickBasketItem }>(`/quick/basket/item/${id}`, { method: "PATCH", body: JSON.stringify(body) }),
     removeItem: (id: string)            => request<{ removed: boolean }>(`/quick/basket/item/${id}`, { method: "DELETE" }),
     addresses:  ()                      => request<{ addresses: QuickAddress[] }>("/quick/addresses"),
-    checkout:   (body?: { swiggy_address_id?: string }) =>
+    checkout:     (body?: { swiggy_address_id?: string }) =>
                                           request<QuickOrderResult>("/quick/checkout", { method: "POST", body: JSON.stringify(body ?? {}) }),
+    recentOrders:  ()                   => request<{ orders: QuickRecentOrder[] }>("/quick/orders/recent"),
+    reorder:       (orderId: string)    => request<{ added: number; items: QuickBasketItem[] }>(`/quick/orders/${orderId}/reorder`, { method: "POST" }),
+    clearBasket:   ()                   => request<{ cleared: boolean }>("/quick/basket", { method: "DELETE" }),
   },
 }

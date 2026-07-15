@@ -1,16 +1,16 @@
 "use client"
 
-import { useState, useEffect, useRef } from "react"
+import { useState, useCallback } from "react"
 import { useRouter } from "next/navigation"
-import { api } from "@/lib/api"
-import { AppShell, Button, Alert, Spinner } from "@/components/ui"
+import { api, type ProductSearchResult } from "@/lib/api"
+import { AppShell, Button, Alert } from "@/components/ui"
+import { ItemSearchDropdown } from "@/components/basket/ItemSearchDropdown"
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 
-interface SearchResult { swiggy_product_id: string; name: string; price: number; brand?: string }
 interface SelectedItem {
   item_name: string; quantity: number; unit: string
-  swiggy_product_id?: string; swiggy_product_name?: string
+  sku_id?: string | null; swiggy_product_name?: string
 }
 
 // ── Step bar ──────────────────────────────────────────────────────────────────
@@ -36,35 +36,21 @@ function Step1({
   items: SelectedItem[]; setItems: (v: SelectedItem[]) => void
   onNext: () => void
 }) {
-  const [query, setQuery]       = useState("")
-  const [results, setResults]   = useState<SearchResult[]>([])
-  const [searching, setSearching] = useState(false)
-  const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+  const handleSearch = useCallback(async (q: string): Promise<ProductSearchResult[]> => {
+    const res = await api.products.search(q)
+    if (res.success && res.data) return Array.isArray(res.data) ? res.data : []
+    return []
+  }, [])
 
-  function handleSearch(q: string) {
-    setQuery(q)
-    if (debounceRef.current) clearTimeout(debounceRef.current)
-    if (!q.trim()) { setResults([]); return }
-    debounceRef.current = setTimeout(async () => {
-      setSearching(true)
-      const res = await api.products.search(q)
-      if (res.success && res.data) setResults(res.data as SearchResult[])
-      setSearching(false)
-    }, 400)
-  }
-
-  function addItem(r: SearchResult) {
-    if (items.some(i => i.swiggy_product_id === r.swiggy_product_id)) return
-    if (debounceRef.current) clearTimeout(debounceRef.current)
+  function handleSelect(r: ProductSearchResult) {
+    if (items.some(i => i.sku_id === r.sku_id)) return
     setItems([...items, {
-      item_name: r.name,
+      item_name: r.item_name,
       quantity: 1,
-      unit: "unit",
-      swiggy_product_id: r.swiggy_product_id,
-      swiggy_product_name: r.name,
+      unit: r.unit || "unit",
+      sku_id: r.sku_id,
+      swiggy_product_name: r.item_name,
     }])
-    setQuery("")
-    setResults([])
   }
 
   function removeItem(idx: number) {
@@ -88,40 +74,9 @@ function Step1({
           />
         </div>
 
-        <div>
-          <label className="block text-sm font-medium text-gray-700 mb-1">What do you need?</label>
-          <div className="relative">
-            <input
-              className="w-full border border-gray-200 rounded-xl px-4 py-3 text-sm focus:outline-none focus:border-[#2D6A4F]"
-              placeholder="Search items…"
-              value={query}
-              onChange={e => handleSearch(e.target.value)}
-            />
-            {searching && (
-              <div className="absolute right-3 top-3"><Spinner size="sm" /></div>
-            )}
-          </div>
-
-          {results.length > 0 && (
-            <div className="mt-1 border border-gray-100 rounded-xl overflow-hidden shadow-sm">
-              {results.slice(0, 5).map(r => (
-                <button
-                  key={r.swiggy_product_id}
-                  className="w-full text-left px-4 py-2.5 text-sm hover:bg-gray-50 border-b border-gray-50 last:border-0"
-                  onClick={() => addItem(r)}
-                >
-                  <span className="font-medium text-gray-800">{r.name}</span>
-                  {r.brand && <span className="text-gray-400 ml-1 text-xs">· {r.brand}</span>}
-                  <span className="float-right text-[#2D6A4F] font-medium">₹{r.price}</span>
-                </button>
-              ))}
-            </div>
-          )}
-        </div>
-
         {items.length > 0 && (
           <div>
-            <p className="text-xs font-medium text-gray-400 uppercase tracking-wide mb-2">Selected</p>
+            <p className="text-xs font-medium text-gray-400 uppercase tracking-wide mb-2">Selected items</p>
             <div className="space-y-2">
               {items.map((item, idx) => (
                 <div key={idx} className="flex items-center gap-2 bg-[#F7FAF8] border border-[#D8F3DC] rounded-xl px-3 py-2">
@@ -146,6 +101,11 @@ function Step1({
             </div>
           </div>
         )}
+
+        <div>
+          <p className="text-sm font-medium text-gray-700 mb-2">Add items</p>
+          <ItemSearchDropdown onSearch={handleSearch} onSelect={handleSelect} />
+        </div>
       </div>
 
       <div className="px-6 pb-6 pt-3 border-t border-gray-100">
@@ -421,7 +381,7 @@ export default function NewRoutinePage() {
         item_name: i.item_name,
         quantity: i.quantity,
         unit: i.unit,
-        swiggy_product_id: i.swiggy_product_id,
+        sku_id: i.sku_id,
         swiggy_product_name: i.swiggy_product_name,
       })),
       frequency_type: freqType,

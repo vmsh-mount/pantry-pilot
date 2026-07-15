@@ -105,12 +105,13 @@ class SwiggyMCPClient:
             "addressId": address_id,
             "limit":     limit,
         })
-        raw_products = result.get("products", result.get("items", []))
+        data = result.get("data", result)
+        raw_products = data.get("products", data.get("items", []))
         logger.info("search_products_raw", query=query, keys=list(result.keys()), raw_count=len(raw_products), sample=str(result)[:500])
         products = [_parse_product(p) for p in raw_products]
         return MCPSearchResult(
             products    = products,
-            total_count = result.get("totalCount", result.get("total_count", len(products))),
+            total_count = data.get("totalCount", data.get("total_count", len(products))),
             query       = query,
         )
 
@@ -118,7 +119,8 @@ class SwiggyMCPClient:
         """Fetch frequently / recently ordered items for a delivery address."""
         # Swiggy param: addressId (camelCase)
         result = await self._call("your_go_to_items", {"addressId": address_id})
-        items = result.get("items", result.get("products", []))
+        data = result.get("data", result)
+        items = data.get("items", data.get("products", []))
         return [_parse_go_to_item(i) for i in items]
 
     # ── Cart Tools ────────────────────────────────────────────────────────────
@@ -135,7 +137,11 @@ class SwiggyMCPClient:
         address_id: Swiggy's address ID (required for cart to be valid at checkout)
         """
         mcp_items = [
-            {"spinId": item["sku_id"], "quantity": max(1, int(item["quantity"]))}
+            {
+                "spinId": item.get("spin_id") or item["sku_id"],
+                "skuId":  item["sku_id"],
+                "quantity": max(1, int(item["quantity"])),
+            }
             for item in items
             if int(item.get("quantity", 0)) > 0
         ]
@@ -456,7 +462,8 @@ def _parse_product(p: dict) -> "MCPProduct":
     price_block = first_var.get("price") or {}
 
     return MCPProduct(
-        sku_id      = first_var.get("spinId") or p.get("productId") or "",
+        sku_id      = first_var.get("skuId") or first_var.get("spinId") or p.get("productId") or "",
+        spin_id     = first_var.get("spinId") or "",
         name        = first_var.get("displayName") or p.get("displayName") or "",
         brand       = first_var.get("brandName") or p.get("brand"),
         category    = p.get("category"),

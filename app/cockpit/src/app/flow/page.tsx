@@ -4,7 +4,8 @@ import { useCallback, useEffect, useRef, useState } from "react"
 import { useRouter } from "next/navigation"
 import { api, type RunSummary, type RunsListResponse, type SettingsResponse } from "@/lib/api"
 import { AppShell, Card, Button, Alert, Spinner, BudgetBar, SubstitutionBanner } from "@/components/ui"
-import { ItemSearchDropdown, type SearchProduct } from "@/components/basket/ItemSearchDropdown"
+import { ItemSearchDropdown } from "@/components/basket/ItemSearchDropdown"
+import { BasketItemRow } from "@/components/basket/BasketItemRow"
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 
@@ -105,12 +106,13 @@ function fmtNextRun(iso: string): string {
 // ── Category group component ──────────────────────────────────────────────────
 
 function CategorySection({
-  cat, items, onRemove, removingIds,
+  cat, items, onRemove, onQtyChange, removingIds,
 }: {
-  cat:         string
-  items:       BasketItem[]
-  onRemove:    (id: string, name: string) => void
-  removingIds: Set<string>
+  cat:          string
+  items:        BasketItem[]
+  onRemove:     (id: string, name: string) => void
+  onQtyChange:  (id: string, qty: number) => void
+  removingIds:  Set<string>
 }) {
   const emoji = CATEGORY_EMOJI[cat] ?? "🛒"
   const label = cat.charAt(0).toUpperCase() + cat.slice(1)
@@ -121,38 +123,26 @@ function CategorySection({
         <span className="text-xs font-semibold text-gray-500 uppercase tracking-wider">{label}</span>
       </div>
       {items.map((item) => (
-        <div key={item.id} className="flex items-start gap-3 px-4 py-3 border-b border-gray-50 last:border-0">
-          <div className="flex-1 min-w-0">
-            <p className="text-sm font-medium text-gray-900 leading-snug truncate">
-              {item.product_name || item.item_name}
-            </p>
-            {item.brand && <p className="text-xs text-gray-400 mt-0.5">{item.brand}</p>}
-            {item.is_substitution && (
-              <span className="inline-block mt-1 px-1.5 py-0.5 rounded text-[10px] font-medium bg-amber-50 text-amber-700 border border-amber-200">
+        <div key={item.id}>
+          {item.is_substitution && (
+            <div className="px-4 pt-2">
+              <span className="px-1.5 py-0.5 rounded text-[10px] font-medium bg-amber-50 text-amber-700 border border-amber-200">
                 substitution
               </span>
-            )}
-          </div>
-          <div className="flex items-center gap-2 shrink-0">
-            <div className="text-right">
-              <p className="text-sm font-semibold text-gray-900">₹{Math.round(item.total_price)}</p>
-              <p className="text-xs text-gray-400">
-                {item.quantity} {item.unit}
-              </p>
             </div>
-            <button
-              onClick={() => onRemove(item.id, item.item_name)}
-              disabled={removingIds.has(item.id)}
-              className="ml-1 w-6 h-6 flex items-center justify-center rounded-full text-gray-300 hover:text-red-400 hover:bg-red-50 transition-colors disabled:opacity-30"
-              aria-label={`Remove ${item.item_name}`}
-            >
-              {removingIds.has(item.id) ? (
-                <span className="w-3 h-3 border border-gray-300 border-t-transparent rounded-full animate-spin" />
-              ) : (
-                <span className="text-xs leading-none">✕</span>
-              )}
-            </button>
-          </div>
+          )}
+          <BasketItemRow
+            id={item.id}
+            item_name={item.product_name || item.item_name}
+            brand={item.brand}
+            unit={item.unit}
+            unit_price={item.unit_price}
+            quantity={item.quantity}
+            showStepper
+            removing={removingIds.has(item.id)}
+            onRemove={(id) => onRemove(id, item.item_name)}
+            onQtyChange={onQtyChange}
+          />
         </div>
       ))}
     </div>
@@ -367,36 +357,62 @@ export default function FlowPage() {
     }
   }
 
-  const handleSearch = useCallback(async (q: string): Promise<SearchProduct[]> => {
+  async function handleQtyChange(itemId: string, qty: number) {
+    if (qty < 1) {
+      const item = (basket as PendingBasket)?.items?.find(i => i.id === itemId)
+      if (item) handleRemoveItem(itemId, item.item_name)
+      return
+    }
+    const prev = basket as PendingBasket
+    if (!prev?.items) return
+    const newItems = prev.items.map(i =>
+      i.id === itemId ? { ...i, quantity: qty, total_price: i.unit_price * qty } : i
+    )
+    const newTotal = newItems.reduce((s, i) => s + i.total_price, 0)
+    setBasket({ ...prev, items: newItems, estimated_total: newTotal })
+    try {
+      const res = await api.basket.editItem(itemId, { quantity: qty })
+      if (!res.success) {
+        setBasket(prev)
+        setError("Could not update quantity.")
+      }
+    } catch {
+      setBasket(prev)
+      setError("Could not update quantity.")
+    }
+  }
+
+  const handleSearch = useCallback(async (q: string): Promise<import("@/lib/api").ProductSearchResult[]> => {
     try {
       const res = await api.basket.searchItems(q)
       if (!res.success) {
         const code = (res.error as { code?: string })?.code
         if (code === "TOKEN_EXPIRED") { router.push("/reauth"); return [] }
-        setError("Search failed. Please try again.")
+        setError(res.error?.message ?? "Search failed. Please try again.")
         return []
       }
-      return (res.data as { results: SearchProduct[] })?.results ?? []
+      return res.data?.results ?? []
     } catch {
       setError("Search failed. Check your connection and try again.")
       return []
     }
   }, [])
 
-  async function handleAddItem(product: SearchProduct) {
+  async function handleAddItem(product: import("@/lib/api").ProductSearchResult) {
     setAddingItem(true); setError("")
     try {
       const res = await api.basket.addItem({
-        swiggy_product_id: product.swiggy_product_id,
-        name:      product.name,
-        price:     product.price,
-        image_url: product.image_url,
-        brand:     product.brand,
+        sku_id:     product.sku_id ?? "",
+        item_name:  product.item_name,
+        unit_price: product.unit_price,
+        unit:       product.unit,
+        image_url:  product.image_url,
+        brand:      product.brand,
       })
       if (!res.success) {
         const code = (res.error as { code?: string })?.code
         if (code === "TOKEN_EXPIRED") { handleTokenExpired(); return }
-        setError(`Could not add ${product.name}.`)
+        setError(`Could not add ${product.item_name}.`)
         return
       }
       const data = res.data as { item: BasketItem; estimated_total: number; item_count: number }
@@ -407,7 +423,7 @@ export default function FlowPage() {
       })
       setEditSummary((s) => ({ ...s, added: s.added + 1 }))
     } catch {
-      setError(`Could not add ${product.name}. Please try again.`)
+      setError(`Could not add ${product.item_name}. Please try again.`)
     } finally {
       setAddingItem(false)
     }
@@ -725,6 +741,7 @@ export default function FlowPage() {
                           cat={cat}
                           items={items}
                           onRemove={handleRemoveItem}
+                          onQtyChange={handleQtyChange}
                           removingIds={removingIds}
                         />
                       ))

@@ -14,6 +14,7 @@ Each item shape:
     "unit":       str,
     "quantity":   int,
     "unit_price": float,
+    "in_stock":   bool,  # captured at add time; stale by definition, used for UI warning only
 }
 """
 
@@ -62,9 +63,11 @@ async def add_item(household_id: str, item: dict[str, Any]) -> dict:
         "item_name":  item_name,
         "brand":      item.get("brand"),
         "sku_id":     item.get("sku_id"),
+        "spin_id":    item.get("spin_id") or "",
         "unit":       item.get("unit", "units"),
         "quantity":   int(item.get("quantity", 1)),
         "unit_price": float(item.get("unit_price", 0)),
+        "in_stock":   bool(item.get("in_stock", True)),
     }
     items.append(entry)
     await save_basket(household_id, items)
