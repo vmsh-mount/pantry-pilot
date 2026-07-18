@@ -87,7 +87,7 @@ services:
     command: >
       celery -A app.tasks.celery_app worker
       --loglevel=info
-      --queues=planning,pantry,whatsapp,maintenance
+      --queues=planning,pantry,whatsapp,maintenance,nutrition
       --concurrency=4
 
   # ── Pilot Beat (Scheduler) ────────────────────────────────────────────────

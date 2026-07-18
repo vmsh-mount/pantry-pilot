@@ -135,6 +135,55 @@ export interface QuickOrderResult {
   items:           QuickBasketItem[]
 }
 
+export type NutritionConfidence = "verified" | "high" | "medium" | "estimate" | "unresolved"
+
+export interface NutritionItemBreakdown {
+  item_name:   string
+  sku_id:      string | null
+  source:      string
+  confidence:  NutritionConfidence
+  quantity_g:  number | null
+  calories:    number | null
+  protein_g:   number | null
+  carbs_g:     number | null
+  fat_g:       number | null
+  fiber_g:     number | null
+  sodium_mg:   number | null
+  nutrients:   Record<string, number | null>
+}
+
+export interface OrderNutrition {
+  order_id:              string
+  computed_at:           string
+  total_calories:        number | null
+  total_protein_g:       number | null
+  total_carbs_g:         number | null
+  total_fat_g:           number | null
+  total_fiber_g:         number | null
+  total_sodium_mg:       number | null
+  nutrient_totals:       Record<string, number | null>
+  total_items:           number
+  resolved_items:        number
+  high_confidence_items: number
+  llm_estimated_items:   number
+  unresolved_items:      number
+  item_breakdown:        NutritionItemBreakdown[]
+}
+
+export interface NutritionWeeklyTargets {
+  calories:  number
+  protein_g: number
+  fiber_g:   number
+  sodium_mg: number
+}
+
+export interface ComplianceFlag {
+  flag_type: string
+  severity:  "warning" | "info"
+  items:     { item_name: string; value: number; threshold: number; field: string }[]
+  detail?:   string
+}
+
 // ── API client ────────────────────────────────────────────────────────────────
 export const api = {
   auth: {
@@ -218,5 +267,12 @@ export const api = {
     recentOrders:  ()                   => request<{ orders: QuickRecentOrder[] }>("/quick/orders/recent"),
     reorder:       (orderId: string)    => request<{ added: number; items: QuickBasketItem[] }>(`/quick/orders/${orderId}/reorder`, { method: "POST" }),
     clearBasket:   ()                   => request<{ cleared: boolean }>("/quick/basket", { method: "DELETE" }),
+  },
+  nutrition: {
+    order:      (orderId: string) => request<OrderNutrition | { status: "computing"; retry_after: number }>(`/nutrition/order/${orderId}`),
+    weekly:     (weeks?: number)  => request<{ weeks: object[]; weekly_targets: NutritionWeeklyTargets }>(`/nutrition/weekly${weeks ? `?weeks=${weeks}` : ""}`),
+    compliance: ()                => request<{ flags: ComplianceFlag[] }>("/nutrition/compliance"),
+    updateGoals:(body: { daily_calories?: number; daily_protein_g?: number; daily_fiber_g?: number; daily_sodium_mg?: number }) =>
+                                     request("/nutrition/goals", { method: "PATCH", body: JSON.stringify(body) }),
   },
 }

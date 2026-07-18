@@ -525,3 +525,105 @@ class ItemSignal(Base):
     new_value:       Mapped[dict | None] = mapped_column(JSONB, nullable=True)
 
     recorded_at:     Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+
+
+# ─────────────────────────────────────────────
+# Nutrition: Cache (per-SKU, global)
+# ─────────────────────────────────────────────
+class NutritionCache(Base):
+    __tablename__ = "nutrition_cache"
+
+    id:                    Mapped[str] = mapped_column(UUID(as_uuid=False), primary_key=True, default=gen_uuid)
+    sku_id:                Mapped[str] = mapped_column(String(50), unique=True, nullable=False)
+    resolved_at:           Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+
+    # Source + confidence
+    # source:     'off' | 'usda' | 'llm' | 'user_photo' | 'manual'
+    # confidence: 'high' | 'medium' | 'estimate' | 'verified'
+    source:                Mapped[str] = mapped_column(String(20), nullable=False)
+    confidence:            Mapped[str] = mapped_column(String(10), nullable=False)
+
+    # Quantity normalization
+    quantity_g:            Mapped[float | None] = mapped_column(Float)
+    quantity_unresolvable: Mapped[bool] = mapped_column(Boolean, default=False)
+    serving_size_g:        Mapped[float | None] = mapped_column(Float)  # declared serving size; needed for diabetic carbs-per-serving check
+
+    # Fixed SQL columns — only nutrients aggregated in queries
+    calories_per_100g:     Mapped[float | None] = mapped_column(Float)
+    protein_per_100g:      Mapped[float | None] = mapped_column(Float)
+    total_carbs_per_100g:  Mapped[float | None] = mapped_column(Float)
+    fat_per_100g:          Mapped[float | None] = mapped_column(Float)
+    fiber_per_100g:        Mapped[float | None] = mapped_column(Float)
+    sodium_mg_per_100g:    Mapped[float | None] = mapped_column(Float)  # mg per 100g
+
+    # All other nutrients: sugar, saturated_fat, trans_fat, cholesterol, calcium,
+    # iron, potassium, vitamin_c, vitamin_d, vitamin_b12, folate, zinc, omega3, ...
+    # All values per 100g, numeric, null if unknown. Extend freely — no migration needed.
+    nutrients:             Mapped[dict] = mapped_column(JSONB, default=dict)
+
+    # Source metadata
+    nutriscore_grade:      Mapped[str | None] = mapped_column(String(1))
+    matched_name:          Mapped[str | None] = mapped_column(Text)
+    off_product_id:        Mapped[str | None] = mapped_column(Text)
+    usda_fdc_id:           Mapped[int | None] = mapped_column(Integer)
+    raw_data:              Mapped[dict | None] = mapped_column(JSONB)
+
+    __table_args__ = (
+        Index("idx_nutrition_cache_sku_id", "sku_id"),
+    )
+
+
+# ─────────────────────────────────────────────
+# Nutrition: Per-order totals
+# ─────────────────────────────────────────────
+class OrderNutrition(Base):
+    __tablename__ = "order_nutrition"
+
+    id:                    Mapped[str] = mapped_column(UUID(as_uuid=False), primary_key=True, default=gen_uuid)
+    order_id:              Mapped[str] = mapped_column(UUID(as_uuid=False), ForeignKey("orders.id", ondelete="CASCADE"), unique=True, nullable=False)
+    household_id:          Mapped[str] = mapped_column(UUID(as_uuid=False), ForeignKey("households.id"), nullable=False)
+    computed_at:           Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+
+    # Fixed aggregates used in weekly trend queries and compliance checks
+    total_calories:        Mapped[float | None] = mapped_column(Float)
+    total_protein_g:       Mapped[float | None] = mapped_column(Float)
+    total_carbs_g:         Mapped[float | None] = mapped_column(Float)
+    total_fat_g:           Mapped[float | None] = mapped_column(Float)
+    total_fiber_g:         Mapped[float | None] = mapped_column(Float)
+    total_sodium_mg:       Mapped[float | None] = mapped_column(Float)
+
+    # All other nutrient totals mirroring nutrition_cache.nutrients keys, summed across items
+    nutrient_totals:       Mapped[dict] = mapped_column(JSONB, default=dict)
+
+    # Resolution coverage
+    total_items:           Mapped[int] = mapped_column(Integer, nullable=False)
+    resolved_items:        Mapped[int] = mapped_column(Integer, nullable=False)
+    high_confidence_items: Mapped[int] = mapped_column(Integer, default=0)
+    llm_estimated_items:   Mapped[int] = mapped_column(Integer, default=0)
+    unresolved_items:      Mapped[int] = mapped_column(Integer, default=0)
+
+    # Per-item breakdown: [{item_name, sku_id, source, confidence, quantity_g,
+    #   calories, protein_g, carbs_g, fat_g, fiber_g, sodium_mg, nutrients: {...}}]
+    item_breakdown:        Mapped[list] = mapped_column(JSONB, default=list)
+
+    __table_args__ = (
+        Index("idx_order_nutrition_household_id", "household_id"),
+        Index("idx_order_nutrition_order_id", "order_id"),
+    )
+
+
+# ─────────────────────────────────────────────
+# Nutrition: Household goal overrides
+# ─────────────────────────────────────────────
+class HouseholdNutritionGoals(Base):
+    __tablename__ = "household_nutrition_goals"
+
+    id:               Mapped[str] = mapped_column(UUID(as_uuid=False), primary_key=True, default=gen_uuid)
+    household_id:     Mapped[str] = mapped_column(UUID(as_uuid=False), ForeignKey("households.id", ondelete="CASCADE"), unique=True, nullable=False)
+
+    daily_calories:   Mapped[int | None] = mapped_column(Integer)
+    daily_protein_g:  Mapped[int | None] = mapped_column(Integer)
+    daily_fiber_g:    Mapped[int | None] = mapped_column(Integer)
+    daily_sodium_mg:  Mapped[int | None] = mapped_column(Integer)
+
+    updated_at:       Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now(), onupdate=func.now())
