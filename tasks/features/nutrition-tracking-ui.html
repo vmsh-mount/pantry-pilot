@@ -1,0 +1,336 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Nutrition Card — PantryPilot</title>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@3.19.0/dist/tabler-icons.min.css">
+<style>
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+:root {
+  --bg:       #F0EFEB;
+  --surface:  #F8F7F4;
+  --card:     #FFFFFF;
+  --card2:    #F5F4F0;
+  --border:   rgba(0,0,0,0.10);
+  --border-s: rgba(0,0,0,0.16);
+  --text-1:   #1A1916;
+  --text-2:   #6B6A62;
+  --text-3:   #A8A79F;
+  --accent:   #1A6B54;
+  --acc-bg:   #EAF5F0;
+  --acc-text: #0F4D3C;
+  --suc:      #1A6B2A;
+  --suc-bg:   #EAF5EC;
+  --warn:     #8A5A00;
+  --warn-bg:  #FFF5E0;
+  --warn-bdr: rgba(200,140,0,0.25);
+  --cal:  #C45E18; --pro:  #2A60A8; --carb: #8A6A10; --fat:  #A03820; --fib:  #2A7030; --sod:  #6038A0;
+  --radius: 8px;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --bg:       #111210;
+    --surface:  #191B18;
+    --card:     #222420;
+    --card2:    #2A2C28;
+    --border:   rgba(255,255,255,0.10);
+    --border-s: rgba(255,255,255,0.16);
+    --text-1:   #F0EFE9;
+    --text-2:   #9B9A92;
+    --text-3:   #6B6A62;
+    --accent:   #4DB896;
+    --acc-bg:   #0A2820;
+    --acc-text: #6DD4B4;
+    --suc:      #4DB860;
+    --suc-bg:   #0A2010;
+    --warn:     #E8A830;
+    --warn-bg:  #1E1400;
+    --warn-bdr: rgba(200,140,0,0.30);
+    --cal:  #E8834A; --pro:  #6898D8; --carb: #C89030; --fat:  #D05838; --fib:  #58A860; --sod:  #9068C8;
+  }
+}
+
+body { background: var(--bg); font-family: -apple-system, BlinkMacSystemFont, "Inter", "Segoe UI", sans-serif; font-size: 14px; color: var(--text-1); min-height: 100vh; padding: 20px 16px 40px; }
+
+.page-wrap { max-width: 420px; margin: 0 auto; }
+
+/* Toggle bar */
+.toggle-bar { display: flex; gap: 8px; margin-bottom: 16px; justify-content: center; }
+.toggle-bar button { font-size: 12px; padding: 6px 16px; border-radius: var(--radius); background: var(--card); border: 1px solid var(--border-s); color: var(--text-2); cursor: pointer; transition: all .15s; font-family: inherit; }
+.toggle-bar button.active { background: var(--acc-bg); color: var(--acc-text); border-color: var(--accent); }
+
+/* Screen frame */
+.screen { background: var(--surface); border-radius: 20px; border: 1px solid var(--border); overflow: hidden; }
+
+/* Nav */
+.nav { background: var(--card); padding: 14px 18px 12px; border-bottom: 1px solid var(--border); display: flex; align-items: center; gap: 8px; }
+.nav-back { color: var(--accent); font-size: 13px; display: flex; align-items: center; gap: 2px; }
+.nav-title { font-size: 15px; font-weight: 500; color: var(--text-1); flex: 1; text-align: center; }
+.nav-spacer { width: 52px; }
+
+/* Receipt */
+.receipt { background: var(--card); margin: 10px 10px 0; border-radius: 12px; border: 1px solid var(--border); padding: 14px; }
+.receipt-header { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 10px; }
+.receipt-title { font-size: 15px; font-weight: 500; color: var(--text-1); }
+.receipt-sub { font-size: 12px; color: var(--text-2); margin-top: 2px; }
+.receipt-pill { font-size: 11px; font-weight: 500; color: var(--suc); background: var(--suc-bg); padding: 3px 8px; border-radius: 6px; display: flex; align-items: center; gap: 4px; }
+.divider { height: 1px; background: var(--border); margin: 10px 0; }
+.receipt-row { display: flex; justify-content: space-between; font-size: 13px; color: var(--text-2); padding: 2px 0; }
+.receipt-total { display: flex; justify-content: space-between; font-size: 14px; font-weight: 500; color: var(--text-1); padding: 4px 0; }
+
+/* Nutrition card */
+.nc { background: var(--card); margin: 8px 10px 0; border-radius: 12px; border: 1px solid var(--border); overflow: hidden; }
+.nc-head { background: var(--card2); padding: 12px 14px; border-bottom: 1px solid var(--border); display: flex; align-items: center; justify-content: space-between; }
+.nc-head-left { display: flex; align-items: center; gap: 6px; font-size: 13px; font-weight: 500; color: var(--text-1); }
+.nc-head-left i { font-size: 15px; color: var(--text-2); }
+.nc-badge { font-size: 11px; color: var(--text-3); }
+
+/* Loading */
+.nc-loading { padding: 26px 14px; display: flex; flex-direction: column; align-items: center; gap: 8px; }
+.spinner { width: 20px; height: 20px; border: 2px solid var(--border-s); border-top-color: var(--accent); border-radius: 50%; animation: spin .8s linear infinite; }
+@keyframes spin { to { transform: rotate(360deg); } }
+.nc-loading-t { font-size: 13px; color: var(--text-2); }
+.nc-loading-s { font-size: 11px; color: var(--text-3); text-align: center; }
+
+/* Error */
+.nc-error { padding: 22px 14px; display: none; flex-direction: column; align-items: center; gap: 6px; }
+.nc-error i { font-size: 22px; color: var(--text-3); }
+.nc-error-t { font-size: 13px; color: var(--text-2); }
+.nc-error-s { font-size: 11px; color: var(--text-3); }
+
+/* Loaded body */
+.nc-body { padding: 14px; }
+.cal-hero { display: flex; align-items: baseline; gap: 6px; margin-bottom: 14px; }
+.cal-num { font-size: 28px; font-weight: 600; color: var(--cal); font-variant-numeric: tabular-nums; }
+.cal-label { font-size: 13px; color: var(--text-2); }
+.cal-target { margin-left: auto; font-size: 11px; color: var(--text-3); }
+
+/* Bars */
+.bar-row { margin-bottom: 8px; }
+.bar-meta { display: flex; justify-content: space-between; font-size: 11px; margin-bottom: 3px; }
+.bar-meta .lbl { color: var(--text-2); }
+.bar-meta .val { font-variant-numeric: tabular-nums; }
+.bar-track { height: 4px; background: var(--card2); border-radius: 2px; overflow: hidden; }
+.bar-fill { height: 100%; border-radius: 2px; }
+
+/* Items */
+.item-section { border-top: 1px solid var(--border); margin-top: 12px; padding-top: 10px; }
+.item-section-lbl { font-size: 10px; color: var(--text-3); letter-spacing: .06em; text-transform: uppercase; margin-bottom: 6px; }
+.item-row { display: flex; align-items: center; padding: 5px 0; border-bottom: 1px solid var(--border); gap: 6px; }
+.item-row:last-child { border-bottom: none; }
+.item-name { flex: 1; font-size: 12px; color: var(--text-1); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; min-width: 0; }
+.item-kcal { font-size: 12px; color: var(--text-2); font-variant-numeric: tabular-nums; white-space: nowrap; flex-shrink: 0; }
+.item-kcal.est { color: var(--text-3); font-style: italic; }
+.item-kcal.ver { font-weight: 600; color: var(--text-1); }
+
+/* Badges */
+.badge { display: inline-flex; align-items: center; gap: 3px; font-size: 10px; padding: 2px 6px; border-radius: 4px; white-space: nowrap; flex-shrink: 0; }
+.b-v { background: var(--suc-bg); color: var(--suc); }
+.b-h { background: var(--acc-bg); color: var(--acc-text); }
+.b-m { background: var(--card2); color: var(--text-2); border: 1px solid var(--border-s); }
+.b-e { background: var(--card2); color: var(--text-3); border: 1px solid var(--border); font-style: italic; }
+.b-u { background: var(--card2); color: var(--text-3); border: 1px solid var(--border); }
+
+/* Footer */
+.nc-foot { padding: 8px 14px 10px; font-size: 11px; color: var(--text-3); display: flex; justify-content: space-between; align-items: center; border-top: 1px solid var(--border); }
+.nc-foot a { color: var(--accent); text-decoration: none; }
+
+/* Compliance */
+.compliance { margin: 8px 10px 0; border-radius: 12px; border: 1px solid var(--warn-bdr); background: var(--warn-bg); padding: 10px 12px; display: flex; gap: 10px; align-items: flex-start; }
+.compliance i { font-size: 16px; color: var(--warn); flex-shrink: 0; margin-top: 1px; }
+.c-title { font-size: 12px; font-weight: 500; color: var(--text-1); margin-bottom: 2px; }
+.c-body { font-size: 12px; color: var(--text-2); line-height: 1.5; }
+
+/* Bottom spacer */
+.bottom-gap { height: 10px; }
+
+/* Options bar */
+.opt-bar { margin-top: 14px; display: flex; justify-content: center; }
+.opt-bar label { display: flex; align-items: center; gap: 8px; font-size: 12px; color: var(--text-2); cursor: pointer; }
+
+/* State control */
+[data-state="loading"] .nc-loaded,
+[data-state="loading"] .nc-foot { display: none; }
+[data-state="loaded"] .nc-loading { display: none; }
+[data-state="error"] .nc-loading,
+[data-state="error"] .nc-loaded,
+[data-state="error"] .nc-foot { display: none; }
+[data-state="error"] .nc-error { display: flex; }
+</style>
+</head>
+<body>
+<div class="page-wrap">
+
+  <div class="toggle-bar">
+    <button class="active" onclick="setState('loading')">Loading</button>
+    <button onclick="setState('loaded')">Loaded</button>
+    <button onclick="setState('error')">Error</button>
+  </div>
+
+  <div class="screen" id="screen" data-state="loading">
+
+    <div class="nav">
+      <span class="nav-back"><i class="ti ti-chevron-left"></i> Order</span>
+      <span class="nav-title">Order confirmed</span>
+      <span class="nav-spacer"></span>
+    </div>
+
+    <!-- Receipt -->
+    <div class="receipt">
+      <div class="receipt-header">
+        <div>
+          <div class="receipt-title">Swiggy Instamart</div>
+          <div class="receipt-sub">Today, 6:14 PM · 8 items</div>
+        </div>
+        <span class="receipt-pill"><i class="ti ti-check"></i> Placed</span>
+      </div>
+      <div class="receipt-row"><span>Amul Butter 500g</span><span>₹280</span></div>
+      <div class="receipt-row"><span>Aashirvaad Atta 5kg</span><span>₹325</span></div>
+      <div class="receipt-row"><span>Tropicana Orange 1L</span><span>₹135</span></div>
+      <div class="receipt-row" style="color:var(--text-3); font-size:11px;">+ 5 more items</div>
+      <div class="divider"></div>
+      <div class="receipt-row"><span>Item total</span><span>₹1,240</span></div>
+      <div class="receipt-row"><span>Delivery fee</span><span>₹0</span></div>
+      <div class="receipt-total"><span>Total</span><span>₹1,240</span></div>
+    </div>
+
+    <!-- Nutrition Card -->
+    <div class="nc">
+      <div class="nc-head">
+        <div class="nc-head-left"><i class="ti ti-leaf"></i> Nutrition snapshot</div>
+        <span class="nc-badge" id="nc-badge">computing…</span>
+      </div>
+
+      <!-- Loading state -->
+      <div class="nc-loading">
+        <div class="spinner"></div>
+        <div class="nc-loading-t">Resolving nutrition data</div>
+        <div class="nc-loading-s">Checking Open Food Facts, USDA &amp; AI estimates</div>
+      </div>
+
+      <!-- Error state -->
+      <div class="nc-error">
+        <i class="ti ti-alert-circle"></i>
+        <div class="nc-error-t">Nutrition data unavailable</div>
+        <div class="nc-error-s">We'll retry in the background</div>
+      </div>
+
+      <!-- Loaded state -->
+      <div class="nc-loaded">
+        <div class="nc-body">
+          <div class="cal-hero">
+            <span class="cal-num">3,842</span>
+            <span class="cal-label">kcal this order</span>
+            <span class="cal-target">target 4,000 kcal/wk</span>
+          </div>
+
+          <div class="bar-row">
+            <div class="bar-meta"><span class="lbl">Protein</span><span class="val" style="color:var(--pro)">142g / 200g</span></div>
+            <div class="bar-track"><div class="bar-fill" style="width:71%;background:var(--pro)"></div></div>
+          </div>
+          <div class="bar-row">
+            <div class="bar-meta"><span class="lbl">Carbs</span><span class="val" style="color:var(--carb)">510g / 560g</span></div>
+            <div class="bar-track"><div class="bar-fill" style="width:91%;background:var(--carb)"></div></div>
+          </div>
+          <div class="bar-row">
+            <div class="bar-meta"><span class="lbl">Fat</span><span class="val" style="color:var(--fat)">88g / 110g</span></div>
+            <div class="bar-track"><div class="bar-fill" style="width:80%;background:var(--fat)"></div></div>
+          </div>
+          <div class="bar-row">
+            <div class="bar-meta"><span class="lbl">Fiber</span><span class="val" style="color:var(--fib)">28g / 50g</span></div>
+            <div class="bar-track"><div class="bar-fill" style="width:56%;background:var(--fib)"></div></div>
+          </div>
+          <div class="bar-row">
+            <div class="bar-meta"><span class="lbl">Sodium</span><span class="val" style="color:var(--sod)">1,840mg / 4,600mg</span></div>
+            <div class="bar-track"><div class="bar-fill" style="width:40%;background:var(--sod)"></div></div>
+          </div>
+
+          <div class="item-section">
+            <div class="item-section-lbl">Per item</div>
+            <div class="item-row">
+              <span class="badge b-v"><i class="ti ti-check"></i> Verified</span>
+              <span class="item-name">Amul Butter 500g</span>
+              <span class="item-kcal ver">3,600 kcal</span>
+            </div>
+            <div class="item-row">
+              <span class="badge b-h">Label</span>
+              <span class="item-name">Aashirvaad Atta 5kg</span>
+              <span class="item-kcal">16,500 kcal</span>
+            </div>
+            <div class="item-row">
+              <span class="badge b-m">~Database</span>
+              <span class="item-name">Tropicana Orange 1L</span>
+              <span class="item-kcal">~450 kcal</span>
+            </div>
+            <div class="item-row">
+              <span class="badge b-m">~Database</span>
+              <span class="item-name">Onion 1kg</span>
+              <span class="item-kcal">~400 kcal</span>
+            </div>
+            <div class="item-row">
+              <span class="badge b-e">~AI est.</span>
+              <span class="item-name">Haldiram's Bhujia 400g</span>
+              <span class="item-kcal est">~2,040 kcal</span>
+            </div>
+            <div class="item-row">
+              <span class="badge b-e">~AI est.</span>
+              <span class="item-name">Maggi Masala 12-pack</span>
+              <span class="item-kcal est">~1,800 kcal</span>
+            </div>
+            <div class="item-row">
+              <span class="badge b-h">Label</span>
+              <span class="item-name">Nandini Toned Milk 1L</span>
+              <span class="item-kcal">520 kcal</span>
+            </div>
+            <div class="item-row">
+              <span class="badge b-u">—</span>
+              <span class="item-name">Fresh Coriander bunch</span>
+              <span class="item-kcal" style="color:var(--text-3)">—</span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="nc-foot">
+        <span>7 of 8 items resolved · 1 excluded</span>
+        <a href="#">Report incorrect data</a>
+      </div>
+    </div>
+
+    <!-- V2 Compliance banner (hidden by default) -->
+    <div class="compliance" id="compliance" style="display:none">
+      <i class="ti ti-alert-triangle"></i>
+      <div>
+        <div class="c-title">High-sugar items flagged</div>
+        <div class="c-body">2 items exceed 20g sugar per 100g. Your diet profile is diabetic-friendly. Informational only.</div>
+      </div>
+    </div>
+
+    <div class="bottom-gap"></div>
+  </div>
+
+  <div class="opt-bar">
+    <label>
+      <input type="checkbox" id="chk" onchange="document.getElementById('compliance').style.display=this.checked?'flex':'none'">
+      Show V2 compliance banner
+    </label>
+  </div>
+
+</div>
+
+<script>
+function setState(s) {
+  document.getElementById('screen').dataset.state = s;
+  document.getElementById('nc-badge').textContent =
+    s === 'loading' ? 'computing…' :
+    s === 'loaded'  ? '7 / 8 resolved' : 'unavailable';
+  document.querySelectorAll('.toggle-bar button').forEach((b, i) =>
+    b.classList.toggle('active', ['loading','loaded','error'][i] === s)
+  );
+}
+</script>
+</body>
+</html>

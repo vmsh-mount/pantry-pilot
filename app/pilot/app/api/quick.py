@@ -473,7 +473,9 @@ async def checkout(
 
     # Post-order async tasks
     from app.tasks.pantry import update_pantry_post_order
+    from app.tasks.nutrition import resolve_order_nutrition
     update_pantry_post_order.delay(household_id, swiggy_order_id)
+    resolve_order_nutrition.delay(order.id)
 
     background_tasks.add_task(_run_model_update, household_id)
 

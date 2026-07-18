@@ -16,6 +16,7 @@ celery_app = Celery(
         "app.tasks.maintenance",
         "app.tasks.routines",
         "app.tasks.flow",
+        "app.tasks.nutrition",
     ]
 )
 
@@ -65,6 +66,7 @@ celery_app.conf.update(
         "app.tasks.maintenance.*": {"queue": "maintenance"},
         "app.tasks.routines.*":    {"queue": "planning"},
         "app.tasks.flow.*":        {"queue": "planning"},
+        "app.tasks.nutrition.*":   {"queue": "nutrition"},
     },
     beat_schedule={
         "daily-token-expiry-check": {
@@ -82,6 +84,10 @@ celery_app.conf.update(
         "evaluate-flow-signals": {
             "task": "app.tasks.flow.evaluate_flow_signals",
             "schedule": crontab(hour="*/4"),          # every 4 hours
+        },
+        "nutrition-weekly-compliance": {
+            "task": "app.tasks.nutrition.trigger_all_compliance",
+            "schedule": crontab(hour=11, minute=30, day_of_week=0),  # Sunday 5 PM IST
         },
     }
 )

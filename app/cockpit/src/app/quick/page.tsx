@@ -17,6 +17,7 @@ import {
   Spinner,
 } from "@/components/ui"
 import { ItemSearchDropdown } from "@/components/basket/ItemSearchDropdown"
+import { NutritionCard } from "@/components/nutrition/NutritionCard"
 
 // ── Qty stepper ────────────────────────────────────────────────────────────────
 
@@ -245,6 +246,10 @@ export default function QuickOrderPage() {
             <Button onClick={() => router.push("/dashboard")}>Back to home</Button>
           </div>
         </Card>
+
+        <div className="mt-4">
+          <NutritionCard orderId={order.order_id} />
+        </div>
       </AppShell>
     )
   }

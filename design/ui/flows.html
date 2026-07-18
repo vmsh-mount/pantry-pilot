@@ -1,0 +1,2171 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>PantryPilot — Product Flows</title>
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap');
+
+    :root {
+      --green:       #2D6A4F;
+      --green-dark:  #1B4332;
+      --green-mid:   #40916C;
+      --green-pale:  #D8F3DC;
+      --green-faint: #F0FAF4;
+      --orange:      #F4845F;
+      --text:        #111827;
+      --muted:       #6B7280;
+      --border:      #E5E7EB;
+      --bg:          #F7F8F5;
+      --card:        #FFFFFF;
+      --canvas:      #0D1117;
+      --canvas-nav:  #0A0F14;
+      --canvas-nav-border: #1E2A35;
+    }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: 'Inter', sans-serif;
+      background: var(--canvas);
+      color: var(--text);
+      min-height: 100vh;
+      padding: 32px 16px 64px;
+    }
+
+    /* ── Top nav ──────────────────────────────────────────────── */
+    .nav {
+      position: fixed;
+      top: 0; left: 0; right: 0;
+      background: var(--canvas-nav);
+      border-bottom: 1px solid var(--canvas-nav-border);
+      padding: 10px 20px;
+      display: flex;
+      gap: 6px;
+      flex-wrap: wrap;
+      align-items: center;
+      z-index: 100;
+    }
+
+    .nav-group {
+      display: flex;
+      align-items: center;
+      gap: 4px;
+    }
+
+    .nav-divider {
+      width: 1px;
+      height: 20px;
+      background: var(--canvas-nav-border);
+      margin: 0 6px;
+    }
+
+    .nav-label {
+      font-size: 10px;
+      font-weight: 700;
+      color: #3D5A6C;
+      text-transform: uppercase;
+      letter-spacing: 1.5px;
+      margin-right: 2px;
+    }
+
+    .nav-btn {
+      padding: 5px 12px;
+      border-radius: 20px;
+      border: 1px solid var(--canvas-nav-border);
+      background: transparent;
+      color: #4B6070;
+      font-size: 11px;
+      font-weight: 600;
+      font-family: 'Inter', sans-serif;
+      cursor: pointer;
+      transition: all 0.15s;
+      white-space: nowrap;
+    }
+    .nav-btn:hover { background: #1A2530; color: #8BA8BC; }
+    .nav-btn.active {
+      background: var(--green);
+      border-color: var(--green);
+      color: white;
+    }
+
+    /* ── Stage / screen layout ────────────────────────────────── */
+    .stage {
+      display: none;
+      padding-top: 68px;
+    }
+    .stage.active { display: block; }
+
+    @keyframes slideIn {
+      from { opacity: 0; transform: translateX(24px); }
+      to   { opacity: 1; transform: translateX(0); }
+    }
+    .stage.active { animation: slideIn 0.22s ease; }
+
+    .stage-label {
+      text-align: center;
+      color: #2E4A5C;
+      font-size: 10px;
+      font-weight: 700;
+      letter-spacing: 2.5px;
+      text-transform: uppercase;
+      margin-bottom: 20px;
+    }
+
+    /* ── Phone frame ──────────────────────────────────────────── */
+    .phone {
+      width: 375px;
+      height: 812px;
+      margin: 0 auto;
+      border-radius: 44px;
+      overflow: hidden;
+      box-shadow:
+        0 0 0 1px rgba(255,255,255,0.08),
+        0 40px 80px rgba(0,0,0,0.7),
+        inset 0 1px 0 rgba(255,255,255,0.1);
+      position: relative;
+      display: flex;
+      flex-direction: column;
+      background: var(--green);
+    }
+
+    .phone.white-bg { background: white; }
+
+    .status-bar {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 14px 24px 6px;
+      flex-shrink: 0;
+      background: transparent;
+    }
+    .status-bar.dark { background: #111; }
+    .status-time { font-size: 14px; font-weight: 700; color: white; }
+    .status-icons { font-size: 12px; color: white; opacity: 0.8; }
+
+    .phone-scroll {
+      flex: 1;
+      overflow-y: auto;
+      overflow-x: hidden;
+      scrollbar-width: none;
+      padding: 16px 16px 0;
+      position: relative;
+    }
+    .phone-scroll::-webkit-scrollbar { display: none; }
+
+    /* ── Bottom nav ───────────────────────────────────────────── */
+    .bot-nav {
+      flex-shrink: 0;
+      padding: 6px 12px 10px;
+      background: transparent;
+    }
+    .bot-nav-inner {
+      background: white;
+      border-radius: 22px;
+      display: flex;
+      padding: 2px 4px;
+      box-shadow: 0 4px 20px rgba(0,0,0,0.15), 0 0 0 1px rgba(0,0,0,0.05);
+    }
+    .bot-tab {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      padding: 9px 0 8px;
+      border-radius: 18px;
+      gap: 3px;
+      cursor: pointer;
+      transition: background 0.15s;
+    }
+    .bot-tab.active { background: var(--green-faint); }
+    .bot-tab-icon { font-size: 19px; line-height: 1; }
+    .bot-tab-lbl {
+      font-size: 9px;
+      font-weight: 700;
+      letter-spacing: 0.3px;
+      color: var(--border);
+    }
+    .bot-tab.active .bot-tab-lbl { color: var(--green); }
+
+    /* ── App header (inside scroll area) ─────────────────────── */
+    .app-hdr {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding-bottom: 16px;
+    }
+    .app-hdr-left { display: flex; align-items: center; gap: 8px; }
+    .app-back {
+      color: var(--green-pale);
+      font-size: 20px;
+      cursor: pointer;
+      line-height: 1;
+    }
+    .app-title { color: white; font-size: 17px; font-weight: 700; }
+    .app-tag {
+      background: rgba(255,255,255,0.18);
+      color: var(--green-pale);
+      font-size: 9px;
+      font-weight: 800;
+      padding: 2px 7px;
+      border-radius: 20px;
+      letter-spacing: 0.5px;
+    }
+    .app-hdr-right {
+      color: var(--green-pale);
+      font-size: 12px;
+      font-weight: 700;
+      cursor: pointer;
+    }
+
+    /* ── White card ───────────────────────────────────────────── */
+    .card {
+      background: white;
+      border-radius: 24px;
+      overflow: hidden;
+      box-shadow: 0 2px 16px rgba(0,0,0,0.09);
+    }
+
+    .card-hd-green {
+      background: var(--green);
+      padding: 18px 18px 14px;
+    }
+    .card-hd-title { color: white; font-size: 17px; font-weight: 700; }
+    .card-hd-sub { color: var(--green-pale); font-size: 12px; margin-top: 2px; }
+
+    /* budget bar inside green header */
+    .bbar-wrap { margin-top: 12px; }
+    .bbar-meta {
+      display: flex;
+      justify-content: space-between;
+      font-size: 11px;
+      color: rgba(255,255,255,0.65);
+      margin-bottom: 5px;
+    }
+    .bbar-track {
+      background: rgba(255,255,255,0.2);
+      border-radius: 4px;
+      height: 5px;
+      overflow: hidden;
+    }
+    .bbar-fill {
+      background: var(--green-pale);
+      border-radius: 4px;
+      height: 5px;
+    }
+
+    /* edit-summary banner */
+    .edit-banner {
+      margin: 10px 12px 0;
+      background: var(--green-faint);
+      border: 1px solid rgba(45,106,79,0.2);
+      border-radius: 12px;
+      padding: 8px 12px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+    .edit-banner-txt { font-size: 12px; font-weight: 600; color: var(--green-dark); }
+    .edit-banner-x { font-size: 12px; color: var(--green); cursor: pointer; }
+
+    /* ── Category section ─────────────────────────────────────── */
+    .cat-hd {
+      background: var(--bg);
+      padding: 7px 16px;
+      display: flex;
+      align-items: center;
+      gap: 7px;
+    }
+    .cat-hd-lbl {
+      font-size: 10px;
+      font-weight: 800;
+      color: #9CA3AF;
+      text-transform: uppercase;
+      letter-spacing: 1px;
+    }
+
+    /* ── Item row ─────────────────────────────────────────────── */
+    .item-row {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 11px 16px;
+      border-bottom: 1px solid #F7F7F7;
+    }
+    .item-row:last-child { border-bottom: none; }
+
+    .item-info { flex: 1; min-width: 0; }
+    .item-name {
+      font-size: 13px;
+      font-weight: 600;
+      color: var(--text);
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+    .item-brand { font-size: 11px; color: #9CA3AF; margin-top: 1px; }
+    .item-price-line {
+      font-size: 11px;
+      color: var(--green);
+      font-weight: 600;
+      margin-top: 2px;
+    }
+
+    /* substitution badge */
+    .sub-badge {
+      display: inline-block;
+      background: #FEF3C7;
+      color: #92400E;
+      font-size: 9px;
+      font-weight: 700;
+      padding: 1px 6px;
+      border-radius: 4px;
+      border: 1px solid #FCD34D;
+      margin-top: 3px;
+    }
+
+    .qty-stepper {
+      display: flex;
+      align-items: center;
+      gap: 7px;
+      flex-shrink: 0;
+    }
+    .qty-btn {
+      width: 26px; height: 26px;
+      border-radius: 50%;
+      border: none;
+      font-size: 15px;
+      font-weight: 700;
+      font-family: 'Inter', sans-serif;
+      cursor: pointer;
+      display: flex; align-items: center; justify-content: center;
+      line-height: 1;
+      transition: all 0.12s;
+    }
+    .qty-btn.minus { background: #F0F0F0; color: #6B7280; }
+    .qty-btn.plus  { background: var(--green); color: white; }
+    .qty-btn.minus:hover { background: #E0E0E0; }
+    .qty-btn.plus:hover  { background: var(--green-dark); }
+    .qty-num {
+      font-size: 14px;
+      font-weight: 800;
+      color: var(--text);
+      min-width: 14px;
+      text-align: center;
+      font-variant-numeric: tabular-nums;
+    }
+
+    .item-line-total {
+      font-size: 14px;
+      font-weight: 700;
+      color: var(--text);
+      min-width: 40px;
+      text-align: right;
+      flex-shrink: 0;
+      font-variant-numeric: tabular-nums;
+    }
+
+    .item-rm {
+      width: 22px; height: 22px;
+      border-radius: 50%;
+      border: none;
+      background: transparent;
+      color: #D0D0D0;
+      font-size: 11px;
+      cursor: pointer;
+      display: flex; align-items: center; justify-content: center;
+      flex-shrink: 0;
+      transition: all 0.12s;
+    }
+    .item-rm:hover { background: #FEE2E2; color: #EF4444; }
+
+    /* ── Add item button ──────────────────────────────────────── */
+    .add-btn {
+      width: 100%;
+      border: 2px dashed rgba(45,106,79,0.28);
+      border-radius: 14px;
+      padding: 12px;
+      background: none;
+      color: var(--green);
+      font-size: 13px;
+      font-weight: 700;
+      font-family: 'Inter', sans-serif;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 7px;
+      transition: all 0.15s;
+    }
+    .add-btn:hover { background: var(--green-faint); border-color: var(--green); }
+
+    /* ── Search dropdown (open state) ─────────────────────────── */
+    .search-box {
+      border: 1.5px solid rgba(45,106,79,0.25);
+      border-radius: 14px;
+      overflow: hidden;
+      background: white;
+    }
+    .search-input-row {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      padding: 10px 14px;
+      border-bottom: 1px solid var(--bg);
+    }
+    .search-icon { font-size: 14px; color: #9CA3AF; }
+    .search-fake-input {
+      flex: 1;
+      font-size: 13px;
+      color: var(--text);
+      font-weight: 500;
+    }
+    .search-fake-cursor {
+      display: inline-block;
+      width: 1.5px;
+      height: 14px;
+      background: var(--green);
+      vertical-align: middle;
+      margin-left: 1px;
+      animation: blink 1s step-end infinite;
+    }
+    @keyframes blink { 0%,100%{opacity:1} 50%{opacity:0} }
+    .search-x {
+      color: #9CA3AF;
+      font-size: 11px;
+      cursor: pointer;
+    }
+
+    .search-result {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 9px 14px;
+      border-bottom: 1px solid #F7F7F7;
+      cursor: pointer;
+      transition: background 0.1s;
+    }
+    .search-result:last-child { border-bottom: none; }
+    .search-result:hover { background: var(--green-faint); }
+
+    .s-thumb {
+      width: 36px; height: 36px;
+      border-radius: 10px;
+      background: var(--bg);
+      display: flex; align-items: center; justify-content: center;
+      font-size: 18px;
+      flex-shrink: 0;
+    }
+    .s-info { flex: 1; min-width: 0; }
+    .s-name { font-size: 12px; font-weight: 600; color: var(--text); }
+    .s-brand { font-size: 11px; color: #9CA3AF; }
+    .s-price-col { text-align: right; flex-shrink: 0; }
+    .s-price { font-size: 13px; font-weight: 800; color: var(--text); }
+    .s-unit  { font-size: 10px; color: #9CA3AF; }
+    .s-add-btn {
+      padding: 5px 11px;
+      border-radius: 8px;
+      border: none;
+      font-size: 11px;
+      font-weight: 700;
+      font-family: 'Inter', sans-serif;
+      cursor: pointer;
+      flex-shrink: 0;
+      transition: all 0.12s;
+    }
+    .s-add { background: var(--green); color: white; }
+    .s-added { background: var(--green-pale); color: var(--green-dark); }
+    .s-oos { background: var(--bg); color: #9CA3AF; cursor: default; }
+
+    /* ── Card total footer ────────────────────────────────────── */
+    .card-footer {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 13px 16px;
+      border-top: 1px solid #F0F0F0;
+    }
+    .footer-lbl { font-size: 13px; color: var(--muted); font-weight: 500; }
+    .footer-total { font-size: 18px; font-weight: 900; color: var(--text); font-variant-numeric: tabular-nums; }
+
+    /* ── Buttons (outside card) ───────────────────────────────── */
+    .btn {
+      width: 100%;
+      padding: 15px;
+      border: none;
+      border-radius: 18px;
+      font-size: 14px;
+      font-weight: 700;
+      font-family: 'Inter', sans-serif;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      transition: all 0.15s;
+    }
+    .btn-primary   { background: var(--green); color: white; }
+    .btn-primary:hover { background: var(--green-dark); }
+    .btn-secondary {
+      background: white;
+      color: var(--text);
+      border: 1.5px solid var(--border);
+    }
+    .btn-secondary:hover { background: var(--bg); }
+    .btn-ghost { background: transparent; color: var(--green-pale); font-size: 13px; }
+
+    /* ── Run status bar ───────────────────────────────────────── */
+    .run-bar {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      background: rgba(255,255,255,0.1);
+      border: 1px solid rgba(255,255,255,0.15);
+      border-radius: 16px;
+      padding: 10px 14px;
+      margin-bottom: 10px;
+    }
+    .run-bar-lbl { font-size: 11px; color: var(--green-pale); }
+    .run-bar-val { font-size: 13px; color: white; font-weight: 700; margin-top: 2px; }
+    .run-bar-cta {
+      background: white;
+      color: var(--green);
+      border: none;
+      border-radius: 10px;
+      padding: 7px 13px;
+      font-size: 11px;
+      font-weight: 800;
+      font-family: 'Inter', sans-serif;
+      cursor: pointer;
+    }
+
+    /* ── Stat chips ───────────────────────────────────────────── */
+    .stat-row {
+      display: grid;
+      grid-template-columns: 1fr 1fr 1fr;
+      gap: 8px;
+      margin-bottom: 10px;
+    }
+    .stat-chip {
+      background: rgba(255,255,255,0.1);
+      border-radius: 16px;
+      padding: 10px 8px;
+      text-align: center;
+    }
+    .stat-v { font-size: 14px; font-weight: 900; color: white; font-variant-numeric: tabular-nums; }
+    .stat-l { font-size: 10px; color: var(--green-pale); margin-top: 3px; }
+
+    /* ── Planning progress card ───────────────────────────────── */
+    .plan-card {
+      background: white;
+      border-radius: 24px;
+      padding: 32px 24px;
+      text-align: center;
+      box-shadow: 0 2px 16px rgba(0,0,0,0.09);
+    }
+    .plan-icon {
+      width: 64px; height: 64px;
+      background: var(--green-pale);
+      border-radius: 50%;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 30px;
+      margin: 0 auto 16px;
+      animation: pulse 1.8s ease-in-out infinite;
+    }
+    @keyframes pulse {
+      0%,100% { transform: scale(1); opacity: 1; }
+      50% { transform: scale(1.08); opacity: 0.85; }
+    }
+    .plan-title { font-size: 15px; font-weight: 700; color: var(--text); }
+    .plan-sub   { font-size: 12px; color: var(--muted); margin-top: 4px; }
+    .plan-stages {
+      display: flex;
+      justify-content: center;
+      gap: 6px;
+      margin-top: 16px;
+    }
+    .plan-stage-bar {
+      height: 5px;
+      width: 36px;
+      border-radius: 3px;
+      background: var(--border);
+    }
+    .plan-stage-bar.done { background: var(--green); }
+    .plan-stage-bar.active { background: var(--green-mid); }
+
+    /* ── Next run pill ────────────────────────────────────────── */
+    .next-run-pill {
+      display: flex;
+      align-items: center;
+      gap: 7px;
+      background: rgba(255,255,255,0.1);
+      border: 1px solid rgba(255,255,255,0.15);
+      border-radius: 14px;
+      padding: 9px 14px;
+      margin-bottom: 10px;
+    }
+    .nrp-dot {
+      width: 8px; height: 8px;
+      border-radius: 50%;
+      background: #52B788;
+      flex-shrink: 0;
+    }
+    .nrp-text { font-size: 13px; color: var(--green-pale); }
+    .nrp-val  { font-weight: 700; color: white; }
+
+    /* ── Success / confirmation screen ────────────────────────── */
+    .success-card {
+      background: white;
+      border-radius: 24px;
+      overflow: hidden;
+      box-shadow: 0 2px 16px rgba(0,0,0,0.09);
+    }
+    .success-hd {
+      background: var(--green-dark);
+      padding: 28px 20px 22px;
+      text-align: center;
+    }
+    .success-icon { font-size: 40px; margin-bottom: 10px; }
+    .success-title { color: white; font-size: 18px; font-weight: 800; }
+    .success-sub   { color: rgba(255,255,255,0.65); font-size: 12px; margin-top: 4px; }
+    .success-rows  { padding: 4px 0; }
+    .success-row {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 11px 18px;
+      border-bottom: 1px solid #F7F7F7;
+      font-size: 13px;
+    }
+    .success-row:last-child { border-bottom: none; }
+    .s-row-lbl { color: var(--muted); }
+    .s-row-val { font-weight: 700; color: var(--text); }
+    .s-row-val.green { color: var(--green); }
+
+    /* ── Idle empty card ──────────────────────────────────────── */
+    .idle-card {
+      background: white;
+      border-radius: 24px;
+      padding: 32px 24px;
+      text-align: center;
+      box-shadow: 0 2px 16px rgba(0,0,0,0.09);
+    }
+    .idle-icon { font-size: 40px; margin-bottom: 14px; }
+    .idle-title { font-size: 15px; font-weight: 700; color: var(--text); }
+    .idle-sub   { font-size: 12px; color: var(--muted); margin-top: 6px; line-height: 1.5; }
+    .idle-cta {
+      margin-top: 16px;
+      font-size: 13px;
+      font-weight: 700;
+      color: var(--green);
+      cursor: pointer;
+    }
+
+    /* ── Quick order empty state ──────────────────────────────── */
+    .qo-empty-hd {
+      text-align: center;
+      padding: 28px 20px 20px;
+      border-bottom: 1px solid #F5F5F5;
+    }
+    .qo-empty-icon { font-size: 44px; margin-bottom: 12px; }
+    .qo-empty-title { font-size: 15px; font-weight: 700; color: var(--text); }
+    .qo-empty-sub   { font-size: 12px; color: var(--muted); margin-top: 5px; line-height: 1.5; }
+    .qo-empty-body  { padding: 16px; }
+
+    /* Quick order card header (neutral, no green) */
+    .qo-card-hd {
+      padding: 14px 16px 12px;
+      border-bottom: 1px solid #F5F5F5;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+    .qo-hd-title { font-size: 14px; font-weight: 700; color: var(--text); }
+    .qo-hd-meta  { font-size: 12px; color: var(--muted); }
+
+    /* ── Recent runs list ─────────────────────────────────────── */
+    .runs-card {
+      background: white;
+      border-radius: 20px;
+      overflow: hidden;
+      box-shadow: 0 2px 16px rgba(0,0,0,0.08);
+      margin-top: 10px;
+    }
+    .runs-hd {
+      padding: 12px 16px 8px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+    .runs-hd-lbl { font-size: 11px; font-weight: 800; color: #9CA3AF; text-transform: uppercase; letter-spacing: 1px; }
+    .runs-hd-link { font-size: 11px; font-weight: 700; color: var(--green); cursor: pointer; }
+    .run-row {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 10px 16px;
+      border-top: 1px solid #F7F7F7;
+    }
+    .run-date { font-size: 12px; color: var(--muted); }
+    .run-badge {
+      font-size: 10px;
+      font-weight: 700;
+      padding: 3px 8px;
+      border-radius: 20px;
+      margin-left: 8px;
+    }
+    .rb-done { background: var(--green-pale); color: var(--green-dark); }
+    .rb-skip { background: #F3F4F6; color: #6B7280; }
+    .rb-fail { background: #FEE2E2; color: #B91C1C; }
+    .run-amt { font-size: 12px; color: #9CA3AF; }
+
+    /* ── Routine cards ────────────────────────────────────────── */
+    .routine-card {
+      background: white;
+      border-radius: 20px;
+      overflow: hidden;
+      box-shadow: 0 2px 12px rgba(0,0,0,0.07);
+      margin-bottom: 10px;
+      cursor: pointer;
+      transition: box-shadow 0.15s;
+    }
+    .routine-card:hover { box-shadow: 0 4px 18px rgba(0,0,0,0.12); }
+    .routine-inner {
+      display: flex;
+      align-items: flex-start;
+      gap: 12px;
+      padding: 14px 16px;
+    }
+    .routine-ico {
+      width: 42px; height: 42px;
+      border-radius: 13px;
+      background: var(--green-pale);
+      display: flex; align-items: center; justify-content: center;
+      font-size: 21px;
+      flex-shrink: 0;
+    }
+    .routine-info { flex: 1; min-width: 0; }
+    .routine-name-row {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 8px;
+      margin-bottom: 4px;
+    }
+    .routine-name { font-size: 14px; font-weight: 700; color: var(--text); }
+    .status-chip {
+      font-size: 10px;
+      font-weight: 800;
+      padding: 3px 8px;
+      border-radius: 20px;
+      flex-shrink: 0;
+    }
+    .sc-active { background: var(--green-pale); color: var(--green-dark); }
+    .sc-paused { background: #FEF3C7; color: #92400E; }
+    .sc-ended  { background: #F3F4F6; color: #6B7280; }
+    .routine-meta { font-size: 11px; color: #9CA3AF; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .routine-next { font-size: 11px; color: var(--green); font-weight: 700; margin-top: 4px; }
+
+    /* ── Routine detail ───────────────────────────────────────── */
+    .detail-section {
+      background: white;
+      border-radius: 20px;
+      overflow: hidden;
+      box-shadow: 0 2px 12px rgba(0,0,0,0.07);
+      margin-bottom: 10px;
+    }
+    .detail-hd {
+      padding: 14px 16px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      border-bottom: 1px solid #F5F5F5;
+    }
+    .detail-hd-lbl { font-size: 11px; font-weight: 800; color: #9CA3AF; text-transform: uppercase; letter-spacing: 1px; }
+    .detail-row {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 11px 16px;
+      border-bottom: 1px solid #F7F7F7;
+      font-size: 13px;
+    }
+    .detail-row:last-child { border-bottom: none; }
+    .detail-lbl { color: var(--muted); }
+    .detail-val { font-weight: 600; color: var(--text); }
+
+    .detail-item-row {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 10px 16px;
+      border-bottom: 1px solid #F7F7F7;
+    }
+    .detail-item-row:last-child { border-bottom: none; }
+    .di-name { font-size: 13px; font-weight: 600; color: var(--text); flex: 1; }
+    .di-qty  { font-size: 12px; color: #9CA3AF; }
+
+    /* ── Form elements ────────────────────────────────────────── */
+    .form-group { margin-bottom: 18px; }
+    .form-lbl {
+      font-size: 11px;
+      font-weight: 700;
+      color: #9CA3AF;
+      text-transform: uppercase;
+      letter-spacing: 0.8px;
+      margin-bottom: 8px;
+      display: block;
+    }
+    .form-input-fake {
+      width: 100%;
+      border: 2px solid var(--border);
+      border-radius: 13px;
+      padding: 12px 14px;
+      font-size: 14px;
+      font-weight: 600;
+      color: var(--text);
+      background: white;
+    }
+    .form-input-fake.focused { border-color: var(--green); }
+
+    .freq-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 8px;
+    }
+    .freq-opt {
+      border: 2px solid var(--border);
+      border-radius: 13px;
+      padding: 11px 12px;
+      font-size: 12px;
+      font-weight: 700;
+      color: #6B7280;
+      cursor: pointer;
+      text-align: center;
+      transition: all 0.15s;
+      background: white;
+    }
+    .freq-opt.selected {
+      border-color: var(--green);
+      background: var(--green-faint);
+      color: var(--green);
+    }
+    .freq-opt-sub { font-size: 10px; font-weight: 500; color: #9CA3AF; margin-top: 2px; }
+    .freq-opt.selected .freq-opt-sub { color: var(--green-mid); }
+
+    .day-row {
+      display: flex;
+      gap: 6px;
+    }
+    .day-chip {
+      flex: 1;
+      padding: 7px 0;
+      border-radius: 10px;
+      border: 2px solid var(--border);
+      font-size: 11px;
+      font-weight: 700;
+      color: #9CA3AF;
+      text-align: center;
+      cursor: pointer;
+      transition: all 0.12s;
+    }
+    .day-chip.sel {
+      border-color: var(--green);
+      background: var(--green);
+      color: white;
+    }
+
+    /* ── Dashboard product cards ──────────────────────────────── */
+    .dash-card {
+      background: white;
+      border-radius: 22px;
+      overflow: hidden;
+      box-shadow: 0 2px 14px rgba(0,0,0,0.08);
+      margin-bottom: 10px;
+      cursor: pointer;
+      transition: box-shadow 0.15s;
+    }
+    .dash-card:hover { box-shadow: 0 4px 20px rgba(0,0,0,0.13); }
+    .dash-card-hd {
+      background: var(--green);
+      padding: 14px 18px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+    .dash-card-title { color: white; font-size: 15px; font-weight: 700; }
+    .dash-card-sub   { color: var(--green-pale); font-size: 11px; margin-top: 3px; }
+    .dash-card-body {
+      padding: 11px 18px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+    .dash-status {
+      display: flex;
+      align-items: center;
+      gap: 7px;
+    }
+    .dash-dot {
+      width: 7px; height: 7px;
+      border-radius: 50%;
+      flex-shrink: 0;
+    }
+    .dd-green  { background: var(--green); }
+    .dd-amber  { background: #F59E0B; animation: pulse 1.2s ease-in-out infinite; }
+    .dd-gray   { background: #D0D0D0; }
+    .dd-purple { background: #8B5CF6; }
+    .dash-status-txt { font-size: 12px; color: #4B5563; font-weight: 500; }
+    .dash-chevron { color: #D0D0D0; font-size: 16px; }
+
+    /* ── Section spacer ───────────────────────────────────────── */
+    .sp8  { height: 8px; }
+    .sp12 { height: 12px; }
+
+    /* ── Alert ────────────────────────────────────────────────── */
+    .alert-info {
+      background: rgba(255,255,255,0.1);
+      border: 1px solid rgba(255,255,255,0.15);
+      border-radius: 13px;
+      padding: 10px 14px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      margin-bottom: 10px;
+    }
+    .alert-info-txt { font-size: 12px; color: rgba(255,255,255,0.75); }
+
+    /* ── Annotation columns (for WhatsApp-style layouts) ─────── */
+    .two-col {
+      display: flex;
+      gap: 32px;
+      max-width: 820px;
+      margin: 0 auto;
+      flex-wrap: wrap;
+      justify-content: center;
+    }
+    .annotation {
+      flex: 1; min-width: 220px; max-width: 260px;
+      padding-top: 60px;
+    }
+    .ann-item {
+      display: flex; gap: 12px; margin-bottom: 18px;
+    }
+    .ann-num {
+      width: 22px; height: 22px;
+      background: var(--green);
+      color: white;
+      border-radius: 50%;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 10px; font-weight: 800;
+      flex-shrink: 0;
+    }
+    .ann-txt { font-size: 12px; color: #4B6070; line-height: 1.6; }
+    .ann-b   { color: #7A9FB5; font-weight: 700; }
+  </style>
+</head>
+<body>
+
+<!-- ── Top navigation ──────────────────────────────────────────────── -->
+<div class="nav">
+  <div class="nav-group">
+    <span class="nav-label">Home</span>
+    <button class="nav-btn active" data-screen="dashboard" onclick="show('dashboard')">Dashboard</button>
+  </div>
+  <div class="nav-divider"></div>
+  <div class="nav-group">
+    <span class="nav-label">Flow</span>
+    <button class="nav-btn" data-screen="flow-idle"     onclick="show('flow-idle')">Idle</button>
+    <button class="nav-btn" data-screen="flow-building" onclick="show('flow-building')">Building</button>
+    <button class="nav-btn" data-screen="flow-basket"   onclick="show('flow-basket')">Basket ready</button>
+    <button class="nav-btn" data-screen="flow-ordered"  onclick="show('flow-ordered')">Ordered</button>
+  </div>
+  <div class="nav-divider"></div>
+  <div class="nav-group">
+    <span class="nav-label">Quick Order</span>
+    <button class="nav-btn" data-screen="qo-empty"   onclick="show('qo-empty')">Empty</button>
+    <button class="nav-btn" data-screen="qo-search"  onclick="show('qo-search')">Searching</button>
+    <button class="nav-btn" data-screen="qo-items"   onclick="show('qo-items')">Has items</button>
+    <button class="nav-btn" data-screen="qo-ordered" onclick="show('qo-ordered')">Ordered</button>
+  </div>
+  <div class="nav-divider"></div>
+  <div class="nav-group">
+    <span class="nav-label">Routines</span>
+    <button class="nav-btn" data-screen="rt-list"    onclick="show('rt-list')">List</button>
+    <button class="nav-btn" data-screen="rt-detail"  onclick="show('rt-detail')">Detail</button>
+    <button class="nav-btn" data-screen="rt-new-1"   onclick="show('rt-new-1')">New — Setup</button>
+    <button class="nav-btn" data-screen="rt-new-2"   onclick="show('rt-new-2')">New — Items</button>
+    <button class="nav-btn" data-screen="rt-created" onclick="show('rt-created')">Created</button>
+  </div>
+</div>
+
+
+<!-- ══════════════════════════════════════════════════════════════════ -->
+<!-- DASHBOARD                                                          -->
+<!-- ══════════════════════════════════════════════════════════════════ -->
+<div id="dashboard" class="stage active">
+  <div class="stage-label">Dashboard — Home</div>
+  <div class="phone">
+    <div class="status-bar">
+      <span class="status-time">9:41</span>
+      <span class="status-icons">●●● 5G 🔋</span>
+    </div>
+    <div class="phone-scroll">
+
+      <!-- Logo row -->
+      <div class="app-hdr">
+        <div class="app-hdr-left">
+          <span style="font-size:22px">🥦</span>
+          <span style="color:white;font-size:18px;font-weight:800;letter-spacing:-0.3px">PantryPilot</span>
+        </div>
+        <span style="color:var(--green-pale);font-size:19px;cursor:pointer">⚙</span>
+      </div>
+
+      <!-- Flow card -->
+      <div class="dash-card" onclick="show('flow-basket')">
+        <div class="dash-card-hd">
+          <div>
+            <div style="display:flex;align-items:center;gap:7px;margin-bottom:4px">
+              <span class="dash-card-title">Flow</span>
+              <span class="app-tag">ON</span>
+            </div>
+            <div class="dash-card-sub">Intelligent weekly replenishment</div>
+          </div>
+          <span style="font-size:24px">🔄</span>
+        </div>
+        <div class="dash-card-body">
+          <div class="dash-status">
+            <span class="dash-dot dd-purple"></span>
+            <span class="dash-status-txt" style="color:#7C3AED;font-weight:700">Basket ready for review</span>
+          </div>
+          <span class="dash-chevron">›</span>
+        </div>
+      </div>
+
+      <!-- Routines card -->
+      <div class="dash-card" onclick="show('rt-list')">
+        <div class="dash-card-hd">
+          <div>
+            <div class="dash-card-title" style="margin-bottom:4px">Routines</div>
+            <div class="dash-card-sub">Scheduled recurring orders</div>
+          </div>
+          <span style="font-size:24px">📋</span>
+        </div>
+        <div class="dash-card-body">
+          <div class="dash-status">
+            <span class="dash-dot dd-green"></span>
+            <span class="dash-status-txt"><b>2 active</b> · next tomorrow</span>
+          </div>
+          <span class="dash-chevron">›</span>
+        </div>
+      </div>
+
+      <!-- Quick Order card -->
+      <div class="dash-card" onclick="show('qo-empty')">
+        <div class="dash-card-hd">
+          <div>
+            <div class="dash-card-title" style="margin-bottom:4px">Quick Order</div>
+            <div class="dash-card-sub">Order anything from Swiggy now</div>
+          </div>
+          <span style="font-size:24px">🛒</span>
+        </div>
+        <div class="dash-card-body">
+          <div class="dash-status">
+            <span class="dash-dot dd-gray"></span>
+            <span class="dash-status-txt">Search and order in minutes</span>
+          </div>
+          <span class="dash-chevron">›</span>
+        </div>
+      </div>
+
+      <!-- Stats row -->
+      <div class="stat-row" style="margin-top:4px">
+        <div class="stat-chip"><div class="stat-v">14</div><div class="stat-l">Total runs</div></div>
+        <div class="stat-chip"><div class="stat-v">₹1,940</div><div class="stat-l">Last order</div></div>
+        <div class="stat-chip"><div class="stat-v">₹1,820</div><div class="stat-l">Avg weekly</div></div>
+      </div>
+
+    </div>
+    <div class="bot-nav">
+      <div class="bot-nav-inner">
+        <div class="bot-tab active"><span class="bot-tab-icon">🏠</span><span class="bot-tab-lbl">Home</span></div>
+        <div class="bot-tab" onclick="show('rt-list')"><span class="bot-tab-icon">🔄</span><span class="bot-tab-lbl">Routines</span></div>
+        <div class="bot-tab"><span class="bot-tab-icon">📦</span><span class="bot-tab-lbl">Orders</span></div>
+        <div class="bot-tab"><span class="bot-tab-icon">⚙️</span><span class="bot-tab-lbl">Settings</span></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+
+<!-- ══════════════════════════════════════════════════════════════════ -->
+<!-- FLOW — IDLE                                                        -->
+<!-- ══════════════════════════════════════════════════════════════════ -->
+<div id="flow-idle" class="stage">
+  <div class="stage-label">Flow — Idle (no pending basket)</div>
+  <div class="phone">
+    <div class="status-bar"><span class="status-time">9:41</span><span class="status-icons">●●● 5G 🔋</span></div>
+    <div class="phone-scroll">
+
+      <div class="app-hdr">
+        <div class="app-hdr-left">
+          <span class="app-back" onclick="show('dashboard')">←</span>
+          <span class="app-title">Flow</span>
+          <span class="app-tag">ON</span>
+        </div>
+        <span class="app-hdr-right" onclick="show('flow-basket')">History →</span>
+      </div>
+
+      <!-- Next run bar -->
+      <div class="run-bar">
+        <div>
+          <div class="run-bar-lbl">Next run</div>
+          <div class="run-bar-val">Sunday, 13 Jul at 10 AM</div>
+        </div>
+        <button class="run-bar-cta" onclick="show('flow-building')">Plan now</button>
+      </div>
+
+      <!-- Stats -->
+      <div class="stat-row">
+        <div class="stat-chip"><div class="stat-v">14</div><div class="stat-l">Runs</div></div>
+        <div class="stat-chip"><div class="stat-v">₹1,940</div><div class="stat-l">Last order</div></div>
+        <div class="stat-chip"><div class="stat-v">₹1,820</div><div class="stat-l">Avg weekly</div></div>
+      </div>
+
+      <!-- Next run status pill -->
+      <div class="next-run-pill">
+        <span class="nrp-dot"></span>
+        <span class="nrp-text">Next run: <span class="nrp-val">Sunday, 10 AM</span></span>
+      </div>
+
+      <!-- Idle card -->
+      <div class="idle-card">
+        <div class="idle-icon">🛒</div>
+        <div class="idle-title">Flow is watching</div>
+        <div class="idle-sub">Your next basket is planned for Sunday. We'll ping you on WhatsApp before anything ships.</div>
+        <div class="idle-cta" onclick="show('flow-building')">Plan now →</div>
+      </div>
+
+      <!-- Recent runs -->
+      <div class="runs-card">
+        <div class="runs-hd">
+          <span class="runs-hd-lbl">Recent runs</span>
+          <span class="runs-hd-link">See all →</span>
+        </div>
+        <div class="run-row">
+          <span class="run-date">6 Jul</span>
+          <span class="run-badge rb-done">Completed</span>
+          <span class="run-amt">₹1,940</span>
+        </div>
+        <div class="run-row">
+          <span class="run-date">29 Jun</span>
+          <span class="run-badge rb-done">Completed</span>
+          <span class="run-amt">₹1,720</span>
+        </div>
+        <div class="run-row">
+          <span class="run-date">22 Jun</span>
+          <span class="run-badge rb-skip">Skipped</span>
+          <span class="run-amt">—</span>
+        </div>
+      </div>
+
+    </div>
+    <div class="bot-nav"><div class="bot-nav-inner">
+      <div class="bot-tab" onclick="show('dashboard')"><span class="bot-tab-icon">🏠</span><span class="bot-tab-lbl">Home</span></div>
+      <div class="bot-tab"><span class="bot-tab-icon">🔄</span><span class="bot-tab-lbl">Routines</span></div>
+      <div class="bot-tab"><span class="bot-tab-icon">📦</span><span class="bot-tab-lbl">Orders</span></div>
+      <div class="bot-tab"><span class="bot-tab-icon">⚙️</span><span class="bot-tab-lbl">Settings</span></div>
+    </div></div>
+  </div>
+</div>
+
+
+<!-- ══════════════════════════════════════════════════════════════════ -->
+<!-- FLOW — BUILDING                                                    -->
+<!-- ══════════════════════════════════════════════════════════════════ -->
+<div id="flow-building" class="stage">
+  <div class="stage-label">Flow — Planning in progress</div>
+  <div class="phone">
+    <div class="status-bar"><span class="status-time">9:41</span><span class="status-icons">●●● 5G 🔋</span></div>
+    <div class="phone-scroll">
+
+      <div class="app-hdr">
+        <div class="app-hdr-left">
+          <span class="app-back" onclick="show('dashboard')">←</span>
+          <span class="app-title">Flow</span>
+          <span class="app-tag">ON</span>
+        </div>
+        <span class="app-hdr-right">History →</span>
+      </div>
+
+      <div class="run-bar" style="border-color:rgba(245,158,11,0.35);background:rgba(245,158,11,0.1)">
+        <div>
+          <div class="run-bar-lbl" style="color:#FCD34D">A run is in progress</div>
+          <div class="run-bar-val" style="font-size:12px;color:rgba(255,255,255,0.6)">Started at 9:38 AM</div>
+        </div>
+      </div>
+
+      <div class="stat-row">
+        <div class="stat-chip"><div class="stat-v">14</div><div class="stat-l">Runs</div></div>
+        <div class="stat-chip"><div class="stat-v">₹1,940</div><div class="stat-l">Last order</div></div>
+        <div class="stat-chip"><div class="stat-v">₹1,820</div><div class="stat-l">Avg weekly</div></div>
+      </div>
+
+      <!-- Planning card (animated) -->
+      <div class="plan-card" onclick="show('flow-basket')" style="cursor:pointer">
+        <div class="plan-icon">🛒</div>
+        <div class="plan-title">Planning your basket…</div>
+        <div class="plan-sub">This takes about a minute</div>
+        <div class="plan-stages">
+          <div class="plan-stage-bar done"></div>
+          <div class="plan-stage-bar active"></div>
+          <div class="plan-stage-bar"></div>
+        </div>
+        <div style="margin-top:14px;font-size:11px;color:var(--muted)">✓ Pantry scanned &nbsp;·&nbsp; Planning items…</div>
+      </div>
+      <div style="text-align:center;margin-top:10px">
+        <span style="font-size:11px;color:rgba(255,255,255,0.3);cursor:pointer" onclick="show('flow-basket')">(tap to skip ahead →)</span>
+      </div>
+
+    </div>
+    <div class="bot-nav"><div class="bot-nav-inner">
+      <div class="bot-tab" onclick="show('dashboard')"><span class="bot-tab-icon">🏠</span><span class="bot-tab-lbl">Home</span></div>
+      <div class="bot-tab"><span class="bot-tab-icon">🔄</span><span class="bot-tab-lbl">Routines</span></div>
+      <div class="bot-tab"><span class="bot-tab-icon">📦</span><span class="bot-tab-lbl">Orders</span></div>
+      <div class="bot-tab"><span class="bot-tab-icon">⚙️</span><span class="bot-tab-lbl">Settings</span></div>
+    </div></div>
+  </div>
+</div>
+
+
+<!-- ══════════════════════════════════════════════════════════════════ -->
+<!-- FLOW — BASKET READY                                                -->
+<!-- ══════════════════════════════════════════════════════════════════ -->
+<div id="flow-basket" class="stage">
+  <div class="stage-label">Flow — Basket ready (review + edit)</div>
+  <div class="two-col">
+    <div class="phone" style="height:900px">
+      <div class="status-bar"><span class="status-time">9:41</span><span class="status-icons">●●● 5G 🔋</span></div>
+      <div class="phone-scroll" style="padding-bottom:8px">
+
+        <div class="app-hdr">
+          <div class="app-hdr-left">
+            <span class="app-back" onclick="show('dashboard')">←</span>
+            <span class="app-title">Flow</span>
+            <span class="app-tag">ON</span>
+          </div>
+          <span class="app-hdr-right">History →</span>
+        </div>
+
+        <div class="stat-row">
+          <div class="stat-chip"><div class="stat-v">14</div><div class="stat-l">Runs</div></div>
+          <div class="stat-chip"><div class="stat-v">₹1,940</div><div class="stat-l">Last order</div></div>
+          <div class="stat-chip"><div class="stat-v">₹1,820</div><div class="stat-l">Avg weekly</div></div>
+        </div>
+
+        <!-- Main basket card -->
+        <div class="card">
+          <!-- Green header -->
+          <div class="card-hd-green">
+            <div style="display:flex;justify-content:space-between;align-items:flex-start">
+              <div>
+                <div class="card-hd-title">Your basket is ready</div>
+                <div class="card-hd-sub">8 items · ₹1,940</div>
+              </div>
+              <span style="font-size:28px">🛒</span>
+            </div>
+            <div class="bbar-wrap">
+              <div class="bbar-meta">
+                <span>Budget usage</span>
+                <span>₹1,940 of ₹2,200</span>
+              </div>
+              <div class="bbar-track">
+                <div class="bbar-fill" style="width:88%"></div>
+              </div>
+            </div>
+            <div style="font-size:11px;color:rgba(255,255,255,0.5);margin-top:8px">WhatsApp sent at 9:38 AM</div>
+          </div>
+
+          <!-- Edit summary banner (shown after an edit) -->
+          <div class="edit-banner">
+            <span class="edit-banner-txt">Removed 1 · Added 1</span>
+            <span class="edit-banner-x">✕</span>
+          </div>
+
+          <!-- Staples section -->
+          <div class="cat-hd"><span>🌾</span><span class="cat-hd-lbl">Staples</span></div>
+          <div class="item-row">
+            <div class="item-info">
+              <div class="item-name">Aashirvaad Atta 5kg</div>
+              <div class="item-brand">Aashirvaad</div>
+              <div class="item-price-line">₹280 / pack</div>
+            </div>
+            <div class="qty-stepper">
+              <button class="qty-btn minus" onclick="decr(this)">−</button>
+              <span class="qty-num">1</span>
+              <button class="qty-btn plus" onclick="incr(this)">+</button>
+            </div>
+            <div class="item-line-total">₹280</div>
+            <button class="item-rm">✕</button>
+          </div>
+          <div class="item-row">
+            <div class="item-info">
+              <div class="item-name">Tata Sampann Toor Dal 1kg</div>
+              <div class="item-brand">Tata Sampann</div>
+              <div class="item-price-line">₹145 / kg</div>
+            </div>
+            <div class="qty-stepper">
+              <button class="qty-btn minus" onclick="decr(this)">−</button>
+              <span class="qty-num">2</span>
+              <button class="qty-btn plus" onclick="incr(this)">+</button>
+            </div>
+            <div class="item-line-total">₹290</div>
+            <button class="item-rm">✕</button>
+          </div>
+
+          <!-- Dairy section -->
+          <div class="cat-hd"><span>🥛</span><span class="cat-hd-lbl">Dairy</span></div>
+          <div class="item-row">
+            <div class="item-info">
+              <div class="item-name">Amul Gold Butter 500g</div>
+              <div class="item-brand">Amul</div>
+              <div class="item-price-line">₹288 / pack</div>
+              <div class="sub-badge">⚠ Substituted</div>
+            </div>
+            <div class="qty-stepper">
+              <button class="qty-btn minus" onclick="decr(this)">−</button>
+              <span class="qty-num">1</span>
+              <button class="qty-btn plus" onclick="incr(this)">+</button>
+            </div>
+            <div class="item-line-total">₹288</div>
+            <button class="item-rm">✕</button>
+          </div>
+          <div class="item-row">
+            <div class="item-info">
+              <div class="item-name">Amul Taaza Milk 1L</div>
+              <div class="item-brand">Amul</div>
+              <div class="item-price-line">₹68 / litre</div>
+            </div>
+            <div class="qty-stepper">
+              <button class="qty-btn minus" onclick="decr(this)">−</button>
+              <span class="qty-num">3</span>
+              <button class="qty-btn plus" onclick="incr(this)">+</button>
+            </div>
+            <div class="item-line-total">₹204</div>
+            <button class="item-rm">✕</button>
+          </div>
+
+          <!-- Fresh produce -->
+          <div class="cat-hd"><span>🥬</span><span class="cat-hd-lbl">Vegetables</span></div>
+          <div class="item-row">
+            <div class="item-info">
+              <div class="item-name">Fresh Tomatoes 1kg</div>
+              <div class="item-brand">Local Farm</div>
+              <div class="item-price-line">₹52 / kg</div>
+            </div>
+            <div class="qty-stepper">
+              <button class="qty-btn minus" onclick="decr(this)">−</button>
+              <span class="qty-num">2</span>
+              <button class="qty-btn plus" onclick="incr(this)">+</button>
+            </div>
+            <div class="item-line-total">₹104</div>
+            <button class="item-rm">✕</button>
+          </div>
+          <div class="item-row">
+            <div class="item-info">
+              <div class="item-name">Baby Spinach 250g</div>
+              <div class="item-brand">✨ AI suggestion</div>
+              <div class="item-price-line">₹45 / pack</div>
+            </div>
+            <div class="qty-stepper">
+              <button class="qty-btn minus" onclick="decr(this)">−</button>
+              <span class="qty-num">1</span>
+              <button class="qty-btn plus" onclick="incr(this)">+</button>
+            </div>
+            <div class="item-line-total">₹45</div>
+            <button class="item-rm">✕</button>
+          </div>
+
+          <!-- Add item search -->
+          <div style="padding:12px 16px;border-top:1px solid #F5F5F5">
+            <div class="add-btn" onclick="show('flow-basket')">
+              <span style="font-size:16px">+</span>
+              <span>Add item</span>
+            </div>
+          </div>
+
+          <!-- Total footer -->
+          <div class="card-footer">
+            <span class="footer-lbl">Estimated total</span>
+            <span class="footer-total">₹1,940</span>
+          </div>
+        </div>
+
+        <div class="sp12"></div>
+
+        <!-- Actions -->
+        <button class="btn btn-primary" onclick="show('flow-ordered')">✅ Approve &amp; order</button>
+        <div class="sp8"></div>
+        <button class="btn btn-secondary" style="background:rgba(255,255,255,0.1);color:var(--green-pale);border-color:rgba(255,255,255,0.2)">Skip this week</button>
+        <div class="sp12"></div>
+        <div style="text-align:center;font-size:11px;color:rgba(255,255,255,0.3)">Generated Sunday, 13 Jul at 9:38 AM</div>
+        <div class="sp12"></div>
+
+      </div>
+      <div class="bot-nav"><div class="bot-nav-inner">
+        <div class="bot-tab" onclick="show('dashboard')"><span class="bot-tab-icon">🏠</span><span class="bot-tab-lbl">Home</span></div>
+        <div class="bot-tab"><span class="bot-tab-icon">🔄</span><span class="bot-tab-lbl">Routines</span></div>
+        <div class="bot-tab"><span class="bot-tab-icon">📦</span><span class="bot-tab-lbl">Orders</span></div>
+        <div class="bot-tab"><span class="bot-tab-icon">⚙️</span><span class="bot-tab-lbl">Settings</span></div>
+      </div></div>
+    </div>
+    <div class="annotation">
+      <div class="ann-item"><div class="ann-num">1</div><div class="ann-txt"><span class="ann-b">Green card header</span> — basket ready state. Item count + total at a glance. Budget bar shows % of weekly budget used.</div></div>
+      <div class="ann-item"><div class="ann-num">2</div><div class="ann-txt"><span class="ann-b">Edit summary banner</span> — appears after removing or adding items. Dismissable. Tracks changes since basket was generated.</div></div>
+      <div class="ann-item"><div class="ann-num">3</div><div class="ann-txt"><span class="ann-b">Category sections</span> — items grouped by type. Category headers are light gray strips for visual scanning.</div></div>
+      <div class="ann-item"><div class="ann-num">4</div><div class="ann-txt"><span class="ann-b">Qty steppers</span> — −/count/+ inline per row. Decrement to 0 removes the item. Line total updates immediately.</div></div>
+      <div class="ann-item"><div class="ann-num">5</div><div class="ann-txt"><span class="ann-b">Substitution badge</span> — "⚠ Substituted" inline tag. Original item name shown on detail tap.</div></div>
+      <div class="ann-item"><div class="ann-num">6</div><div class="ann-txt"><span class="ann-b">"+ Add item" dashed button</span> — opens inline search dropdown. Same component used in Quick Order and Routines.</div></div>
+      <div class="ann-item"><div class="ann-num">7</div><div class="ann-txt"><span class="ann-b">Primary CTA outside card</span> — "Approve & order" always visible without scrolling.</div></div>
+    </div>
+  </div>
+</div>
+
+
+<!-- ══════════════════════════════════════════════════════════════════ -->
+<!-- FLOW — ORDERED (SUCCESS)                                           -->
+<!-- ══════════════════════════════════════════════════════════════════ -->
+<div id="flow-ordered" class="stage">
+  <div class="stage-label">Flow — Order placed (success)</div>
+  <div class="phone">
+    <div class="status-bar"><span class="status-time">9:43</span><span class="status-icons">●●● 5G 🔋</span></div>
+    <div class="phone-scroll">
+
+      <div class="app-hdr">
+        <div class="app-hdr-left">
+          <span class="app-back" onclick="show('dashboard')">←</span>
+          <span class="app-title">Order placed</span>
+        </div>
+      </div>
+
+      <div class="success-card">
+        <div class="success-hd">
+          <div class="success-icon">🎉</div>
+          <div class="success-title">Order confirmed!</div>
+          <div class="success-sub">Swiggy Instamart · Ref #IM-20260713-4821</div>
+        </div>
+        <div class="success-rows">
+          <div class="success-row"><span class="s-row-lbl">Items</span><span class="s-row-val">8 items</span></div>
+          <div class="success-row"><span class="s-row-lbl">Item total</span><span class="s-row-val">₹1,940</span></div>
+          <div class="success-row"><span class="s-row-lbl">Delivery fee</span><span class="s-row-val">₹0</span></div>
+          <div class="success-row"><span class="s-row-lbl">Order total</span><span class="s-row-val" style="font-size:16px;color:var(--green)">₹1,940</span></div>
+          <div class="success-row"><span class="s-row-lbl">Delivering to</span><span class="s-row-val">Koramangala, Bengaluru</span></div>
+          <div class="success-row"><span class="s-row-lbl">Expected by</span><span class="s-row-val green">Today, 6–8 PM</span></div>
+        </div>
+      </div>
+
+      <div class="sp12"></div>
+      <button class="btn btn-primary" onclick="show('dashboard')">Back to home</button>
+      <div class="sp8"></div>
+      <div style="text-align:center;font-size:12px;color:rgba(255,255,255,0.4);margin-top:4px">Next basket: Sunday, 20 Jul at 10 AM</div>
+
+    </div>
+    <div class="bot-nav"><div class="bot-nav-inner">
+      <div class="bot-tab" onclick="show('dashboard')"><span class="bot-tab-icon">🏠</span><span class="bot-tab-lbl">Home</span></div>
+      <div class="bot-tab"><span class="bot-tab-icon">🔄</span><span class="bot-tab-lbl">Routines</span></div>
+      <div class="bot-tab active"><span class="bot-tab-icon">📦</span><span class="bot-tab-lbl">Orders</span></div>
+      <div class="bot-tab"><span class="bot-tab-icon">⚙️</span><span class="bot-tab-lbl">Settings</span></div>
+    </div></div>
+  </div>
+</div>
+
+
+<!-- ══════════════════════════════════════════════════════════════════ -->
+<!-- QUICK ORDER — EMPTY                                                -->
+<!-- ══════════════════════════════════════════════════════════════════ -->
+<div id="qo-empty" class="stage">
+  <div class="stage-label">Quick Order — Empty (no basket yet)</div>
+  <div class="phone">
+    <div class="status-bar"><span class="status-time">9:41</span><span class="status-icons">●●● 5G 🔋</span></div>
+    <div class="phone-scroll">
+
+      <div class="app-hdr">
+        <div class="app-hdr-left">
+          <span class="app-back" onclick="show('dashboard')">←</span>
+          <span class="app-title">Quick Order</span>
+        </div>
+      </div>
+
+      <!-- Card: empty state -->
+      <div class="card">
+        <div class="qo-empty-hd">
+          <div class="qo-empty-icon">🛒</div>
+          <div class="qo-empty-title">Order anything, right now</div>
+          <div class="qo-empty-sub">Search Swiggy Instamart and build your basket.<br/>No planning needed.</div>
+        </div>
+        <div class="qo-empty-body">
+          <div class="add-btn" onclick="show('qo-search')">
+            <span style="font-size:16px">🔍</span>
+            <span>Search to add items</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Recent quick orders (if any) -->
+      <div class="sp12"></div>
+      <div style="font-size:11px;font-weight:800;color:rgba(255,255,255,0.25);text-transform:uppercase;letter-spacing:1.5px;margin-bottom:8px">Recent quick orders</div>
+      <div class="runs-card">
+        <div class="run-row">
+          <span class="run-date">8 Jul</span>
+          <span class="run-badge rb-done" style="margin-left:0">Delivered</span>
+          <span class="run-amt">₹428 · 4 items</span>
+        </div>
+        <div class="run-row">
+          <span class="run-date">2 Jul</span>
+          <span class="run-badge rb-done" style="margin-left:0">Delivered</span>
+          <span class="run-amt">₹192 · 2 items</span>
+        </div>
+      </div>
+
+    </div>
+    <div class="bot-nav"><div class="bot-nav-inner">
+      <div class="bot-tab" onclick="show('dashboard')"><span class="bot-tab-icon">🏠</span><span class="bot-tab-lbl">Home</span></div>
+      <div class="bot-tab"><span class="bot-tab-icon">🔄</span><span class="bot-tab-lbl">Routines</span></div>
+      <div class="bot-tab"><span class="bot-tab-icon">📦</span><span class="bot-tab-lbl">Orders</span></div>
+      <div class="bot-tab"><span class="bot-tab-icon">⚙️</span><span class="bot-tab-lbl">Settings</span></div>
+    </div></div>
+  </div>
+</div>
+
+
+<!-- ══════════════════════════════════════════════════════════════════ -->
+<!-- QUICK ORDER — SEARCH OPEN                                          -->
+<!-- ══════════════════════════════════════════════════════════════════ -->
+<div id="qo-search" class="stage">
+  <div class="stage-label">Quick Order — Search open (dropdown results)</div>
+  <div class="two-col">
+    <div class="phone">
+      <div class="status-bar"><span class="status-time">9:41</span><span class="status-icons">●●● 5G 🔋</span></div>
+      <div class="phone-scroll">
+
+        <div class="app-hdr">
+          <div class="app-hdr-left">
+            <span class="app-back" onclick="show('qo-empty')">←</span>
+            <span class="app-title">Quick Order</span>
+          </div>
+        </div>
+
+        <!-- Card: search open (inline) -->
+        <div class="card">
+          <div class="qo-card-hd">
+            <span class="qo-hd-title">Your basket</span>
+            <span class="qo-hd-meta">0 items</span>
+          </div>
+
+          <!-- search expanded inline -->
+          <div style="padding:12px 16px">
+            <div class="search-box">
+              <div class="search-input-row">
+                <span class="search-icon">🔍</span>
+                <span class="search-fake-input">milk<span class="search-fake-cursor"></span></span>
+                <span class="search-x" onclick="show('qo-empty')">✕</span>
+              </div>
+              <!-- results -->
+              <div class="search-result" onclick="show('qo-items')">
+                <div class="s-thumb">🥛</div>
+                <div class="s-info">
+                  <div class="s-name">Amul Taaza Milk 1L</div>
+                  <div class="s-brand">Amul</div>
+                </div>
+                <div class="s-price-col">
+                  <div class="s-price">₹68</div>
+                  <div class="s-unit">per litre</div>
+                </div>
+                <button class="s-add-btn s-add" onclick="event.stopPropagation();show('qo-items')">Add</button>
+              </div>
+              <div class="search-result">
+                <div class="s-thumb">🥛</div>
+                <div class="s-info">
+                  <div class="s-name">Amul Gold Milk 1L</div>
+                  <div class="s-brand">Amul · Full cream</div>
+                </div>
+                <div class="s-price-col">
+                  <div class="s-price">₹72</div>
+                  <div class="s-unit">per litre</div>
+                </div>
+                <button class="s-add-btn s-add" onclick="event.stopPropagation();show('qo-items')">Add</button>
+              </div>
+              <div class="search-result">
+                <div class="s-thumb">🥛</div>
+                <div class="s-info">
+                  <div class="s-name">Nandini Toned Milk 500ml</div>
+                  <div class="s-brand">Nandini</div>
+                </div>
+                <div class="s-price-col">
+                  <div class="s-price">₹28</div>
+                  <div class="s-unit">per 500ml</div>
+                </div>
+                <button class="s-add-btn s-add" onclick="event.stopPropagation();show('qo-items')">Add</button>
+              </div>
+              <div class="search-result">
+                <div class="s-thumb" style="font-size:14px;color:#9CA3AF">OOS</div>
+                <div class="s-info">
+                  <div class="s-name">Organic Cow Milk 1L</div>
+                  <div class="s-brand">Organic Tattva · Out of stock</div>
+                </div>
+                <div class="s-price-col">
+                  <div class="s-price" style="color:#9CA3AF">₹95</div>
+                </div>
+                <button class="s-add-btn s-oos">OOS</button>
+              </div>
+            </div>
+          </div>
+        </div>
+
+      </div>
+      <div class="bot-nav"><div class="bot-nav-inner">
+        <div class="bot-tab" onclick="show('dashboard')"><span class="bot-tab-icon">🏠</span><span class="bot-tab-lbl">Home</span></div>
+        <div class="bot-tab"><span class="bot-tab-icon">🔄</span><span class="bot-tab-lbl">Routines</span></div>
+        <div class="bot-tab"><span class="bot-tab-icon">📦</span><span class="bot-tab-lbl">Orders</span></div>
+        <div class="bot-tab"><span class="bot-tab-icon">⚙️</span><span class="bot-tab-lbl">Settings</span></div>
+      </div></div>
+    </div>
+    <div class="annotation">
+      <div class="ann-item"><div class="ann-num">1</div><div class="ann-txt"><span class="ann-b">Inline search dropdown</span> — same <code>ItemSearchDropdown</code> component used across Flow, Quick Order, and Routines. No separate search page.</div></div>
+      <div class="ann-item"><div class="ann-num">2</div><div class="ann-txt"><span class="ann-b">Thumbnail + brand + price + unit</span> — all the info needed to decide without a detail page.</div></div>
+      <div class="ann-item"><div class="ann-num">3</div><div class="ann-txt"><span class="ann-b">Out-of-stock</span> — row is still visible but "Add" button is replaced with "OOS", row text is dimmed.</div></div>
+      <div class="ann-item"><div class="ann-num">4</div><div class="ann-txt"><span class="ann-b">Tap anywhere on result row</span> to add — the "Add" button is the secondary tap target. Consistent with how Flow adds items.</div></div>
+    </div>
+  </div>
+</div>
+
+
+<!-- ══════════════════════════════════════════════════════════════════ -->
+<!-- QUICK ORDER — HAS ITEMS                                            -->
+<!-- ══════════════════════════════════════════════════════════════════ -->
+<div id="qo-items" class="stage">
+  <div class="stage-label">Quick Order — Basket has items (review + edit)</div>
+  <div class="two-col">
+    <div class="phone" style="height:860px">
+      <div class="status-bar"><span class="status-time">9:43</span><span class="status-icons">●●● 5G 🔋</span></div>
+      <div class="phone-scroll" style="padding-bottom:8px">
+
+        <div class="app-hdr">
+          <div class="app-hdr-left">
+            <span class="app-back" onclick="show('dashboard')">←</span>
+            <span class="app-title">Quick Order</span>
+          </div>
+        </div>
+
+        <!-- Basket card (same structure as Flow, no green header) -->
+        <div class="card">
+          <div class="qo-card-hd">
+            <span class="qo-hd-title">Your basket</span>
+            <span class="qo-hd-meta">3 items · ₹436</span>
+          </div>
+
+          <!-- Items (no category grouping for quick order — user built this manually) -->
+          <div class="item-row">
+            <div class="item-info">
+              <div class="item-name">Amul Taaza Milk 1L</div>
+              <div class="item-brand">Amul</div>
+              <div class="item-price-line">₹68 / litre</div>
+            </div>
+            <div class="qty-stepper">
+              <button class="qty-btn minus" onclick="decr(this)">−</button>
+              <span class="qty-num">2</span>
+              <button class="qty-btn plus" onclick="incr(this)">+</button>
+            </div>
+            <div class="item-line-total">₹136</div>
+            <button class="item-rm">✕</button>
+          </div>
+          <div class="item-row">
+            <div class="item-info">
+              <div class="item-name">Aashirvaad Atta 5kg</div>
+              <div class="item-brand">Aashirvaad</div>
+              <div class="item-price-line">₹280 / pack</div>
+            </div>
+            <div class="qty-stepper">
+              <button class="qty-btn minus" onclick="decr(this)">−</button>
+              <span class="qty-num">1</span>
+              <button class="qty-btn plus" onclick="incr(this)">+</button>
+            </div>
+            <div class="item-line-total">₹280</div>
+            <button class="item-rm">✕</button>
+          </div>
+          <div class="item-row">
+            <div class="item-info">
+              <div class="item-name">Fresh Tomatoes 1kg</div>
+              <div class="item-brand">Local Farm</div>
+              <div class="item-price-line">₹52 / kg</div>
+            </div>
+            <div class="qty-stepper">
+              <button class="qty-btn minus" onclick="decr(this)">−</button>
+              <span class="qty-num">2</span>
+              <button class="qty-btn plus" onclick="incr(this)">+</button>
+            </div>
+            <div class="item-line-total">₹104</div>
+            <button class="item-rm">✕</button>
+          </div>
+
+          <!-- Add more items (same dashed button) -->
+          <div style="padding:12px 16px;border-top:1px solid #F5F5F5">
+            <div class="add-btn">
+              <span style="font-size:16px">+</span>
+              <span>Add more items</span>
+            </div>
+          </div>
+
+          <!-- Total footer -->
+          <div class="card-footer">
+            <span class="footer-lbl">Estimated total</span>
+            <span class="footer-total">₹520</span>
+          </div>
+        </div>
+
+        <div class="sp12"></div>
+
+        <button class="btn btn-primary" onclick="show('qo-ordered')">Place Order · ₹520</button>
+        <div class="sp8"></div>
+        <button class="btn btn-ghost">Clear basket</button>
+        <div class="sp12"></div>
+
+      </div>
+      <div class="bot-nav"><div class="bot-nav-inner">
+        <div class="bot-tab" onclick="show('dashboard')"><span class="bot-tab-icon">🏠</span><span class="bot-tab-lbl">Home</span></div>
+        <div class="bot-tab"><span class="bot-tab-icon">🔄</span><span class="bot-tab-lbl">Routines</span></div>
+        <div class="bot-tab"><span class="bot-tab-icon">📦</span><span class="bot-tab-lbl">Orders</span></div>
+        <div class="bot-tab"><span class="bot-tab-icon">⚙️</span><span class="bot-tab-lbl">Settings</span></div>
+      </div></div>
+    </div>
+    <div class="annotation">
+      <div class="ann-item"><div class="ann-num">1</div><div class="ann-txt"><span class="ann-b">Same card structure as Flow</span> — white card, item rows with qty steppers, dashed add button, total footer. No basket chip, no separate views.</div></div>
+      <div class="ann-item"><div class="ann-num">2</div><div class="ann-txt"><span class="ann-b">No green card header</span> — Quick Order basket has a neutral header (just count + total), since this isn't an AI-generated basket.</div></div>
+      <div class="ann-item"><div class="ann-num">3</div><div class="ann-txt"><span class="ann-b">No category grouping</span> — items in insertion order. Categories only make sense for AI-planned baskets (Flow) where 15+ items need grouping.</div></div>
+      <div class="ann-item"><div class="ann-num">4</div><div class="ann-txt"><span class="ann-b">"Place Order · ₹520"</span> — total in the CTA label. Same pattern as Flow's "Approve & order" but imperative for a manual order.</div></div>
+    </div>
+  </div>
+</div>
+
+
+<!-- ══════════════════════════════════════════════════════════════════ -->
+<!-- QUICK ORDER — ORDERED                                              -->
+<!-- ══════════════════════════════════════════════════════════════════ -->
+<div id="qo-ordered" class="stage">
+  <div class="stage-label">Quick Order — Order placed (success)</div>
+  <div class="phone">
+    <div class="status-bar"><span class="status-time">9:45</span><span class="status-icons">●●● 5G 🔋</span></div>
+    <div class="phone-scroll">
+
+      <div class="app-hdr">
+        <div class="app-hdr-left">
+          <span class="app-back" onclick="show('dashboard')">←</span>
+          <span class="app-title">Order placed</span>
+        </div>
+      </div>
+
+      <div class="success-card">
+        <div class="success-hd">
+          <div class="success-icon">✅</div>
+          <div class="success-title">Order on its way!</div>
+          <div class="success-sub">Swiggy Instamart · Ref #IM-20260713-4828</div>
+        </div>
+        <div class="success-rows">
+          <div class="success-row"><span class="s-row-lbl">Amul Taaza Milk 1L × 2</span><span class="s-row-val">₹136</span></div>
+          <div class="success-row"><span class="s-row-lbl">Aashirvaad Atta 5kg × 1</span><span class="s-row-val">₹280</span></div>
+          <div class="success-row"><span class="s-row-lbl">Fresh Tomatoes 1kg × 2</span><span class="s-row-val">₹104</span></div>
+          <div class="success-row"><span class="s-row-lbl">Delivery fee</span><span class="s-row-val">₹0</span></div>
+          <div class="success-row"><span class="s-row-lbl">Total</span><span class="s-row-val" style="font-size:16px;color:var(--green)">₹520</span></div>
+          <div class="success-row"><span class="s-row-lbl">Expected by</span><span class="s-row-val green">Today, 6–8 PM</span></div>
+        </div>
+      </div>
+
+      <div class="sp12"></div>
+      <button class="btn btn-primary" onclick="show('dashboard')">Back to home</button>
+
+    </div>
+    <div class="bot-nav"><div class="bot-nav-inner">
+      <div class="bot-tab" onclick="show('dashboard')"><span class="bot-tab-icon">🏠</span><span class="bot-tab-lbl">Home</span></div>
+      <div class="bot-tab"><span class="bot-tab-icon">🔄</span><span class="bot-tab-lbl">Routines</span></div>
+      <div class="bot-tab active"><span class="bot-tab-icon">📦</span><span class="bot-tab-lbl">Orders</span></div>
+      <div class="bot-tab"><span class="bot-tab-icon">⚙️</span><span class="bot-tab-lbl">Settings</span></div>
+    </div></div>
+  </div>
+</div>
+
+
+<!-- ══════════════════════════════════════════════════════════════════ -->
+<!-- ROUTINES — LIST                                                    -->
+<!-- ══════════════════════════════════════════════════════════════════ -->
+<div id="rt-list" class="stage">
+  <div class="stage-label">Routines — List</div>
+  <div class="phone">
+    <div class="status-bar"><span class="status-time">9:41</span><span class="status-icons">●●● 5G 🔋</span></div>
+    <div class="phone-scroll">
+
+      <div class="app-hdr">
+        <div class="app-hdr-left">
+          <span class="app-title">Routines</span>
+        </div>
+        <button class="app-hdr-right" onclick="show('rt-new-1')" style="background:rgba(255,255,255,0.12);border-radius:12px;padding:6px 12px;font-size:13px;border:none;cursor:pointer">+ New</button>
+      </div>
+
+      <!-- Active routines -->
+      <div class="routine-card" onclick="show('rt-detail')">
+        <div class="routine-inner">
+          <div class="routine-ico">🥛</div>
+          <div class="routine-info">
+            <div class="routine-name-row">
+              <span class="routine-name">Weekly Dairy &amp; Veggies</span>
+              <span class="status-chip sc-active">Active</span>
+            </div>
+            <div class="routine-meta">Every Monday · Milk, Curd, Tomatoes, Onions</div>
+            <div class="routine-next">Next: tomorrow at 8 AM</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="routine-card" onclick="show('rt-detail')">
+        <div class="routine-inner">
+          <div class="routine-ico">🌾</div>
+          <div class="routine-info">
+            <div class="routine-name-row">
+              <span class="routine-name">Monthly Staples</span>
+              <span class="status-chip sc-active">Active</span>
+            </div>
+            <div class="routine-meta">Every 30 days · Atta, Dal, Rice, Oil</div>
+            <div class="routine-next">Next: 28 Jul</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="routine-card">
+        <div class="routine-inner">
+          <div class="routine-ico" style="background:#F3F4F6">🧴</div>
+          <div class="routine-info">
+            <div class="routine-name-row">
+              <span class="routine-name">Cleaning Supplies</span>
+              <span class="status-chip sc-paused">Paused</span>
+            </div>
+            <div class="routine-meta">Every 2 weeks · Surf, Vim, Dettol</div>
+          </div>
+        </div>
+      </div>
+
+    </div>
+    <div class="bot-nav"><div class="bot-nav-inner">
+      <div class="bot-tab" onclick="show('dashboard')"><span class="bot-tab-icon">🏠</span><span class="bot-tab-lbl">Home</span></div>
+      <div class="bot-tab active"><span class="bot-tab-icon">🔄</span><span class="bot-tab-lbl">Routines</span></div>
+      <div class="bot-tab"><span class="bot-tab-icon">📦</span><span class="bot-tab-lbl">Orders</span></div>
+      <div class="bot-tab"><span class="bot-tab-icon">⚙️</span><span class="bot-tab-lbl">Settings</span></div>
+    </div></div>
+  </div>
+</div>
+
+
+<!-- ══════════════════════════════════════════════════════════════════ -->
+<!-- ROUTINES — DETAIL                                                  -->
+<!-- ══════════════════════════════════════════════════════════════════ -->
+<div id="rt-detail" class="stage">
+  <div class="stage-label">Routines — Detail view</div>
+  <div class="phone">
+    <div class="status-bar"><span class="status-time">9:41</span><span class="status-icons">●●● 5G 🔋</span></div>
+    <div class="phone-scroll">
+
+      <div class="app-hdr">
+        <div class="app-hdr-left">
+          <span class="app-back" onclick="show('rt-list')">←</span>
+          <span class="app-title">Weekly Dairy &amp; Veggies</span>
+        </div>
+        <span class="app-hdr-right" onclick="show('rt-new-2')">Edit</span>
+      </div>
+
+      <!-- Status + schedule card -->
+      <div class="detail-section">
+        <div class="detail-hd">
+          <span class="detail-hd-lbl">Schedule</span>
+          <span class="status-chip sc-active">Active</span>
+        </div>
+        <div class="detail-row"><span class="detail-lbl">Frequency</span><span class="detail-val">Every Monday</span></div>
+        <div class="detail-row"><span class="detail-lbl">Time</span><span class="detail-val">8:00 AM IST</span></div>
+        <div class="detail-row"><span class="detail-lbl">Next run</span><span class="detail-val" style="color:var(--green)">Tomorrow, 14 Jul</span></div>
+        <div class="detail-row"><span class="detail-lbl">Runs remaining</span><span class="detail-val">Unlimited</span></div>
+      </div>
+
+      <!-- Items card -->
+      <div class="detail-section">
+        <div class="detail-hd"><span class="detail-hd-lbl">Items (4)</span></div>
+        <div class="detail-item-row"><span style="font-size:18px">🥛</span><span class="di-name">Amul Taaza Milk 1L</span><span class="di-qty">× 2</span></div>
+        <div class="detail-item-row"><span style="font-size:18px">🥛</span><span class="di-name">Amul Dahi 400g</span><span class="di-qty">× 1</span></div>
+        <div class="detail-item-row"><span style="font-size:18px">🍅</span><span class="di-name">Fresh Tomatoes 1kg</span><span class="di-qty">× 2</span></div>
+        <div class="detail-item-row"><span style="font-size:18px">🧅</span><span class="di-name">Onions 1kg</span><span class="di-qty">× 1</span></div>
+      </div>
+
+      <!-- Actions -->
+      <div class="sp8"></div>
+      <button class="btn btn-secondary" onclick="show('rt-new-2')" style="margin-bottom:8px">Edit routine</button>
+      <button class="btn" style="background:rgba(239,68,68,0.1);color:#DC2626;border:1.5px solid rgba(239,68,68,0.2)">Pause routine</button>
+
+    </div>
+    <div class="bot-nav"><div class="bot-nav-inner">
+      <div class="bot-tab" onclick="show('dashboard')"><span class="bot-tab-icon">🏠</span><span class="bot-tab-lbl">Home</span></div>
+      <div class="bot-tab active"><span class="bot-tab-icon">🔄</span><span class="bot-tab-lbl">Routines</span></div>
+      <div class="bot-tab"><span class="bot-tab-icon">📦</span><span class="bot-tab-lbl">Orders</span></div>
+      <div class="bot-tab"><span class="bot-tab-icon">⚙️</span><span class="bot-tab-lbl">Settings</span></div>
+    </div></div>
+  </div>
+</div>
+
+
+<!-- ══════════════════════════════════════════════════════════════════ -->
+<!-- ROUTINES — NEW: SETUP                                              -->
+<!-- ══════════════════════════════════════════════════════════════════ -->
+<div id="rt-new-1" class="stage">
+  <div class="stage-label">Routines — New: Step 1 (name + schedule)</div>
+  <div class="phone" style="background:white">
+    <div class="status-bar dark"><span class="status-time" style="color:#111">9:41</span><span class="status-icons" style="color:#111">●●● 5G 🔋</span></div>
+
+    <!-- Green header (like onboarding) -->
+    <div style="background:var(--green);padding:20px 20px 16px;flex-shrink:0">
+      <div style="display:flex;gap:6px;margin-bottom:14px">
+        <div style="height:4px;flex:1;border-radius:2px;background:white;opacity:0.9"></div>
+        <div style="height:4px;flex:1;border-radius:2px;background:rgba(255,255,255,0.3)"></div>
+      </div>
+      <div style="display:flex;align-items:center;gap:10px">
+        <span class="app-back" onclick="show('rt-list')" style="color:rgba(255,255,255,0.7)">←</span>
+        <div>
+          <div style="color:white;font-size:17px;font-weight:800">New Routine</div>
+          <div style="color:rgba(255,255,255,0.6);font-size:12px;margin-top:2px">Step 1 of 2</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="phone-scroll" style="background:white;padding:20px 20px 0">
+
+      <div class="form-group">
+        <span class="form-lbl">Routine name</span>
+        <div class="form-input-fake focused">Weekly Dairy &amp; Veggies</div>
+      </div>
+
+      <div class="form-group">
+        <span class="form-lbl">How often?</span>
+        <div class="freq-grid">
+          <div class="freq-opt">
+            Every day
+            <div class="freq-opt-sub">Daily order</div>
+          </div>
+          <div class="freq-opt selected">
+            Every week
+            <div class="freq-opt-sub">7 days</div>
+          </div>
+          <div class="freq-opt">
+            Every 2 weeks
+            <div class="freq-opt-sub">14 days</div>
+          </div>
+          <div class="freq-opt">
+            Monthly
+            <div class="freq-opt-sub">30 days</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="form-group">
+        <span class="form-lbl">Day of week</span>
+        <div class="day-row">
+          <div class="day-chip">M</div>
+          <div class="day-chip sel">T</div>
+          <div class="day-chip">W</div>
+          <div class="day-chip">T</div>
+          <div class="day-chip">F</div>
+          <div class="day-chip">S</div>
+          <div class="day-chip">S</div>
+        </div>
+      </div>
+
+      <div class="form-group">
+        <span class="form-lbl">Order time</span>
+        <div class="form-input-fake">8:00 AM IST</div>
+      </div>
+
+      <div class="sp8"></div>
+      <button class="btn btn-primary" onclick="show('rt-new-2')" style="margin-bottom:16px">Next: Add items →</button>
+
+    </div>
+  </div>
+</div>
+
+
+<!-- ══════════════════════════════════════════════════════════════════ -->
+<!-- ROUTINES — NEW: ITEMS                                              -->
+<!-- ══════════════════════════════════════════════════════════════════ -->
+<div id="rt-new-2" class="stage">
+  <div class="stage-label">Routines — New: Step 2 (add items)</div>
+  <div class="two-col">
+    <div class="phone" style="background:white;height:860px">
+      <div class="status-bar dark"><span class="status-time" style="color:#111">9:41</span><span class="status-icons" style="color:#111">●●● 5G 🔋</span></div>
+
+      <div style="background:var(--green);padding:20px 20px 16px;flex-shrink:0">
+        <div style="display:flex;gap:6px;margin-bottom:14px">
+          <div style="height:4px;flex:1;border-radius:2px;background:white;opacity:0.9"></div>
+          <div style="height:4px;flex:1;border-radius:2px;background:white;opacity:0.9"></div>
+        </div>
+        <div style="display:flex;align-items:center;gap:10px">
+          <span class="app-back" onclick="show('rt-new-1')" style="color:rgba(255,255,255,0.7)">←</span>
+          <div>
+            <div style="color:white;font-size:17px;font-weight:800">Weekly Dairy &amp; Veggies</div>
+            <div style="color:rgba(255,255,255,0.6);font-size:12px;margin-top:2px">Step 2 of 2 · Add items</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="phone-scroll" style="background:white;padding:16px 16px 0">
+
+        <!-- Items added so far -->
+        <div class="detail-section" style="margin-bottom:12px">
+          <div class="detail-hd"><span class="detail-hd-lbl">Items added (4)</span></div>
+          <div class="detail-item-row">
+            <span style="font-size:18px">🥛</span>
+            <span class="di-name">Amul Taaza Milk 1L</span>
+            <span class="di-qty">× 2</span>
+            <button class="item-rm" style="width:20px;height:20px">✕</button>
+          </div>
+          <div class="detail-item-row">
+            <span style="font-size:18px">🥛</span>
+            <span class="di-name">Amul Dahi 400g</span>
+            <span class="di-qty">× 1</span>
+            <button class="item-rm" style="width:20px;height:20px">✕</button>
+          </div>
+          <div class="detail-item-row">
+            <span style="font-size:18px">🍅</span>
+            <span class="di-name">Fresh Tomatoes 1kg</span>
+            <span class="di-qty">× 2</span>
+            <button class="item-rm" style="width:20px;height:20px">✕</button>
+          </div>
+          <div class="detail-item-row">
+            <span style="font-size:18px">🧅</span>
+            <span class="di-name">Onions 1kg</span>
+            <span class="di-qty">× 1</span>
+            <button class="item-rm" style="width:20px;height:20px">✕</button>
+          </div>
+        </div>
+
+        <!-- Search (same dropdown) -->
+        <div class="search-box" style="margin-bottom:16px">
+          <div class="search-input-row">
+            <span class="search-icon">🔍</span>
+            <span class="search-fake-input" style="color:#9CA3AF">Search to add items…</span>
+          </div>
+        </div>
+
+        <button class="btn btn-primary" onclick="show('rt-created')">Create routine</button>
+        <div class="sp12"></div>
+
+      </div>
+    </div>
+    <div class="annotation">
+      <div class="ann-item"><div class="ann-num">1</div><div class="ann-txt"><span class="ann-b">Same 2-step pattern</span> as onboarding — progress bars in the green header. Step 1: schedule. Step 2: items.</div></div>
+      <div class="ann-item"><div class="ann-num">2</div><div class="ann-txt"><span class="ann-b">Items list is editable inline</span> — remove ✕ per item. Qty shown but editable with steppers (not shown when collapsed).</div></div>
+      <div class="ann-item"><div class="ann-num">3</div><div class="ann-txt"><span class="ann-b">Same <code>ItemSearchDropdown</code></span> used here — completely shared with Flow basket editing and Quick Order. Tap to expand and search.</div></div>
+      <div class="ann-item"><div class="ann-num">4</div><div class="ann-txt"><span class="ann-b">"Create routine"</span> only enabled once at least 1 item is added. Label changes to "Save changes" when editing an existing routine.</div></div>
+    </div>
+  </div>
+</div>
+
+
+<!-- ══════════════════════════════════════════════════════════════════ -->
+<!-- ROUTINES — CREATED                                                 -->
+<!-- ══════════════════════════════════════════════════════════════════ -->
+<div id="rt-created" class="stage">
+  <div class="stage-label">Routines — Created (success)</div>
+  <div class="phone">
+    <div class="status-bar"><span class="status-time">9:45</span><span class="status-icons">●●● 5G 🔋</span></div>
+    <div class="phone-scroll">
+
+      <div class="app-hdr">
+        <div class="app-hdr-left">
+          <span class="app-title">Routine created</span>
+        </div>
+      </div>
+
+      <div class="success-card">
+        <div class="success-hd" style="background:var(--green)">
+          <div class="success-icon">🔄</div>
+          <div class="success-title">Routine is live!</div>
+          <div class="success-sub">Weekly Dairy &amp; Veggies</div>
+        </div>
+        <div class="success-rows">
+          <div class="success-row"><span class="s-row-lbl">Frequency</span><span class="s-row-val">Every Tuesday at 8 AM</span></div>
+          <div class="success-row"><span class="s-row-lbl">Items</span><span class="s-row-val">4 items</span></div>
+          <div class="success-row"><span class="s-row-lbl">First run</span><span class="s-row-val green">Tomorrow, 14 Jul</span></div>
+        </div>
+      </div>
+
+      <div class="sp12"></div>
+      <button class="btn btn-primary" onclick="show('rt-list')" style="margin-bottom:8px">View all routines</button>
+      <button class="btn btn-ghost" onclick="show('rt-new-1')">Create another</button>
+
+    </div>
+    <div class="bot-nav"><div class="bot-nav-inner">
+      <div class="bot-tab" onclick="show('dashboard')"><span class="bot-tab-icon">🏠</span><span class="bot-tab-lbl">Home</span></div>
+      <div class="bot-tab active" onclick="show('rt-list')"><span class="bot-tab-icon">🔄</span><span class="bot-tab-lbl">Routines</span></div>
+      <div class="bot-tab"><span class="bot-tab-icon">📦</span><span class="bot-tab-lbl">Orders</span></div>
+      <div class="bot-tab"><span class="bot-tab-icon">⚙️</span><span class="bot-tab-lbl">Settings</span></div>
+    </div></div>
+  </div>
+</div>
+
+
+<script>
+  function show(id) {
+    document.querySelectorAll('.stage').forEach(s => s.classList.remove('active'));
+    document.querySelectorAll('.nav-btn').forEach(b => b.classList.remove('active'));
+
+    const target = document.getElementById(id);
+    if (target) {
+      target.classList.add('active');
+      // Activate the matching nav button
+      const btn = document.querySelector(`.nav-btn[data-screen="${id}"]`);
+      if (btn) btn.classList.add('active');
+    }
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  }
+
+  // Qty stepper logic
+  function incr(btn) {
+    const row = btn.closest('.qty-stepper');
+    const numEl = row.querySelector('.qty-num');
+    const n = parseInt(numEl.textContent) + 1;
+    numEl.textContent = n;
+    updateLineTotal(btn, n);
+  }
+  function decr(btn) {
+    const row = btn.closest('.qty-stepper');
+    const numEl = row.querySelector('.qty-num');
+    const n = Math.max(0, parseInt(numEl.textContent) - 1);
+    numEl.textContent = n;
+    if (n === 0) {
+      btn.closest('.item-row').style.opacity = '0.4';
+    } else {
+      btn.closest('.item-row').style.opacity = '1';
+    }
+    updateLineTotal(btn, n);
+  }
+  function updateLineTotal(btn, qty) {
+    const itemRow = btn.closest('.item-row');
+    if (!itemRow) return;
+    const priceLine = itemRow.querySelector('.item-price-line');
+    if (!priceLine) return;
+    const match = priceLine.textContent.match(/₹(\d+)/);
+    if (!match) return;
+    const unitPrice = parseInt(match[1]);
+    const totalEl = itemRow.querySelector('.item-line-total');
+    if (totalEl) totalEl.textContent = `₹${unitPrice * qty}`;
+  }
+
+  // Initialize — set first nav btn as active
+  document.querySelector('[data-screen="dashboard"]').classList.add('active');
+</script>
+
+</body>
+</html>

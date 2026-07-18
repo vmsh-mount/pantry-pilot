@@ -23,6 +23,10 @@ class Settings(BaseSettings):
     # Anthropic
     anthropic_api_key: str
     anthropic_model: str = "claude-sonnet-4-5"
+    anthropic_haiku_model: str = "claude-haiku-4-5-20251001"
+
+    # USDA FoodData Central (nutrition resolution)
+    usda_api_key: str = ""
 
     # Interakt (WhatsApp BSP — production)
     interakt_api_key: str = ""
