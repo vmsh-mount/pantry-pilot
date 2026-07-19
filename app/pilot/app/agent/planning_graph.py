@@ -1175,10 +1175,9 @@ async def place(state: PlanningState) -> dict:
         countdown = 30 * 60,
     )
 
-    # Kick off nutrition resolution (async, non-blocking)
     if db_order and db_order.id:
-        from app.tasks.nutrition import resolve_order_nutrition
-        resolve_order_nutrition.delay(db_order.id)
+        from app.services.order_events import dispatch_post_order_tasks
+        dispatch_post_order_tasks(db_order.id)
 
     logger.info(
         "place_complete",

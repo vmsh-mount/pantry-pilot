@@ -4,14 +4,16 @@ import { useEffect, useState } from "react"
 import { useRouter } from "next/navigation"
 import { api } from "@/lib/api"
 import { AppShell, Card, Spinner, Alert, Button } from "@/components/ui"
+import { NutritionCard } from "@/components/nutrition/NutritionCard"
 
 interface Order {
-  order_id:        string
-  placed_at:       string | null
-  total:           number
-  item_count:      number
-  preview_items:   string[]
-  via_pantrypilot: boolean
+  order_id:              string
+  placed_at:             string | null
+  total:                 number
+  item_count:            number
+  preview_items:         string[]
+  via_pantrypilot:       boolean
+  pantrypilot_order_id:  string | null
 }
 
 function fmtDate(iso: string | null) {
@@ -24,9 +26,10 @@ function fmtDate(iso: string | null) {
 
 export default function OrdersPage() {
   const router = useRouter()
-  const [orders,  setOrders]  = useState<Order[]>([])
-  const [loading, setLoading] = useState(true)
-  const [error,   setError]   = useState("")
+  const [orders,       setOrders]       = useState<Order[]>([])
+  const [loading,      setLoading]      = useState(true)
+  const [error,        setError]        = useState("")
+  const [expandedId,   setExpandedId]   = useState<string | null>(null)
 
   useEffect(() => {
     api.orders.list().then((res) => {
@@ -108,6 +111,27 @@ export default function OrdersPage() {
                       </span>
                     )}
                   </div>
+                )}
+
+                {/* Nutrition toggle — only for PantryPilot orders with an internal UUID */}
+                {order.pantrypilot_order_id && (
+                  <>
+                    <div className="pt-1 border-t border-gray-50 flex">
+                      <button
+                        onClick={() => setExpandedId(expandedId === order.order_id ? null : order.order_id)}
+                        className="text-xs text-[#2D6A4F] font-medium flex items-center gap-1 hover:opacity-70 transition-opacity"
+                      >
+                        <span>🌿</span>
+                        <span>{expandedId === order.order_id ? "Hide nutrition" : "Nutrition"}</span>
+                      </button>
+                    </div>
+
+                    {expandedId === order.order_id && (
+                      <div className="pt-1">
+                        <NutritionCard orderId={order.pantrypilot_order_id} />
+                      </div>
+                    )}
+                  </>
                 )}
               </div>
             </Card>

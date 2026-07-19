@@ -4,6 +4,7 @@ import { useEffect, useState, useCallback } from "react"
 import { useRouter } from "next/navigation"
 import { api, type RunSummary, type RunItem } from "@/lib/api"
 import { AppShell, Card, Spinner, Alert, Button } from "@/components/ui"
+import { NutritionCard } from "@/components/nutrition/NutritionCard"
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
 
@@ -83,9 +84,10 @@ function RunRow({
   run:     RunSummary
   onRetry: () => void
 }) {
-  const [open,    setOpen]    = useState(false)
-  const [items,   setItems]   = useState<RunItem[] | null>(null)
-  const [loading, setLoading] = useState(false)
+  const [open,          setOpen]          = useState(false)
+  const [items,         setItems]         = useState<RunItem[] | null>(null)
+  const [loading,       setLoading]       = useState(false)
+  const [showNutrition, setShowNutrition] = useState(false)
 
   const isActive    = ACTIVE_STATES.has(run.state)
   const isFailed    = run.state === "failed"
@@ -179,6 +181,24 @@ function RunRow({
             </div>
           ) : (
             <p className="text-xs text-gray-400 py-2 text-center">No items recorded for this run.</p>
+          )}
+
+          {/* Nutrition toggle — only for completed runs with an order */}
+          {run.state === "completed" && run.order_id && (
+            <div className="mt-3 pt-2 border-t border-gray-100">
+              <button
+                onClick={(e) => { e.stopPropagation(); setShowNutrition(v => !v) }}
+                className="text-xs text-[#2D6A4F] font-medium flex items-center gap-1 hover:opacity-70 transition-opacity"
+              >
+                <span>🌿</span>
+                <span>{showNutrition ? "Hide nutrition" : "Nutrition"}</span>
+              </button>
+              {showNutrition && (
+                <div className="mt-2">
+                  <NutritionCard orderId={run.order_id} />
+                </div>
+              )}
+            </div>
           )}
 
           {isFailed && (

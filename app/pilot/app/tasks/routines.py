@@ -225,6 +225,10 @@ async def _execute(routine_id: str):
             _check_ended(routine)
             await db.commit()
 
+            if order_id:
+                from app.services.order_events import dispatch_post_order_tasks
+                dispatch_post_order_tasks(str(order_id))
+
             # Step 12: WhatsApp notification
             await _notify_wa(db, routine, status, skipped_items, total_amount)
             logger.info("routine_run_completed", routine_id=routine_id, status=status, total=total_amount)

@@ -34,6 +34,7 @@ export interface RunSummary {
   failure_reason: string | null
   failure_stage:  string | null
   skip_reason:    string | null
+  order_id:       string | null
 }
 
 export interface RunsListResponse {

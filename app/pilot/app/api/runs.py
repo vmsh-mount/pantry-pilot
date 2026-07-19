@@ -132,6 +132,7 @@ async def list_runs(
             "failure_reason": run.failure_reason,
             "failure_stage":  run.failure_stage,
             "skip_reason":    run.skip_reason,
+            "order_id":       str(run.order_id) if run.order_id else None,
         })
 
     return APIResponse.ok({

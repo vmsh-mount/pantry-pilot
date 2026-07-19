@@ -31,9 +31,9 @@ async def list_orders(request: Request, db: AsyncSession = Depends(get_db)):
 
     # Fetch all orders placed via PantryPilot for this household
     placed_result = await db.execute(
-        select(Order.swiggy_order_id).where(Order.household_id == household_id)
+        select(Order.swiggy_order_id, Order.id).where(Order.household_id == household_id)
     )
-    pilot_order_ids = {row[0] for row in placed_result.all()}
+    pilot_order_map = {row.swiggy_order_id: str(row.id) for row in placed_result.all()}
 
     orders = []
     for o in raw_orders:
@@ -56,7 +56,8 @@ async def list_orders(request: Request, db: AsyncSession = Depends(get_db)):
             "total":           float(total),
             "item_count":      item_count,
             "preview_items":   item_names[:3],
-            "via_pantrypilot": order_id in pilot_order_ids,
+            "via_pantrypilot":       order_id in pilot_order_map,
+            "pantrypilot_order_id":  pilot_order_map.get(order_id),
         })
 
     return APIResponse.ok({"orders": orders})

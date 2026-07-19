@@ -4,6 +4,7 @@ import { useEffect, useState } from "react"
 import { useRouter, useParams } from "next/navigation"
 import { api } from "@/lib/api"
 import { AppShell, Card, Button, Alert, Spinner } from "@/components/ui"
+import { NutritionCard } from "@/components/nutrition/NutritionCard"
 
 interface RoutineItem  { id: string; item_name: string; quantity: number; unit: string }
 interface RoutineRun   { id: string; scheduled_at: string; status: string; skip_reason?: string; total_amount?: number; order_id?: string }
@@ -50,6 +51,7 @@ export default function RoutineDetailPage() {
   const [error, setError]           = useState("")
   const [actionLoading, setAction]  = useState<string | null>(null)
   const [dialog, setDialog]         = useState<"delete" | "pause" | null>(null)
+  const [expandedRunId, setExpandedRunId] = useState<string | null>(null)
 
   useEffect(() => {
     Promise.all([api.routines.get(id), api.routines.runs(id)]).then(([r, runs]) => {
@@ -208,21 +210,38 @@ export default function RoutineDetailPage() {
           <Card>
             <div className="px-6 py-4">
               <p className="text-xs font-semibold text-gray-400 uppercase tracking-wide mb-3">Past orders</p>
-              <div className="space-y-2">
-                {runs.filter(r => r.status !== "skipped" || r.skip_reason === "user_skip").slice(0, 5).map(run => (
-                  <div key={run.id} className="flex justify-between text-sm py-1">
-                    <span className="text-gray-600">{fmtDate(run.scheduled_at)}</span>
-                    <span className={
-                      run.status === "placed" ? "text-[#2D6A4F] font-medium" :
-                      run.status === "partial" ? "text-amber-600 font-medium" :
-                      "text-gray-400"
-                    }>
-                      {run.status === "placed" ? `₹${run.total_amount?.toFixed(0)}` :
-                       run.status === "partial" ? "Partial" :
-                       run.status === "skipped" ? "Skipped" : "Failed"}
-                    </span>
-                  </div>
-                ))}
+              <div className="space-y-1">
+                {runs.filter(r => r.status !== "skipped" || r.skip_reason === "user_skip").slice(0, 5).map(run => {
+                  const canExpand = (run.status === "placed" || run.status === "partial") && !!run.order_id
+                  const isOpen = expandedRunId === run.id
+                  return (
+                    <div key={run.id}>
+                      <div
+                        className={`flex justify-between text-sm py-2 rounded-lg px-2 -mx-2 ${canExpand ? "cursor-pointer hover:bg-gray-50" : ""}`}
+                        onClick={() => canExpand && setExpandedRunId(isOpen ? null : run.id)}
+                      >
+                        <span className="text-gray-600">{fmtDate(run.scheduled_at)}</span>
+                        <div className="flex items-center gap-2">
+                          <span className={
+                            run.status === "placed" ? "text-[#2D6A4F] font-medium" :
+                            run.status === "partial" ? "text-amber-600 font-medium" :
+                            "text-gray-400"
+                          }>
+                            {run.status === "placed" ? `₹${run.total_amount?.toFixed(0)}` :
+                             run.status === "partial" ? "Partial" :
+                             run.status === "skipped" ? "Skipped" : "Failed"}
+                          </span>
+                          {canExpand && <span className="text-gray-300 text-xs">{isOpen ? "▲" : "▼"}</span>}
+                        </div>
+                      </div>
+                      {isOpen && run.order_id && (
+                        <div className="mt-2 mb-1">
+                          <NutritionCard orderId={run.order_id} />
+                        </div>
+                      )}
+                    </div>
+                  )
+                })}
               </div>
             </div>
           </Card>
