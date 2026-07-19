@@ -15,9 +15,10 @@ from app.utils.logging import get_logger
 logger = get_logger(__name__)
 
 
-def dispatch_post_order_tasks(order_id: str) -> None:
+def dispatch_post_order_tasks(order_id) -> None:
     """Fire-and-forget all background tasks for a newly placed order."""
     from app.tasks.nutrition import resolve_order_nutrition
 
-    resolve_order_nutrition.delay(str(order_id))
+    order_id = str(order_id)
+    resolve_order_nutrition.delay(order_id)
     logger.info("post_order_tasks_dispatched", order_id=order_id)
