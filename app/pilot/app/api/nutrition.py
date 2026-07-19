@@ -38,10 +38,10 @@ def _icmr_weekly_targets(member_count: int) -> dict:
         d = {"calories": 5100, "protein_g": 126, "fiber_g": 63, "sodium_mg": 5400}
     else:
         d = {
-            "calories":  member_count * 1700,
-            "protein_g": member_count * 42,
-            "fiber_g":   member_count * 21,
-            "sodium_mg": member_count * 1800,
+            "calories":  member_count * 2000,
+            "protein_g": member_count * 50,
+            "fiber_g":   member_count * 25,
+            "sodium_mg": member_count * 2300,
         }
     return {k: v * 7 for k, v in d.items()}
 

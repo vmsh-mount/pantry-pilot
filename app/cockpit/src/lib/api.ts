@@ -276,4 +276,7 @@ export const api = {
     updateGoals:(body: { daily_calories?: number; daily_protein_g?: number; daily_fiber_g?: number; daily_sodium_mg?: number }) =>
                                      request("/nutrition/goals", { method: "PATCH", body: JSON.stringify(body) }),
   },
+  dashboard: {
+    get: () => request("/dashboard"),
+  },
 }

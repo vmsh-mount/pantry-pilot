@@ -1,0 +1,437 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>PantryPilot Dashboard</title>
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0 }
+
+  :root {
+    --bg:        #1B4332;
+    --bg2:       #163827;
+    --card:      #FFFFFF;
+    --card-bg2:  #F7F8F5;
+    --mint:      #D8F3DC;
+    --green:     #2D6A4F;
+    --green-dk:  #1B4332;
+    --text:      #111827;
+    --text-2:    #6B7280;
+    --text-3:    #9CA3AF;
+    --border:    #F3F4F6;
+    --cal:       #C45E18;
+    --spend:     #2A60A8;
+    --protein:   #2A60A8;
+    --fiber:     #2A7030;
+    --sodium:    #6038A0;
+    --amber:     #D97706;
+    --red:       #DC2626;
+  }
+
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --card:     #1F2937;
+      --card-bg2: #111827;
+      --text:     #F9FAFB;
+      --text-2:   #9CA3AF;
+      --text-3:   #6B7280;
+      --border:   #374151;
+    }
+  }
+  :root[data-theme="light"] {
+    --card:     #FFFFFF; --card-bg2:#F7F8F5;
+    --text:     #111827; --text-2:#6B7280; --text-3:#9CA3AF; --border:#F3F4F6;
+  }
+  :root[data-theme="dark"] {
+    --card:     #1F2937; --card-bg2:#111827;
+    --text:     #F9FAFB; --text-2:#9CA3AF; --text-3:#6B7280; --border:#374151;
+  }
+
+  body {
+    background: var(--bg);
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    padding: 24px 16px 48px;
+    min-height: 100vh;
+  }
+
+  /* phone shell */
+  .phone {
+    width: 100%;
+    max-width: 390px;
+  }
+
+  /* ── header ── */
+  .header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 0 4px;
+    margin-bottom: 20px;
+  }
+  .logo { display: flex; align-items: center; gap: 8px; color: #fff; font-weight: 700; font-size: 17px }
+  .logo-icon { font-size: 22px }
+  .settings-btn {
+    background: rgba(255,255,255,.12);
+    border: none; border-radius: 50%;
+    width: 34px; height: 34px;
+    display: flex; align-items: center; justify-content: center;
+    color: var(--mint); font-size: 15px; cursor: pointer;
+  }
+
+  /* ── alert banner ── */
+  .alert {
+    background: var(--mint);
+    border-radius: 14px;
+    padding: 12px 16px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 16px;
+    cursor: pointer;
+  }
+  .alert-left { display: flex; align-items: center; gap: 10px }
+  .alert-dot { width: 8px; height: 8px; border-radius: 50%; background: var(--green); flex-shrink: 0 }
+  .alert-dot.pulse { animation: pulse 1.5s infinite }
+  @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:.4} }
+  .alert-title { font-size: 13px; font-weight: 700; color: var(--green-dk) }
+  .alert-sub { font-size: 11px; color: var(--green); margin-top: 1px }
+  .alert-arrow { font-size: 13px; color: var(--green) }
+
+  /* ── section label ── */
+  .section-label {
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: .06em;
+    text-transform: uppercase;
+    color: rgba(216,243,220,.55);
+    padding: 0 2px;
+    margin-bottom: 10px;
+    margin-top: 20px;
+  }
+
+  /* ── hero tiles ── */
+  .hero-row { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 10px }
+  .hero-tile {
+    background: var(--card);
+    border-radius: 18px;
+    padding: 14px 16px 16px;
+  }
+  .hero-icon { font-size: 18px; margin-bottom: 6px }
+  .hero-value { font-size: 24px; font-weight: 700; line-height: 1; font-variant-numeric: tabular-nums }
+  .hero-target { font-size: 11px; color: var(--text-2); margin-top: 3px }
+  .hero-bar { height: 5px; border-radius: 99px; background: var(--border); margin-top: 10px; overflow: hidden }
+  .hero-bar-fill { height: 100%; border-radius: 99px; transition: width .6s ease }
+
+  /* ── stat tiles ── */
+  .stat-row { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 8px; margin-bottom: 4px }
+  .stat-tile {
+    background: rgba(255,255,255,.10);
+    border-radius: 14px;
+    padding: 12px 10px;
+    text-align: center;
+  }
+  .stat-value { font-size: 17px; font-weight: 700; color: #fff; font-variant-numeric: tabular-nums }
+  .stat-label { font-size: 10px; color: rgba(216,243,220,.6); margin-top: 3px; line-height: 1.3 }
+
+  /* ── nutrition section ── */
+  .nutrition-card {
+    background: var(--card);
+    border-radius: 18px;
+    padding: 16px;
+  }
+  .macro-row {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 7px 0;
+    border-bottom: 1px solid var(--border);
+  }
+  .macro-row:last-child { border-bottom: none; padding-bottom: 0 }
+  .macro-row:first-child { padding-top: 0 }
+  .macro-label { font-size: 12px; color: var(--text-2); width: 52px; flex-shrink: 0 }
+  .dot-bar { display: flex; gap: 4px; flex: 1 }
+  .dot {
+    width: 8px; height: 8px; border-radius: 50%;
+    background: var(--border);
+    flex-shrink: 0;
+    transition: background .3s;
+  }
+  .macro-val { font-size: 11px; font-variant-numeric: tabular-nums; color: var(--text-2); text-align: right; width: 70px; flex-shrink: 0 }
+
+  /* ── recent orders ── */
+  .orders-card {
+    background: var(--card);
+    border-radius: 18px;
+    overflow: hidden;
+  }
+  .order-row {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 12px 16px;
+    border-bottom: 1px solid var(--border);
+    cursor: pointer;
+  }
+  .order-row:last-child { border-bottom: none }
+  .order-day {
+    font-size: 10px;
+    font-weight: 700;
+    text-transform: uppercase;
+    color: var(--text-3);
+    width: 28px;
+    flex-shrink: 0;
+  }
+  .order-items { flex: 1; min-width: 0 }
+  .order-name { font-size: 13px; font-weight: 500; color: var(--text); white-space: nowrap; overflow: hidden; text-overflow: ellipsis }
+  .order-source { font-size: 10px; color: var(--text-3); margin-top: 1px }
+  .order-amount { font-size: 13px; font-weight: 700; color: var(--text); font-variant-numeric: tabular-nums; flex-shrink: 0 }
+  .order-arrow { font-size: 12px; color: var(--text-3); margin-left: 4px }
+
+  /* ── action strip ── */
+  .action-strip { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 8px; margin-top: 20px }
+  .action-btn {
+    background: var(--card);
+    border-radius: 16px;
+    padding: 12px 8px 12px;
+    text-align: center;
+    cursor: pointer;
+    border: none;
+    transition: transform .1s;
+  }
+  .action-btn:active { transform: scale(.96) }
+  .action-icon { font-size: 20px; margin-bottom: 4px }
+  .action-name { font-size: 12px; font-weight: 700; color: var(--text) }
+  .action-sub { font-size: 10px; color: var(--text-2); margin-top: 2px; line-height: 1.3 }
+
+  /* ── toggle bar ── */
+  .toggle-bar {
+    display: flex;
+    gap: 8px;
+    justify-content: center;
+    margin-bottom: 24px;
+    flex-wrap: wrap;
+  }
+  .toggle-btn {
+    padding: 6px 14px;
+    border-radius: 99px;
+    border: 1.5px solid rgba(255,255,255,.25);
+    background: transparent;
+    color: var(--mint);
+    font-size: 12px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all .15s;
+  }
+  .toggle-btn.active {
+    background: var(--mint);
+    color: var(--green-dk);
+    border-color: var(--mint);
+  }
+</style>
+</head>
+<body>
+
+<!-- state toggle -->
+<div class="toggle-bar">
+  <button class="toggle-btn active" onclick="setState('normal')">Normal</button>
+  <button class="toggle-btn" onclick="setState('basket')">Basket ready</button>
+  <button class="toggle-btn" onclick="setState('planning')">Planning…</button>
+  <button class="toggle-btn" onclick="setState('empty')">No data yet</button>
+</div>
+
+<div class="phone">
+
+  <!-- header -->
+  <div class="header">
+    <div class="logo"><span class="logo-icon">🥦</span> PantryPilot</div>
+    <button class="settings-btn">⚙</button>
+  </div>
+
+  <!-- alert banner (conditional) -->
+  <div id="alert-basket" class="alert" style="display:none">
+    <div class="alert-left">
+      <div class="alert-dot"></div>
+      <div>
+        <div class="alert-title">Basket ready for review</div>
+        <div class="alert-sub">Your weekly order is planned · Tap to confirm</div>
+      </div>
+    </div>
+    <span class="alert-arrow">›</span>
+  </div>
+  <div id="alert-planning" class="alert" style="display:none; background:rgba(251,191,36,.15)">
+    <div class="alert-left">
+      <div class="alert-dot pulse" style="background:#D97706"></div>
+      <div>
+        <div class="alert-title" style="color:#92400E">Building your basket…</div>
+        <div class="alert-sub" style="color:#B45309">Checking pantry · Planning items</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- this week -->
+  <div class="section-label">This week</div>
+
+  <div class="hero-row">
+    <!-- calories -->
+    <div class="hero-tile">
+      <div class="hero-icon">🔥</div>
+      <div class="hero-value" style="color:var(--cal)" id="cal-value">12,400</div>
+      <div class="hero-target" id="cal-target">of 14,000 kcal</div>
+      <div class="hero-bar">
+        <div class="hero-bar-fill" id="cal-bar" style="width:89%;background:var(--cal)"></div>
+      </div>
+    </div>
+    <!-- spend -->
+    <div class="hero-tile">
+      <div class="hero-icon">💸</div>
+      <div class="hero-value" style="color:var(--spend)" id="spend-value">₹1,840</div>
+      <div class="hero-target" id="spend-target">of ₹2,000 budget</div>
+      <div class="hero-bar">
+        <div class="hero-bar-fill" id="spend-bar" style="width:92%;background:var(--spend)"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- stat tiles -->
+  <div class="stat-row">
+    <div class="stat-tile">
+      <div class="stat-value" id="stat-orders">12</div>
+      <div class="stat-label">orders placed</div>
+    </div>
+    <div class="stat-tile">
+      <div class="stat-value" id="stat-avg">₹460</div>
+      <div class="stat-label">avg order</div>
+    </div>
+    <div class="stat-tile">
+      <div class="stat-value" id="stat-resolved">4/5</div>
+      <div class="stat-label">items resolved</div>
+    </div>
+  </div>
+
+  <!-- nutrition -->
+  <div class="section-label" id="nutrition-label">Nutrition</div>
+  <div class="nutrition-card" id="nutrition-card">
+    <!-- protein -->
+    <div class="macro-row">
+      <span class="macro-label">Protein</span>
+      <div class="dot-bar" id="dots-protein"></div>
+      <span class="macro-val" style="color:var(--protein)">48g / 50g</span>
+    </div>
+    <!-- fiber -->
+    <div class="macro-row">
+      <span class="macro-label">Fiber</span>
+      <div class="dot-bar" id="dots-fiber"></div>
+      <span class="macro-val" style="color:var(--fiber)">12g / 25g</span>
+    </div>
+    <!-- sodium -->
+    <div class="macro-row">
+      <span class="macro-label">Sodium</span>
+      <div class="dot-bar" id="dots-sodium"></div>
+      <span class="macro-val" style="color:var(--sodium)">1,800 / 2,300mg</span>
+    </div>
+  </div>
+
+  <!-- recent orders -->
+  <div class="section-label" id="orders-label">Recent orders</div>
+  <div class="orders-card" id="orders-card">
+    <div class="order-row">
+      <div class="order-day">Mon</div>
+      <div class="order-items">
+        <div class="order-name">Lay's Chips, Amul Milk +3</div>
+        <div class="order-source">🔄 Flow · 5 items</div>
+      </div>
+      <span class="order-amount">₹620</span>
+      <span class="order-arrow">›</span>
+    </div>
+    <div class="order-row">
+      <div class="order-day">Thu</div>
+      <div class="order-items">
+        <div class="order-name">Eggs, Britannia Bread</div>
+        <div class="order-source">🛒 Quick · 2 items</div>
+      </div>
+      <span class="order-amount">₹220</span>
+      <span class="order-arrow">›</span>
+    </div>
+    <div class="order-row">
+      <div class="order-day">Mon</div>
+      <div class="order-items">
+        <div class="order-name">Protein Peanuts, Oats +1</div>
+        <div class="order-source">📋 Routine · 3 items</div>
+      </div>
+      <span class="order-amount">₹480</span>
+      <span class="order-arrow">›</span>
+    </div>
+  </div>
+
+  <!-- action strip -->
+  <div class="action-strip">
+    <button class="action-btn">
+      <div class="action-icon">↻</div>
+      <div class="action-name">Flow</div>
+      <div class="action-sub" id="flow-sub">Next: Mon</div>
+    </button>
+    <button class="action-btn">
+      <div class="action-icon">📋</div>
+      <div class="action-name">Routines</div>
+      <div class="action-sub">2 active</div>
+    </button>
+    <button class="action-btn">
+      <div class="action-icon">🛒</div>
+      <div class="action-name">Quick</div>
+      <div class="action-sub">Order now</div>
+    </button>
+  </div>
+
+</div>
+
+<script>
+  function renderDots(id, pct, color) {
+    const el = document.getElementById(id)
+    if (!el) return
+    const n = 7
+    const filled = Math.round(pct * n)
+    el.innerHTML = Array.from({length: n}, (_, i) =>
+      `<div class="dot" style="${i < filled ? `background:${color}` : ''}"></div>`
+    ).join('')
+  }
+
+  renderDots('dots-protein', 48/50, 'var(--protein)')
+  renderDots('dots-fiber',   12/25, 'var(--fiber)')
+  renderDots('dots-sodium',  1800/2300, 'var(--sodium)')
+
+  function setState(s) {
+    document.querySelectorAll('.toggle-btn').forEach((b, i) => {
+      b.classList.toggle('active', ['normal','basket','planning','empty'][i] === s)
+    })
+
+    document.getElementById('alert-basket').style.display   = s === 'basket'   ? 'flex' : 'none'
+    document.getElementById('alert-planning').style.display = s === 'planning' ? 'flex' : 'none'
+
+    const empty = s === 'empty'
+
+    document.getElementById('cal-value').textContent  = empty ? '—'      : '12,400'
+    document.getElementById('cal-target').textContent = empty ? 'no data yet' : 'of 14,000 kcal'
+    document.getElementById('cal-bar').style.width    = empty ? '0%'     : '89%'
+    document.getElementById('spend-value').textContent = empty ? '₹0'    : '₹1,840'
+    document.getElementById('spend-target').textContent = empty ? 'of ₹2,000 budget' : 'of ₹2,000 budget'
+    document.getElementById('spend-bar').style.width   = empty ? '0%'    : '92%'
+
+    document.getElementById('stat-orders').textContent   = empty ? '0'  : '12'
+    document.getElementById('stat-avg').textContent      = empty ? '—'  : '₹460'
+    document.getElementById('stat-resolved').textContent = empty ? '—'  : '4/5'
+
+    document.getElementById('nutrition-label').style.display = empty ? 'none' : ''
+    document.getElementById('nutrition-card').style.display  = empty ? 'none' : ''
+    document.getElementById('orders-label').style.display    = empty ? 'none' : ''
+    document.getElementById('orders-card').style.display     = empty ? 'none' : ''
+
+    document.getElementById('flow-sub').textContent =
+      s === 'basket'   ? 'Review now' :
+      s === 'planning' ? 'Planning…'  : 'Next: Mon'
+  }
+</script>
+</body>
+</html>
