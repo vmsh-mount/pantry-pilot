@@ -1168,12 +1168,9 @@ async def place(state: PlanningState) -> dict:
     except Exception as e:
         logger.warning("receipt_whatsapp_failed", error=str(e))
 
-    # Schedule pantry update (30 min after placement)
+    # Update pantry from order_items already in our DB — no Swiggy fetch needed
     from app.tasks.pantry import update_pantry_post_order
-    update_pantry_post_order.apply_async(
-        args      = [household_id, order_id_str],
-        countdown = 30 * 60,
-    )
+    update_pantry_post_order.delay(household_id, str(db_order.id))
 
     if db_order and db_order.id:
         from app.services.order_events import dispatch_post_order_tasks

@@ -10,7 +10,7 @@ from app.database import engine, Base
 from app.redis import close_redis
 from app.utils.logging import setup_logging, get_logger
 from app.utils.exceptions import PantryPilotError, NotAuthenticatedError, TokenExpiredError
-from app.api import auth, onboard, webhooks, settings_router, basket, orders, runs, routines, products, quick, nutrition, dashboard
+from app.api import auth, onboard, webhooks, settings_router, basket, orders, runs, routines, products, quick, nutrition, dashboard, pantry
 
 settings = get_settings()
 logger = get_logger(__name__)
@@ -71,6 +71,7 @@ app.include_router(products.router,        prefix="/v1")
 app.include_router(quick.router,           prefix="/v1")
 app.include_router(nutrition.router,       prefix="/v1")
 app.include_router(dashboard.router,       prefix="/v1")
+app.include_router(pantry.router,         prefix="/v1")
 
 # ── Validation error handler ─────────────────
 @app.exception_handler(RequestValidationError)

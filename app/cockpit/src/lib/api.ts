@@ -185,6 +185,24 @@ export interface ComplianceFlag {
   detail?:   string
 }
 
+export type PantryStatus = "stocked" | "low" | "depleted"
+
+export interface PantryItemOut {
+  id:                      string
+  item_name:               string
+  category:                string
+  standard_unit:           string
+  estimated_qty_remaining: number
+  reorder_threshold:       number
+  avg_weekly_consumption:  number | null
+  last_ordered_qty:        number | null
+  last_ordered_at:         string | null
+  times_ordered:           number
+  status:                  PantryStatus
+}
+
+export interface PantryCounts { total: number; low: number; depleted: number }
+
 // ── API client ────────────────────────────────────────────────────────────────
 export const api = {
   auth: {
@@ -278,5 +296,11 @@ export const api = {
   },
   dashboard: {
     get: () => request("/dashboard"),
+  },
+  pantry: {
+    list:   ()                                              => request<{ items: PantryItemOut[]; counts: PantryCounts }>("/pantry"),
+    update: (id: string, body: { estimated_qty_remaining: number }) =>
+                                                               request<{ item: PantryItemOut }>(`/pantry/${id}`, { method: "PATCH", body: JSON.stringify(body) }),
+    remove: (id: string)                                    => request<{ deleted: boolean }>(`/pantry/${id}`, { method: "DELETE" }),
   },
 }

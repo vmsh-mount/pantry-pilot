@@ -78,6 +78,7 @@ class HouseholdPreferences(Base):
 
     next_run_at:             Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
     last_run_at:             Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    last_external_sync_at:   Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
 
     created_at:              Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
     updated_at:              Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now(), onupdate=func.now())

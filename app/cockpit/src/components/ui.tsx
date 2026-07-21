@@ -26,8 +26,9 @@ export function Shell({ children }: { children: React.ReactNode }) {
 
 const NAV_TABS = [
   { href: "/dashboard", label: "Home",     icon: "🏠" },
-  { href: "/routines",  label: "Routines", icon: "🔄" },
+  { href: "/pantry",    label: "Pantry",   icon: "🥫" },
   { href: "/orders",    label: "Orders",   icon: "📦" },
+  { href: "/routines",  label: "Routines", icon: "🔄" },
   { href: "/settings",  label: "Settings", icon: "⚙️" },
 ]
 

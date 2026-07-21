@@ -89,5 +89,9 @@ celery_app.conf.update(
             "task": "app.tasks.nutrition.trigger_all_compliance",
             "schedule": crontab(hour=11, minute=30, day_of_week=0),  # Sunday 5 PM IST
         },
+        "sync-external-orders": {
+            "task": "app.tasks.pantry.sync_external_orders_all",
+            "schedule": crontab(minute=0, hour="*/4"),
+        },
     }
 )
