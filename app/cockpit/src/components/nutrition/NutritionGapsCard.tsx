@@ -20,86 +20,82 @@ function summaryLine(gaps: NutritionGap[]): string {
   return parts.join(" · ")
 }
 
+type Phase = "checking-flag" | "flag-off" | "loading-gaps" | "hidden" | "ready"
+
 export function NutritionGapsCard() {
   const router = useRouter()
-  const [loading, setLoading] = useState(true)
-  const [gaps, setGaps]       = useState<NutritionGap[] | null>(null)
-  const [failed, setFailed]   = useState(false)
+  const [phase, setPhase] = useState<Phase>("checking-flag")
+  const [gaps, setGaps]   = useState<NutritionGap[]>([])
 
   useEffect(() => {
     let cancelled = false
     ;(async () => {
+      let flag = false
       try {
         const settingsRes = await api.settings.get()
-        const flag = settingsRes.success ? settingsRes.data?.nutrition_gaps_enabled : false
-        if (!flag) return
+        flag = settingsRes.success ? !!settingsRes.data?.nutrition_gaps_enabled : false
+      } catch {
+        flag = false
+      }
+      if (cancelled) return
+      if (!flag) { setPhase("flag-off"); return }
 
-        // GET /v1/nutrition/gaps does live Swiggy searches + nutrition
-        // resolution per recommendation — routinely 10-15s. Without the
-        // try/catch below, any transient failure on this call (timeout,
-        // dropped connection) left `loading` stuck true forever and the
-        // card silently, permanently vanished for that page load with no
-        // visible error — indistinguishable from "nothing to show."
+      // Flag confirmed on — show the card shell + entry rows immediately.
+      // GET /v1/nutrition/gaps does live Swiggy searches + nutrition
+      // resolution per recommendation and can take 15-20s+; the entry rows
+      // (Settings / weekly digest / Gap-to-Cart) don't depend on this
+      // request at all, so gating the whole card behind it blocked
+      // navigation for the entire duration of a slow fetch — worse than
+      // the silent-disappearance bug this loading state was added to fix.
+      setPhase("loading-gaps")
+
+      try {
         const gapsRes = await api.nutrition.gaps()
         if (cancelled) return
         if (gapsRes.success && gapsRes.data) {
           setGaps(gapsRes.data.gaps)
+          setPhase("ready")
         } else {
-          setFailed(true)
+          setPhase("hidden")
         }
       } catch {
-        if (!cancelled) setFailed(true)
-      } finally {
-        if (!cancelled) setLoading(false)
+        if (!cancelled) setPhase("hidden")
       }
     })()
     return () => { cancelled = true }
   }, [])
 
-  if (loading) {
-    // Visible "still checking" state so a slow (10-15s) fetch reads as
-    // loading, not as an absent card — the exact ambiguity that made this
-    // look like the card was randomly disappearing.
-    return (
-      <div className="bg-white rounded-xl overflow-hidden px-3.5 py-3.5 flex items-center gap-2.5"
-           style={{ border: "0.5px solid rgba(0,0,0,0.06)" }}>
-        <span className="w-3.5 h-3.5 rounded-full border-2 border-gray-200 border-t-[#2D6A4F] animate-spin shrink-0" />
-        <span className="text-[12px] text-[#8E8E93]">Checking this week&apos;s nutrition…</span>
-      </div>
-    )
-  }
-
-  // A failed fetch (after retries are exhausted / on error) hides the card
-  // rather than showing stale or broken data — but this is now a distinct,
-  // deliberate outcome from a caught error, not an indefinite hang.
-  if (failed || gaps === null) return null
-
-  // compute_gaps omits on-track nutrients from the response entirely, so an
-  // empty-of-"short" gaps array is ambiguous between two different states:
-  //   (a) no order_nutrition data yet (every nutrient, including the
-  //       always-evaluated calories/protein/fiber, comes back
-  //       insufficient_data) — genuinely nothing to show;
-  //   (b) a fully healthy household with real order history — calories/
-  //       protein/fiber all on target — whose only insufficient_data entry
-  //       is a micronutrient (e.g. b12/iron below the 60% coverage guard).
-  // Both cases produce hasNothingToShow = true, and hiding the card is the
-  // right call either way — a household with nothing to fix and no
-  // coverage-worthy signal doesn't need a nutrition card on Home. But (b)
-  // is not "near-zero order history"; don't debug an active household's
-  // missing card by looking for missing orders — check gap statuses instead.
-  const hasNothingToShow = gaps.every((g) => g.status === "insufficient_data")
-  if (hasNothingToShow) return null
+  if (phase === "checking-flag" || phase === "flag-off" || phase === "hidden") return null
 
   const shortGaps = gaps.filter((g) => g.status === "short")
   const needsAttention = shortGaps.length > 0
-  const summary = needsAttention ? summaryLine(shortGaps) : summaryLine(gaps.filter((g) => g.status === "insufficient_data"))
+  // compute_gaps omits on-track nutrients from the response, so an EMPTY
+  // gaps array is real good news (every tracked nutrient — always
+  // evaluated — is on target), not "nothing computed." Only when the array
+  // is non-empty AND contains nothing but insufficient_data (no "short"
+  // entries at all) is there truly no usable signal to show — that's the
+  // "never really computed" case (near-zero order history in practice,
+  // since core nutrients rarely fail the coverage guard once any order
+  // exists). An empty array must render "on track", not hide.
+  const hasNoUsableSignal = gaps.length > 0 && !needsAttention && gaps.every((g) => g.status === "insufficient_data")
+  if (phase === "ready" && hasNoUsableSignal) return null
+
+  const isLoadingGaps = phase === "loading-gaps"
+  const summary = needsAttention
+    ? summaryLine(shortGaps)
+    : summaryLine(gaps.filter((g) => g.status === "insufficient_data"))
 
   return (
     <div className="bg-white rounded-xl overflow-hidden" style={{ border: "0.5px solid rgba(0,0,0,0.06)" }}>
       <div className="px-3.5 pt-3.5 pb-1 flex items-center gap-2">
         <span className="text-base">🌿</span>
         <span className="text-[13px] font-bold text-[#1C1C1E] flex-1">Nutrition</span>
-        {needsAttention ? (
+        {isLoadingGaps ? (
+          <span className="flex items-center gap-1.5">
+            <span className="w-3 h-3 rounded-full border-2 border-gray-200 border-t-[#2D6A4F] animate-spin" />
+            <span className="text-[10px] text-[#8E8E93]">checking…</span>
+          </span>
+        ) : needsAttention ? (
           <span className="text-[10px] font-bold uppercase tracking-wide px-2 py-0.5 rounded-full bg-red-50 text-red-600">
             needs attention
           </span>
@@ -108,7 +104,7 @@ export function NutritionGapsCard() {
         )}
       </div>
 
-      {(needsAttention || summary) && (
+      {!isLoadingGaps && (needsAttention || summary) && (
         <p className="px-3.5 pb-2 text-[12px] text-[#5A5A5F]">{summary}</p>
       )}
 
@@ -116,7 +112,11 @@ export function NutritionGapsCard() {
         {[
           { label: "Household targets", sub: "per-member, in Settings", href: "/settings/targets" },
           { label: "This week's report", sub: "macros vs your targets", href: "/nutrition/weekly" },
-          { label: "Fix these in my cart", sub: needsAttention ? `${shortGaps.length} item${shortGaps.length === 1 ? "" : "s"} close the gap` : "see recommendations", href: "/nutrition/gaps" },
+          {
+            label: "Fix these in my cart",
+            sub: isLoadingGaps ? "loading…" : needsAttention ? `${shortGaps.length} item${shortGaps.length === 1 ? "" : "s"} close the gap` : "see recommendations",
+            href: "/nutrition/gaps",
+          },
         ].map((row, i) => (
           <button
             key={row.href}

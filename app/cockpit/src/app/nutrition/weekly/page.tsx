@@ -32,21 +32,32 @@ const NUTRIENT_LABEL: Record<string, string> = {
 
 export default function WeeklyNutritionPage() {
   const router = useRouter()
-  const [loading, setLoading]   = useState(true)
-  const [week, setWeek]         = useState<WeekRow | null>(null)
-  const [targets, setTargets]   = useState<NutritionWeeklyTargets | null>(null)
-  const [gaps, setGaps]         = useState<NutritionGap[]>([])
+  const [loading, setLoading]         = useState(true)
+  const [week, setWeek]               = useState<WeekRow | null>(null)
+  const [targets, setTargets]         = useState<NutritionWeeklyTargets | null>(null)
+  const [gaps, setGaps]               = useState<NutritionGap[]>([])
+  const [gapsLoading, setGapsLoading] = useState(true)
 
   useEffect(() => {
-    Promise.all([api.nutrition.weekly(1), api.nutrition.gaps()]).then(([weeklyRes, gapsRes]) => {
+    // Decoupled from the gaps fetch below: GET /v1/nutrition/weekly is a
+    // plain DB aggregation (fast). GET /v1/nutrition/gaps does live Swiggy
+    // searches + resolution and can take 15-20s+. Awaiting both together
+    // (the previous Promise.all) blocked this entire page — including the
+    // "Fix these in my cart" CTA button, which doesn't even read gaps data
+    // — behind the slow one. The macro bars now render as soon as the fast
+    // call resolves; the flagged section shows its own loading row.
+    api.nutrition.weekly(1).then((weeklyRes) => {
       setLoading(false)
       if (weeklyRes.success && weeklyRes.data) {
         const weeks = (weeklyRes.data as { weeks: WeekRow[] }).weeks
         setWeek(weeks[0] ?? null)
         setTargets(weeklyRes.data.weekly_targets)
       }
-      if (gapsRes.success && gapsRes.data) setGaps(gapsRes.data.gaps)
     })
+    api.nutrition.gaps().then((gapsRes) => {
+      setGapsLoading(false)
+      if (gapsRes.success && gapsRes.data) setGaps(gapsRes.data.gaps)
+    }).catch(() => setGapsLoading(false))
   }, [])
 
   if (loading) {
@@ -87,10 +98,16 @@ export default function WeeklyNutritionPage() {
           )}
         </div>
 
-        {gaps.length > 0 && (
+        {(gapsLoading || gaps.length > 0) && (
           <div className="px-5 pt-4 pb-1 mt-2 border-t border-gray-100">
             <p className="text-xs font-semibold text-gray-700 mb-2">Flagged this week</p>
-            {gaps.map((g) => {
+            {gapsLoading && (
+              <div className="flex items-center gap-2 py-1.5">
+                <span className="w-3 h-3 rounded-full border-2 border-gray-200 border-t-[#2D6A4F] animate-spin shrink-0" />
+                <span className="text-xs text-gray-400">Checking for gaps…</span>
+              </div>
+            )}
+            {!gapsLoading && gaps.map((g) => {
               const label = NUTRIENT_LABEL[g.nutrient] ?? g.nutrient
               return (
                 <div key={g.nutrient} className="flex items-center gap-2 py-1.5">

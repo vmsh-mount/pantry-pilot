@@ -207,6 +207,7 @@ async def get_recommendations_for_nutrient(
 
     svc = BasketEditingService()
     scored: list[dict] = []
+    seen_sku_ids: set[str] = set()
 
     for cand in candidates:
         try:
@@ -216,6 +217,13 @@ async def get_recommendations_for_nutrient(
             continue
 
         for p in products:
+            # Different candidate concepts can surface the SAME Swiggy SKU
+            # (fuzzy search overlap, e.g. a "chana" query and a "dal" query
+            # both matching "Kala Chana") — without this, the exact same
+            # sku_id could appear twice in the final recommendations.
+            if p.sku_id in seen_sku_ids:
+                continue
+
             name_lc = (p.name or "").lower()
             if any(a in name_lc for a in allergies):
                 continue  # guardrail: hard-exclude allergens
@@ -225,11 +233,21 @@ async def get_recommendations_for_nutrient(
                 continue
             delivers = cand["nutrient_per_100g"] * pack_g / 100
             per_rupee = delivers / p.price
+            seen_sku_ids.add(p.sku_id)
             scored.append({"candidate": cand, "product": p, "per_rupee": per_rupee, "delivers": delivers})
 
-    # Step 3 done — rank by the concept-level live per_rupee, take top N to resolve.
+    # Step 3 done — rank by the concept-level live per_rupee. Keep only the
+    # single best-scoring item per food_concept before taking the top N, so
+    # the final recommendations favor variety across different foods rather
+    # than letting one concept (e.g. two different soya chunks brands) fill
+    # multiple slots that could otherwise show the household a wider choice.
     scored.sort(key=lambda s: -s["per_rupee"])
-    to_resolve = scored[:limit]
+    best_per_concept: dict[str, dict] = {}
+    for s in scored:
+        concept = s["candidate"]["food_concept"]
+        if concept not in best_per_concept:
+            best_per_concept[concept] = s  # first hit per concept = highest per_rupee, since scored is sorted
+    to_resolve = sorted(best_per_concept.values(), key=lambda s: -s["per_rupee"])[:limit]
 
     results: list[dict] = []
     for s in to_resolve:

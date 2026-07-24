@@ -70,12 +70,16 @@ function RecommendationCard({
   )
 }
 
+type AddAllState = "idle" | "adding" | "done"
+
 export default function GapsToCartPage() {
   const router = useRouter()
   const [loading, setLoading]           = useState(true)
   const [gaps, setGaps]                 = useState<NutritionGap[]>([])
   const [basketPending, setBasketPending] = useState(false)
   const [addStates, setAddStates]       = useState<Record<string, AddState>>({})
+  const [addAllState, setAddAllState]   = useState<AddAllState>("idle")
+  const [addAllCount, setAddAllCount]   = useState(0)
 
   useEffect(() => {
     Promise.all([api.nutrition.gaps(), api.dashboard.get()]).then(([gapsRes, dashRes]) => {
@@ -86,7 +90,7 @@ export default function GapsToCartPage() {
     })
   }, [])
 
-  async function addToCart(rec: GapRecommendation) {
+  async function addToCart(rec: GapRecommendation): Promise<boolean> {
     setAddStates((s) => ({ ...s, [rec.sku_id]: "adding" }))
     try {
       const res = basketPending
@@ -100,8 +104,10 @@ export default function GapsToCartPage() {
             in_stock: rec.in_stock,
           })
       setAddStates((s) => ({ ...s, [rec.sku_id]: res.success ? "added" : "error" }))
+      return res.success
     } catch {
       setAddStates((s) => ({ ...s, [rec.sku_id]: "error" }))
+      return false
     }
   }
 
@@ -109,10 +115,20 @@ export default function GapsToCartPage() {
     const topPicks = shortGaps
       .map((g) => g.recommendations?.[0])
       .filter((r): r is GapRecommendation => !!r)
+
+    setAddAllState("adding")
+    let succeeded = 0
     for (const rec of topPicks) {
-      if (addStates[rec.sku_id] !== "added") await addToCart(rec)
+      if (addStates[rec.sku_id] === "added") { succeeded++; continue }
+      const ok = await addToCart(rec)
+      if (ok) succeeded++
     }
+    setAddAllCount(succeeded)
+    setAddAllState("done")
   }
+
+  const cartDestination = basketPending ? "/flow" : "/quick"
+  const cartDestinationLabel = basketPending ? "Review Flow basket" : "Review Quick Order"
 
   if (loading) {
     return (
@@ -172,10 +188,36 @@ export default function GapsToCartPage() {
           })}
 
           <div className="px-1 pb-2">
-            <Button onClick={addAllTopPicks}>Add all to cart</Button>
-            <p className="text-center text-[11px] text-white/60 mt-2">
-              → your open Flow basket if one&apos;s pending, else a Quick Order
-            </p>
+            {addAllState === "done" ? (
+              <div className="bg-white rounded-2xl p-4 flex items-center gap-3">
+                <span className="w-9 h-9 rounded-full bg-green-50 text-green-700 flex items-center justify-center text-lg shrink-0">✓</span>
+                <div className="flex-1 min-w-0">
+                  <p className="text-sm font-bold text-gray-900">
+                    {addAllCount > 0
+                      ? `Added ${addAllCount} item${addAllCount === 1 ? "" : "s"} to your ${basketPending ? "Flow basket" : "Quick Order"}`
+                      : "Nothing new to add"}
+                  </p>
+                  <p className="text-xs text-gray-400 mt-0.5">
+                    {addAllCount > 0 ? "Review before it's placed" : "Everything was already added"}
+                  </p>
+                </div>
+                <button
+                  onClick={() => router.push(cartDestination)}
+                  className="text-xs font-bold text-white bg-[#2D6A4F] px-3.5 py-2 rounded-full whitespace-nowrap shrink-0"
+                >
+                  {cartDestinationLabel} →
+                </button>
+              </div>
+            ) : (
+              <>
+                <Button onClick={addAllTopPicks} loading={addAllState === "adding"}>
+                  {addAllState === "adding" ? "Adding…" : "Add all to cart"}
+                </Button>
+                <p className="text-center text-[11px] text-white/60 mt-2">
+                  → your open Flow basket if one&apos;s pending, else a Quick Order
+                </p>
+              </>
+            )}
           </div>
         </>
       )}

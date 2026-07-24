@@ -293,6 +293,112 @@ async def test_per_rupee_computed_from_live_price_not_stored(db):
     assert r["per_rupee"] == pytest.approx(r["delivers"] / live_price, abs=0.001)
 
 
+# ── 4b. Recommendation dedup — real bug found via manual testing ─────────────
+# GET /v1/nutrition/gaps returned "Tata Sampann Unpolished Kala Chana" twice
+# with the IDENTICAL sku_id, because two different candidate concepts (e.g.
+# "chana" and "dal") both searched Swiggy and both happened to match the same
+# product — nothing deduplicated across concept searches before ranking.
+
+@pytest.mark.asyncio
+async def test_recommendations_dedup_same_sku_across_concepts(db):
+    """The same sku_id surfacing under two different candidate concept
+    searches must appear only once in the final results."""
+    from app.mcp.types import MCPProduct
+    from app.models.db import NutrientFoodCandidate
+    from app.services.nutrition_gaps import get_recommendations_for_nutrient
+
+    hh = await _create_household_with_address(db, diet_type="vegetarian")
+
+    for concept, per_100g in [("dal", 22.0), ("chana", 19.0), ("rajma", 23.0)]:
+        db.add(NutrientFoodCandidate(
+            id=str(uuid.uuid4()), nutrient="protein", food_concept=concept,
+            diet_tags=["vegetarian", "vegan", "jain"], nutrient_per_100g=per_100g,
+            sample_size=10, confidence="medium", order_frequency=5, repurchase_rate=0.5,
+        ))
+    await db.commit()
+
+    # Same product (same sku_id) returned for BOTH "dal" and "chana" queries —
+    # simulates Swiggy's fuzzy search overlap that produced the real bug.
+    kala_chana = MCPProduct(
+        sku_id="sku_kala_chana", spin_id="sku_kala_chana",
+        name="Tata Sampann Unpolished Kala Chana", brand="Tata Sampann",
+        quantity="500 g", price=58.0, in_stock=True,
+    )
+    rajma_product = MCPProduct(
+        sku_id="sku_rajma", spin_id="sku_rajma", name="Rajma", brand="Fortune",
+        quantity="500 g", price=70.0, in_stock=True,
+    )
+
+    async def _search_side_effect(db, household_id, query, limit=3):
+        if query in ("dal", "chana"):
+            return [kala_chana]
+        if query == "rajma":
+            return [rajma_product]
+        return []
+
+    with (
+        patch("app.services.basket_editing_service.BasketEditingService.search_items",
+              new=AsyncMock(side_effect=_search_side_effect)),
+        patch("app.services.nutrition_gaps.resolve_item", new=AsyncMock(return_value={"confidence": "unresolved"})),
+    ):
+        results = await get_recommendations_for_nutrient(db, "protein", hh)
+
+    sku_ids = [r["sku_id"] for r in results]
+    assert len(sku_ids) == len(set(sku_ids)), f"duplicate sku_id in results: {sku_ids}"
+    assert sku_ids.count("sku_kala_chana") == 1
+
+
+@pytest.mark.asyncio
+async def test_recommendations_prefer_variety_across_food_concepts(db):
+    """When Swiggy returns multiple distinct SKUs for the SAME concept (e.g.
+    two different soya chunks brands), only the best-scoring one should take
+    a slot — favoring a spread of different foods over multiple near-
+    duplicates of the same underlying food."""
+    from app.mcp.types import MCPProduct
+    from app.models.db import NutrientFoodCandidate
+    from app.services.nutrition_gaps import get_recommendations_for_nutrient
+
+    hh = await _create_household_with_address(db, diet_type="vegetarian")
+
+    for concept, per_100g in [("soya", 52.0), ("dal", 22.0)]:
+        db.add(NutrientFoodCandidate(
+            id=str(uuid.uuid4()), nutrient="protein", food_concept=concept,
+            diet_tags=["vegetarian", "vegan", "jain"], nutrient_per_100g=per_100g,
+            sample_size=10, confidence="medium", order_frequency=5, repurchase_rate=0.5,
+        ))
+    await db.commit()
+
+    # Two DIFFERENT SKUs, both under the "soya" concept — two brands, same food.
+    soya_a = MCPProduct(sku_id="sku_soya_a", spin_id="sku_soya_a",
+                         name="Supreme Harvest Soya Chunks", brand="Supreme Harvest",
+                         quantity="200 g", price=30.0, in_stock=True)
+    soya_b = MCPProduct(sku_id="sku_soya_b", spin_id="sku_soya_b",
+                         name="Fortune Soya Chunks", brand="Fortune",
+                         quantity="200 g", price=25.0, in_stock=True)  # cheaper -> higher per_rupee
+    dal_product = MCPProduct(sku_id="sku_dal", spin_id="sku_dal", name="Toor Dal",
+                              brand="Tata", quantity="1 kg", price=180.0, in_stock=True)
+
+    async def _search_side_effect(db, household_id, query, limit=3):
+        if query == "soya":
+            return [soya_a, soya_b]
+        if query == "dal":
+            return [dal_product]
+        return []
+
+    with (
+        patch("app.services.basket_editing_service.BasketEditingService.search_items",
+              new=AsyncMock(side_effect=_search_side_effect)),
+        patch("app.services.nutrition_gaps.resolve_item", new=AsyncMock(return_value={"confidence": "unresolved"})),
+    ):
+        results = await get_recommendations_for_nutrient(db, "protein", hh)
+
+    soya_entries = [r for r in results if r["sku_id"] in ("sku_soya_a", "sku_soya_b")]
+    assert len(soya_entries) == 1, f"expected exactly one soya entry (variety), got: {soya_entries}"
+    # The cheaper soya SKU (higher protein-per-rupee) should be the one kept.
+    assert soya_entries[0]["sku_id"] == "sku_soya_b"
+    assert any(r["sku_id"] == "sku_dal" for r in results)
+
+
 # ── 5. on_track nutrients omitted by default ──────────────────────────────────
 
 @pytest.mark.asyncio
