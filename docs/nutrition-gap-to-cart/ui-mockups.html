@@ -1,0 +1,631 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Nutrition Gap-to-Cart — UI mockups</title>
+<style>
+  /* ── Tokens ─────────────────────────────────────────────────────────────── */
+  :root {
+    --green:      #2D6A4F;
+    --green-deep: #1B4332;
+    --mint:       #D8F3DC;
+    --mint-2:     #B7DFC6;
+    --surface:    #F7FAF8;
+
+    /* macro colours — lifted verbatim from NutritionCard.tsx */
+    --kcal:   #C45E18;
+    --protein:#2A60A8;
+    --carbs:  #8A6A10;
+    --fat:    #A03820;
+    --fiber:  #2A7030;
+    --sodium: #6038A0;
+
+    /* semantic (separate from the brand accent) */
+    --warn:   #B45309;
+    --warn-bg:#FEF3C7;
+    --crit:   #A03820;
+    --crit-bg:#FBE6E0;
+    --ok:     #2A7030;
+    --ok-bg:  #DCFCE7;
+
+    /* page neutrals — greyed slightly toward the brand green */
+    --page:   #EEF2EF;
+    --ink:    #1A2420;
+    --ink-2:  #55635C;
+    --ink-3:  #8A9691;
+    --card:   #FFFFFF;
+    --line:   #E4EAE6;
+    --phone-bezel:#1B2420;
+
+    --shadow: 0 10px 30px -12px rgba(20,45,35,.35);
+    --radius: 22px;
+
+    /* theme-varying component tokens (styled through these, never inside @media) */
+    --accent-ink: var(--green-deep);
+    --ava-bg: var(--mint);   --ava-ink: var(--green-deep);
+    --db-bg: #E5EDF6;        --db-ink: #2A60A8;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --page:#0E1512; --ink:#EAF1ED; --ink-2:#A8B5AF; --ink-3:#6E7B75;
+      --card:#16201B; --line:#26332C; --surface:#131C17;
+      --warn-bg:#3A2A08; --crit-bg:#331611; --ok-bg:#132817;
+      --shadow:0 12px 34px -12px rgba(0,0,0,.6);
+      --accent-ink: var(--mint-2);
+      --ava-bg:#20342A; --ava-ink: var(--mint-2);
+      --db-bg:#1A2740;  --db-ink:#8FB6E8;
+    }
+  }
+  :root[data-theme="dark"]{
+    --page:#0E1512; --ink:#EAF1ED; --ink-2:#A8B5AF; --ink-3:#6E7B75;
+    --card:#16201B; --line:#26332C; --surface:#131C17;
+    --warn-bg:#3A2A08; --crit-bg:#331611; --ok-bg:#132817;
+    --shadow:0 12px 34px -12px rgba(0,0,0,.6);
+    --accent-ink: var(--mint-2);
+    --ava-bg:#20342A; --ava-ink: var(--mint-2);
+    --db-bg:#1A2740;  --db-ink:#8FB6E8;
+  }
+  :root[data-theme="light"]{
+    --page:#EEF2EF; --ink:#1A2420; --ink-2:#55635C; --ink-3:#8A9691;
+    --card:#FFFFFF; --line:#E4EAE6; --surface:#F7FAF8;
+    --warn-bg:#FEF3C7; --crit-bg:#FBE6E0; --ok-bg:#DCFCE7;
+    --shadow:0 10px 30px -12px rgba(20,45,35,.35);
+    --accent-ink: var(--green-deep);
+    --ava-bg: var(--mint); --ava-ink: var(--green-deep);
+    --db-bg:#E5EDF6; --db-ink:#2A60A8;
+  }
+
+  * { box-sizing: border-box; }
+  html { -webkit-text-size-adjust: 100%; }
+  body {
+    margin: 0;
+    background: var(--page);
+    color: var(--ink);
+    font-family: system-ui, -apple-system, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    line-height: 1.5;
+  }
+  .wrap { max-width: 1120px; margin: 0 auto; padding: 40px 24px 96px; }
+
+  /* ── Masthead ───────────────────────────────────────────────────────────── */
+  .masthead { margin-bottom: 8px; }
+  .eyebrow {
+    font-size: 12px; letter-spacing: .14em; text-transform: uppercase;
+    color: var(--green); font-weight: 700; margin: 0 0 10px;
+  }
+  h1 {
+    font-size: clamp(28px, 4vw, 40px); line-height: 1.1; margin: 0 0 12px;
+    letter-spacing: -.02em; text-wrap: balance; font-weight: 750;
+  }
+  .lede { max-width: 60ch; color: var(--ink-2); font-size: 16px; margin: 0; }
+  .flow-line {
+    display: inline-flex; flex-wrap: wrap; gap: 8px; align-items: center;
+    margin-top: 18px; font-size: 13px; font-weight: 600;
+  }
+  .flow-line span {
+    background: var(--surface); border: 1px solid var(--line);
+    padding: 5px 11px; border-radius: 999px; color: var(--accent-ink);
+  }
+  .flow-line b { color: var(--ink-3); font-weight: 700; }
+
+  /* ── Section scaffold ───────────────────────────────────────────────────── */
+  section { margin-top: 64px; }
+  .sec-head { display: flex; align-items: baseline; gap: 14px; margin-bottom: 6px; }
+  .tag {
+    flex-shrink: 0; font-size: 12px; font-weight: 800; letter-spacing: .04em;
+    color: #fff; background: var(--green); padding: 3px 10px; border-radius: 7px;
+  }
+  .tag.b { background: var(--kcal); }
+  h2 { font-size: 22px; margin: 0; letter-spacing: -.01em; font-weight: 700; }
+  .sec-sub { color: var(--ink-2); margin: 8px 0 0; max-width: 68ch; font-size: 15px; }
+
+  .stage {
+    margin-top: 28px; display: grid; gap: 30px;
+    grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+    align-items: start;
+  }
+  .col-notes { align-self: center; }
+  .col-notes h3 { font-size: 15px; margin: 0 0 10px; letter-spacing: -.01em; }
+  .col-notes p { color: var(--ink-2); font-size: 14.5px; margin: 0 0 14px; }
+  .note {
+    display: flex; gap: 10px; align-items: flex-start; margin-bottom: 12px;
+    font-size: 14px; color: var(--ink-2);
+  }
+  .note .dot {
+    flex-shrink: 0; width: 18px; height: 18px; border-radius: 6px; margin-top: 1px;
+    display: grid; place-items: center; font-size: 11px; font-weight: 800; color:#fff;
+  }
+  .note .dot.rm { background: var(--crit); }
+  .note .dot.add{ background: var(--ok); }
+  .note b { color: var(--ink); }
+  code {
+    font-family: ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+    font-size: 12.5px; background: var(--surface); border: 1px solid var(--line);
+    padding: 1px 6px; border-radius: 5px; color: var(--accent-ink);
+  }
+
+  .phones { display: flex; flex-wrap: wrap; gap: 22px; }
+  .phone-set { display:flex; flex-direction:column; gap:10px; }
+  .phone-label {
+    font-size: 11px; font-weight: 800; letter-spacing: .1em; text-transform: uppercase;
+    color: var(--ink-3);
+  }
+  .phone-label.before { color: var(--crit); }
+  .phone-label.after  { color: var(--ok); }
+
+  /* ── Phone frame ────────────────────────────────────────────────────────── */
+  .phone {
+    width: 300px; background: var(--phone-bezel); border-radius: 34px;
+    padding: 9px; box-shadow: var(--shadow); flex-shrink: 0;
+  }
+  .screen {
+    background: var(--green); border-radius: 26px; overflow: hidden;
+    display: flex; flex-direction: column; height: 604px; position: relative;
+  }
+  .statusbar {
+    height: 30px; display:flex; align-items:center; justify-content:space-between;
+    padding: 0 18px; color: #EAF6EE; font-size: 11px; font-weight: 600;
+  }
+  .appbar {
+    display: flex; align-items: center; gap: 8px; padding: 4px 16px 12px;
+    color: #fff;
+  }
+  .appbar .back { color: var(--mint); font-size: 13px; font-weight: 700; }
+  .appbar h4 { margin: 0; font-size: 17px; font-weight: 750; flex: 1; }
+  .canvas {
+    flex: 1; overflow-y: auto; padding: 0 12px 12px; display: flex;
+    flex-direction: column; gap: 12px;
+  }
+  .canvas::-webkit-scrollbar { width: 0; }
+
+  .sheet { background: var(--card); border-radius: 20px; padding: 15px; color: var(--ink); }
+  .sheet.tight { padding: 13px; }
+  .sheet h5 {
+    margin: 0 0 3px; font-size: 15px; font-weight: 700; letter-spacing: -.01em;
+  }
+  .muted { color: var(--ink-2); font-size: 12.5px; }
+  .micro { color: var(--ink-3); font-size: 11px; }
+
+  /* macro bars */
+  .macro { margin-bottom: 9px; }
+  .macro:last-child { margin-bottom: 0; }
+  .macro .row { display: flex; justify-content: space-between; font-size: 11.5px; margin-bottom: 4px; }
+  .macro .row .lab { color: var(--ink-2); }
+  .macro .row .val { font-variant-numeric: tabular-nums; font-weight: 600; }
+  .track { height: 5px; border-radius: 999px; background: var(--line); overflow: hidden; }
+  .fill { height: 100%; border-radius: 999px; }
+
+  /* ceiling nutrient — reads as headroom-to-a-limit, NOT progress-to-a-goal */
+  .ceiling { margin-top: 10px; padding-top: 10px; border-top: 1px dashed var(--line); }
+  .ceiling .row { display:flex; justify-content:space-between; align-items:center; font-size: 11.5px; margin-bottom: 4px; }
+  .ceiling .row .lab { color: var(--ink-2); display:flex; align-items:center; gap:5px; }
+  .ceiling .row .lab .cap { font-size:9px; font-weight:800; letter-spacing:.06em; text-transform:uppercase;
+    color: var(--warn); background: var(--warn-bg); padding:1px 5px; border-radius:4px; }
+  .cei-track { position:relative; height: 5px; border-radius: 999px; background: var(--warn-bg); overflow:hidden; }
+  .cei-fill  { height:100%; border-radius:999px; background: var(--warn); }
+  .cei-track .limit { position:absolute; top:-2px; right:0; width:2px; height:9px; background: var(--crit); border-radius:1px; }
+  .val.good { color: var(--ok); font-weight: 700; }
+
+  .kcalhero { display: flex; align-items: baseline; gap: 7px; margin-bottom: 13px; }
+  .kcalhero .n { font-size: 30px; font-weight: 700; color: var(--kcal); font-variant-numeric: tabular-nums; letter-spacing: -.02em; }
+  .kcalhero .u { font-size: 12.5px; color: var(--ink-2); }
+
+  /* member rows */
+  .mrow { display:flex; align-items:center; gap:10px; padding: 9px 0; border-top: 1px solid var(--line); }
+  .mrow:first-of-type { border-top: 0; }
+  .ava { width: 30px; height: 30px; border-radius: 9px; background: var(--ava-bg); color: var(--ava-ink);
+         display:grid; place-items:center; font-size: 14px; flex-shrink:0; }
+  .mrow .who { flex:1; min-width:0; }
+  .mrow .who .nm { font-size: 13px; font-weight:600; }
+  .mrow .who .meta { font-size: 11px; color: var(--ink-3); }
+  .mrow .contrib { text-align:right; font-variant-numeric: tabular-nums; }
+  .mrow .contrib .c1 { font-size: 13px; font-weight:700; }
+  .mrow .contrib .c2 { font-size: 10.5px; color: var(--ink-3); }
+  .totalrow {
+    display:flex; justify-content:space-between; align-items:center;
+    margin-top: 4px; padding-top: 11px; border-top: 2px solid var(--line);
+    font-weight: 750;
+  }
+  .totalrow .big { font-size: 17px; font-variant-numeric: tabular-nums; }
+
+  /* chips / badges */
+  .chip {
+    display:inline-flex; align-items:center; gap:5px; font-size: 10.5px; font-weight: 700;
+    padding: 3px 8px; border-radius: 999px;
+  }
+  .chip.warn { color: var(--warn); background: var(--warn-bg); }
+  .chip.crit { color: var(--crit); background: var(--crit-bg); }
+  .chip.ok   { color: var(--ok);   background: var(--ok-bg); }
+  .conf {
+    font-size: 9.5px; font-weight: 700; padding: 2px 6px; border-radius: 5px;
+    background: var(--line); color: var(--ink-3);
+  }
+  .conf.db { background: var(--db-bg); color: var(--db-ink); }
+  .conf.est{ background: var(--surface); color: var(--ink-3); font-style: italic; }
+
+  .flagline { display:flex; align-items:center; gap:8px; padding: 8px 0; }
+  .flagline .txt { font-size: 12.5px; flex:1; }
+  .flagline .txt b { font-weight: 700; }
+
+  /* recommendation card */
+  .rec {
+    border: 1px solid var(--line); border-radius: 14px; padding: 10px; display:flex; gap:10px;
+    align-items:center; margin-bottom: 9px; background: var(--surface);
+  }
+  .rec .thumb { width:38px; height:38px; border-radius:10px; background: var(--ava-bg);
+    display:grid; place-items:center; font-size:19px; flex-shrink:0; }
+  .rec .info { flex:1; min-width:0; }
+  .rec .info .nm { font-size: 12.5px; font-weight: 650; line-height:1.25; }
+  .rec .info .sub { font-size: 10.5px; color: var(--ink-3); margin-top:1px; }
+  .rec .info .delivers { font-size: 11px; color: var(--protein); font-weight: 700; margin-top: 3px; }
+  .rec .buy { display:flex; flex-direction:column; align-items:flex-end; gap:6px; flex-shrink:0; }
+  .rec .buy .price { font-size: 12.5px; font-weight: 700; font-variant-numeric: tabular-nums; }
+  .addbtn {
+    border: 0; background: var(--green); color:#fff; font-weight: 700; font-size: 11px;
+    padding: 6px 12px; border-radius: 999px; cursor: pointer; white-space:nowrap;
+  }
+  .addbtn.done { background: var(--ok-bg); color: var(--ok); }
+  .primary {
+    margin-top: 2px; border:0; width:100%; background: var(--green); color:#fff;
+    font-weight: 750; font-size: 14px; padding: 13px; border-radius: 14px; cursor:pointer;
+  }
+  .ghostbtn {
+    border:1px solid var(--line); background:transparent; color: var(--green);
+    font-weight:700; font-size:12px; padding:8px 12px; border-radius:10px; width:100%; cursor:pointer;
+  }
+
+  /* bottom nav */
+  .nav {
+    display:flex; justify-content:space-around; padding: 8px 6px 10px;
+    background: var(--card); border-top: 1px solid var(--line);
+  }
+  .nav .it { display:flex; flex-direction:column; align-items:center; gap:2px; font-size:9px; color: var(--ink-3); }
+  .nav .it.on { color: var(--green); font-weight: 700; }
+  .nav .it .ic { font-size: 16px; }
+
+  /* home-screen entry rows → numbered to their destination section */
+  .entry { display:flex; align-items:center; gap:10px; padding:11px 2px; border-top:1px solid var(--line); }
+  .entry:first-of-type { border-top:0; }
+  .pin { width:19px; height:19px; border-radius:6px; background:var(--green); color:#fff;
+    font-size:10px; font-weight:800; display:grid; place-items:center; flex-shrink:0; }
+  .entry .etxt { flex:1; min-width:0; }
+  .entry .etxt .et { font-size:12.5px; font-weight:600; }
+  .entry .etxt .es { font-size:10.5px; color:var(--ink-3); }
+  .entry .chev { color:var(--ink-3); font-size:15px; }
+  .dest { display:flex; align-items:flex-start; gap:11px; margin-bottom:14px; font-size:14px; color:var(--ink-2); }
+  .dest b { color:var(--ink); }
+
+  .callout {
+    margin-top: 30px; border-left: 3px solid var(--green); background: var(--surface);
+    padding: 14px 18px; border-radius: 0 12px 12px 0; font-size: 14.5px; color: var(--ink-2);
+  }
+  .callout b { color: var(--ink); }
+
+  /* theme toggle */
+  .toggle {
+    position: fixed; top: 16px; right: 16px; z-index: 10;
+    border: 1px solid var(--line); background: var(--card); color: var(--ink);
+    border-radius: 999px; padding: 7px 14px; font-size: 12px; font-weight: 700; cursor: pointer;
+    box-shadow: var(--shadow);
+  }
+  .toggle:focus-visible { outline: 2px solid var(--green); outline-offset: 2px; }
+  .footer { margin-top: 64px; color: var(--ink-3); font-size: 12.5px; border-top:1px solid var(--line); padding-top:18px; }
+</style>
+</head>
+<body>
+<button class="toggle" id="themeBtn" aria-label="Toggle colour theme">◐ Theme</button>
+
+<div class="wrap">
+  <header class="masthead">
+    <p class="eyebrow">PantryPilot · Nutrition</p>
+    <h1>From scorecard to cart: personalized targets &amp; Gap-to-Cart</h1>
+    <p class="lede">The current nutrition surface measures every household against a headcount average and stops at a read-only score. These mockups show the two changes that turn it into a loop — targets that reflect who actually lives here, and shortfalls you can fix in one tap.</p>
+    <div class="flow-line">
+      <span>buy</span><b>→</b><span>resolve</span><b>→</b><span>measure vs target</span><b>→</b><span>recommend</span><b>→</b><span>one-tap add</span><b>→</b><span>buy</span>
+    </div>
+  </header>
+
+  <!-- ═══ SECTION 0 — HOME ENTRY POINTS ═══════════════════════════════════ -->
+  <section>
+    <div class="sec-head"><span class="tag" style="background:var(--ink-2)">0</span><h2>Where it lives — entry from Home</h2></div>
+    <p class="sec-sub">Nutrition gets one card on the home screen. It leads with the thing that needs action — this week's shortfall — and offers three ways in. The numbered pins map each tap to the screen it opens.</p>
+
+    <div class="stage">
+      <div class="phones">
+        <div class="phone-set">
+          <span class="phone-label">Home · nutrition card</span>
+          <div class="phone"><div class="screen">
+            <div class="statusbar"><span>9:41</span><span>●●● ▮</span></div>
+            <div class="appbar"><h4 style="font-size:19px">PantryPilot</h4></div>
+            <div class="canvas">
+              <div class="sheet tight" style="background:var(--green-deep);color:#fff">
+                <div style="display:flex;justify-content:space-between;align-items:center">
+                  <div><div style="font-size:12px;opacity:.8">Next Flow run</div><div style="font-size:15px;font-weight:700">Sunday, 26 Jul</div></div>
+                  <span class="chip ok" style="background:rgba(255,255,255,.15);color:var(--mint)">on track</span>
+                </div>
+              </div>
+
+              <div class="sheet">
+                <div style="display:flex;align-items:center;gap:7px;margin-bottom:4px">
+                  <span>🌿</span><h5 style="margin:0">Nutrition · this week</h5>
+                </div>
+                <div class="flagline" style="padding:6px 0 10px">
+                  <span class="chip crit">needs attention</span>
+                  <span class="txt" style="font-size:12px"><b>Protein 224 g short</b> · B12 missing</span>
+                </div>
+
+                <div class="entry">
+                  <span class="pin">2</span>
+                  <div class="etxt"><div class="et">This week’s report</div><div class="es">macros vs your targets, flagged gaps</div></div>
+                  <span class="chev">›</span>
+                </div>
+                <div class="entry">
+                  <span class="pin">3</span>
+                  <div class="etxt"><div class="et">Fix these in my cart</div><div class="es">3 items close the protein &amp; B12 gap</div></div>
+                  <span class="chev">›</span>
+                </div>
+                <div class="entry">
+                  <span class="pin">1</span>
+                  <div class="etxt"><div class="et">Household targets</div><div class="es">per-member, in Settings</div></div>
+                  <span class="chev">›</span>
+                </div>
+              </div>
+            </div>
+            <div class="nav">
+              <div class="it on"><span class="ic">🏠</span>Home</div>
+              <div class="it"><span class="ic">🥫</span>Pantry</div>
+              <div class="it"><span class="ic">📦</span>Orders</div>
+              <div class="it"><span class="ic">🔄</span>Routines</div>
+              <div class="it"><span class="ic">⚙️</span>Settings</div>
+            </div>
+          </div></div>
+        </div>
+      </div>
+
+      <div class="col-notes">
+        <h3>Three ways in</h3>
+        <div class="dest"><span class="pin">1</span><div><b>Household targets</b> → <b>Section A</b>. The per-member breakdown, reached from Settings.</div></div>
+        <div class="dest"><span class="pin">2</span><div><b>This week’s report</b> → <b>Section B</b>. The weekly digest with flagged shortfalls.</div></div>
+        <div class="dest"><span class="pin">3</span><div><b>Fix these in my cart</b> → <b>Section C</b>. The Gap-to-Cart recommendations.</div></div>
+        <p style="margin-top:16px">The card never dead-ends on a number — the primary tap (2 &amp; 3) always leads to an action. Targets (1) sit one level down since they’re set-once.</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- ═══ SECTION A ═══════════════════════════════════════════════════════ -->
+  <section>
+    <div class="sec-head"><span class="tag">A</span><h2>Personalized targets</h2></div>
+    <p class="sec-sub">Today the weekly target is <code>member_count × 2000&nbsp;kcal</code>. The biometric fields already stored on <code>household_members</code> — age, sex, weight, height, activity — go unused. Here they drive a real per-member requirement that sums to the household number.</p>
+
+    <div class="stage">
+      <div class="phones">
+        <div class="phone-set">
+          <span class="phone-label before">Before · headcount average</span>
+          <div class="phone"><div class="screen">
+            <div class="statusbar"><span>9:41</span><span>●●● ▮</span></div>
+            <div class="appbar"><span class="back">←</span><h4>Weekly targets</h4></div>
+            <div class="canvas">
+              <div class="sheet">
+                <h5>Household of 4</h5>
+                <p class="muted">Flat ICMR default · everyone counted the same</p>
+                <div class="totalrow"><span>Calories / day</span><span class="big" style="color:var(--kcal)">8,000</span></div>
+                <div class="totalrow" style="border-top:1px solid var(--line)"><span>Protein / day</span><span class="big">200 g</span></div>
+                <p class="micro" style="margin-top:12px">4 × 2,000 kcal · 4 × 50 g — regardless of an 8-year-old, an active adult, or a grandparent.</p>
+              </div>
+              <div class="sheet tight" style="background:var(--crit-bg)">
+                <span class="chip crit">⚠ Off by ~31%</span>
+                <p class="muted" style="margin-top:8px;color:var(--crit)">Overstates calories, understates protein. Every dot downstream is measured against a wrong line.</p>
+              </div>
+            </div>
+            <div class="nav">
+              <div class="it"><span class="ic">🏠</span>Home</div>
+              <div class="it"><span class="ic">🥫</span>Pantry</div>
+              <div class="it"><span class="ic">📦</span>Orders</div>
+              <div class="it"><span class="ic">🔄</span>Routines</div>
+              <div class="it on"><span class="ic">⚙️</span>Settings</div>
+            </div>
+          </div></div>
+        </div>
+
+        <div class="phone-set">
+          <span class="phone-label after">After · per-member</span>
+          <div class="phone"><div class="screen">
+            <div class="statusbar"><span>9:41</span><span>●●● ▮</span></div>
+            <div class="appbar"><span class="back">←</span><h4>Weekly targets</h4></div>
+            <div class="canvas">
+              <div class="sheet">
+                <h5>Personalized · 4 members</h5>
+                <p class="muted">Mifflin-St Jeor + activity · protein by body weight</p>
+                <div style="margin-top:10px">
+                  <div class="mrow"><div class="ava">🧔</div><div class="who"><div class="nm">Vamsi · 38</div><div class="meta">75 kg · active</div></div><div class="contrib"><div class="c1">2,300</div><div class="c2">96 g protein</div></div></div>
+                  <div class="mrow"><div class="ava">👩</div><div class="who"><div class="nm">Priya · 35</div><div class="meta">60 kg · light</div></div><div class="contrib"><div class="c1">1,450</div><div class="c2">48 g protein</div></div></div>
+                  <div class="mrow"><div class="ava">🧒</div><div class="who"><div class="nm">Aarav · 8</div><div class="meta">child</div></div><div class="contrib"><div class="c1">1,150</div><div class="c2">20 g protein</div></div></div>
+                  <div class="mrow"><div class="ava">👵</div><div class="who"><div class="nm">Amma · 70</div><div class="meta">elderly · low-sodium</div></div><div class="contrib"><div class="c1">1,200</div><div class="c2">68 g protein</div></div></div>
+                </div>
+                <div class="totalrow"><span>Household / day</span><span class="big" style="color:var(--kcal)">6,100</span></div>
+                <div class="totalrow" style="border-top:1px solid var(--line)"><span>Protein / day</span><span class="big">232 g</span></div>
+              </div>
+              <div class="sheet tight" style="background:var(--ok-bg)">
+                <span class="chip ok">✓ Amma’s sodium ceiling applied</span>
+                <p class="muted" style="margin-top:8px;color:var(--ok)"><code>health_flags: hypertension</code> → sodium cap tightened automatically.</p>
+              </div>
+            </div>
+            <div class="nav">
+              <div class="it"><span class="ic">🏠</span>Home</div>
+              <div class="it"><span class="ic">🥫</span>Pantry</div>
+              <div class="it"><span class="ic">📦</span>Orders</div>
+              <div class="it"><span class="ic">🔄</span>Routines</div>
+              <div class="it on"><span class="ic">⚙️</span>Settings</div>
+            </div>
+          </div></div>
+        </div>
+      </div>
+
+      <div class="col-notes">
+        <h3>What changes</h3>
+        <div class="note"><span class="dot" style="background:var(--ink-3)">=</span><div><b>Computation ships per the PRD</b> (<code>utils/nutrition_targets.py</code> · <code>personalised_weekly_targets</code>) — this plan doesn't fork it.</div></div>
+        <div class="note"><span class="dot add">+</span><div><b>Add</b> <code>GET /v1/nutrition/targets</code> — the per-member breakdown, built by itemizing the PRD function's helpers.</div></div>
+        <div class="note"><span class="dot add">+</span><div><b>New UI:</b> a per-member breakdown in Settings, with a role-fallback badge when biometrics are missing.</div></div>
+        <div class="note"><span class="dot" style="background:var(--ink-3)">≠</span><div>The per-order <code>NutritionCard</code> hardcode is a <b>separate surface</b> the PRD leaves alone — realign later, not a blocker here.</div></div>
+        <p style="margin-top:16px">No new data collection — the fields already exist on <code>household_members</code>. This is the smallest change with the widest downstream effect: every bar, dot, and gap becomes personal.</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- ═══ SECTION B — digest ═════════════════════════════════════════════ -->
+  <section>
+    <div class="sec-head"><span class="tag b">B</span><h2>Weekly digest — the gap becomes visible</h2></div>
+    <p class="sec-sub">Actuals from <code>order_nutrition</code> measured against the personalized target from A. Shortfalls are flagged with intent — including diet-specific watch nutrients (B12, iron) that only purchase history can catch.</p>
+
+    <div class="stage">
+      <div class="phones">
+        <div class="phone-set">
+          <span class="phone-label">This week · dashboard</span>
+          <div class="phone"><div class="screen">
+            <div class="statusbar"><span>9:41</span><span>●●● ▮</span></div>
+            <div class="appbar"><span class="back">←</span><h4>This week</h4></div>
+            <div class="canvas">
+              <div class="sheet">
+                <div class="kcalhero"><span class="n">40,100</span><span class="u">/ 42,700 kcal target</span></div>
+                <div class="macro"><div class="row"><span class="lab">Protein</span><span class="val" style="color:var(--protein)">1,400 / 1,624 g</span></div><div class="track"><div class="fill" style="width:86%;background:var(--protein)"></div></div></div>
+                <div class="macro"><div class="row"><span class="lab">Fibre</span><span class="val" style="color:var(--fiber)">142 / 175 g</span></div><div class="track"><div class="fill" style="width:81%;background:var(--fiber)"></div></div></div>
+                <div class="ceiling">
+                  <div class="row"><span class="lab">Sodium <span class="cap">ceiling</span></span><span class="val good">under limit ✓</span></div>
+                  <div class="cei-track"><div class="cei-fill" style="width:75%"></div><span class="limit"></span></div>
+                  <div class="micro" style="margin-top:4px">44,100 / 58,800 mg — headroom to the cap, not a goal to reach</div>
+                </div>
+              </div>
+              <div class="sheet">
+                <h5>Flagged this week</h5>
+                <div class="flagline"><span class="chip crit">short</span><span class="txt"><b>Protein</b> — 224 g under target</span></div>
+                <div class="flagline"><span class="chip crit">missing</span><span class="txt"><b>Vitamin B12</b> — no source in 3 weeks</span></div>
+                <div class="flagline"><span class="chip warn">low</span><span class="txt"><b>Iron</b> — 68% of target</span></div>
+                <p class="micro" style="margin-top:6px">B12 &amp; iron are watch nutrients for your <code>vegetarian</code> household. Flagged only where data coverage is sufficient — B12 78%, iron 84% of items.</p>
+              </div>
+              <button class="primary">Fix these in my basket →</button>
+            </div>
+            <div class="nav">
+              <div class="it on"><span class="ic">🏠</span>Home</div>
+              <div class="it"><span class="ic">🥫</span>Pantry</div>
+              <div class="it"><span class="ic">📦</span>Orders</div>
+              <div class="it"><span class="ic">🔄</span>Routines</div>
+              <div class="it"><span class="ic">⚙️</span>Settings</div>
+            </div>
+          </div></div>
+        </div>
+      </div>
+
+      <div class="col-notes">
+        <h3>What changes</h3>
+        <div class="note"><span class="dot add">+</span><div><b>Reuse</b> the existing <code>MacroBar</code> component, now pointed at the personalized weekly target instead of a constant.</div></div>
+        <div class="note"><span class="dot add">+</span><div><b>Add</b> a "Flagged this week" block driven by the gap diff — semantic amber/red chips, not the brand green, so attention reads at a glance.</div></div>
+        <div class="note"><span class="dot add">+</span><div><b>Diet-aware:</b> watch nutrients keyed off <code>diet_type</code> surface deficiencies a calorie counter can't — the differentiator.</div></div>
+        <div class="note"><span class="dot add">+</span><div><b>Sodium reads as a ceiling</b>, not a goal — amber headroom bar with a limit cap and "under limit ✓", so a near-full bar never looks like progress.</div></div>
+        <div class="note"><span class="dot rm">−</span><div><b>No Fat/Carb bars.</b> Phase A computes only calories, protein, fibre and the sodium ceiling; a macro-split target isn't in scope, so the digest doesn't draw one.</div></div>
+        <div class="note"><span class="dot add">+</span><div><b>Coverage guard.</b> B12 and vitamin D come only from the LLM path — never OFF or USDA. "No data" isn't "no intake", so a deficiency only fires above a coverage threshold; below it the digest says <i>not enough data</i>.</div></div>
+        <p style="margin-top:16px">The single call-to-action hands straight to Section C. The digest never dead-ends on a number.</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- ═══ SECTION C — gap to cart ════════════════════════════════════════ -->
+  <section>
+    <div class="sec-head"><span class="tag b">B</span><h2>Gap → Cart — the loop closes</h2></div>
+    <p class="sec-sub">Each shortfall resolves to real, in-stock SKUs: the learned <code>nutrient_food_candidate</code> map picks the food, live Swiggy search prices it, and the top few are nutrition-resolved and ranked by nutrient-per-rupee — filtered by diet and allergies. One tap drops them into the basket.</p>
+
+    <div class="stage">
+      <div class="phones">
+        <div class="phone-set">
+          <span class="phone-label after">Recommendations · protein gap</span>
+          <div class="phone"><div class="screen">
+            <div class="statusbar"><span>9:41</span><span>●●● ▮</span></div>
+            <div class="appbar"><span class="back">←</span><h4>Close your gaps</h4></div>
+            <div class="canvas">
+              <div class="sheet">
+                <div style="display:flex;align-items:center;gap:8px;margin-bottom:2px">
+                  <span class="chip crit">Protein · 224 g short</span>
+                </div>
+                <p class="muted" style="margin:6px 0 12px">Ranked by protein per ₹ · vegetarian · no nut allergens</p>
+
+                <div class="rec">
+                  <div class="thumb">🫘</div>
+                  <div class="info">
+                    <div class="nm">Toor Dal 1 kg</div>
+                    <div class="sub">Tata Sampann · <span class="conf db">~Database</span> · reordered 6×</div>
+                    <div class="delivers">≈220 g over the week · best per ₹</div>
+                  </div>
+                  <div class="buy"><span class="price">₹180</span><button class="addbtn done">✓ Added</button></div>
+                </div>
+
+                <div class="rec">
+                  <div class="thumb">🧀</div>
+                  <div class="info">
+                    <div class="nm">Milky Mist Paneer 200g</div>
+                    <div class="sub">Milky Mist · <span class="conf db">~Database</span> · reordered 4×</div>
+                    <div class="delivers">+36 g protein</div>
+                  </div>
+                  <div class="buy"><span class="price">₹90</span><button class="addbtn">＋ Add</button></div>
+                </div>
+
+                <div class="rec">
+                  <div class="thumb">🥛</div>
+                  <div class="info">
+                    <div class="nm">Nandini Curd 400g</div>
+                    <div class="sub">Nandini · <span class="conf est">~AI est.</span> · new to you</div>
+                    <div class="delivers">+14 g protein · also covers B12</div>
+                  </div>
+                  <div class="buy"><span class="price">₹60</span><button class="addbtn">＋ Add</button></div>
+                </div>
+              </div>
+
+              <div class="sheet tight">
+                <div class="flagline" style="padding:2px 0"><span class="chip crit">missing</span><span class="txt"><b>B12</b> → curd &amp; milk also cover this</span></div>
+              </div>
+
+              <button class="primary">Add all to cart</button>
+              <p class="micro" style="text-align:center;margin:-2px 0 0">→ your open Flow basket if one’s pending, else a Quick Order</p>
+              <button class="ghostbtn">Send this week’s digest to WhatsApp</button>
+              <p class="micro" style="text-align:center">Estimates from labels &amp; food databases. Not medical advice.</p>
+            </div>
+            <div class="nav">
+              <div class="it on"><span class="ic">🏠</span>Home</div>
+              <div class="it"><span class="ic">🥫</span>Pantry</div>
+              <div class="it"><span class="ic">📦</span>Orders</div>
+              <div class="it"><span class="ic">🔄</span>Routines</div>
+              <div class="it"><span class="ic">⚙️</span>Settings</div>
+            </div>
+          </div></div>
+        </div>
+      </div>
+
+      <div class="col-notes">
+        <h3>What changes</h3>
+        <div class="note"><span class="dot add">+</span><div><b>New</b> <code>GET /v1/nutrition/gaps</code> — gap diff → candidate map → live Swiggy search → resolve top 5 → rank.</div></div>
+        <div class="note"><span class="dot add">+</span><div><b>Reuse</b> the confidence badges from <code>NutritionCard</code> — a recommendation is honest about whether it's label-backed or an estimate.</div></div>
+        <div class="note"><span class="dot add">+</span><div><b>Add-to-cart</b> routes to <code>POST /v1/basket/add-item</code> only when an <code>awaiting_confirmation</code> LoopRun is open; otherwise (the usual case when reading a digest) it adds to a <b>Quick Order</b> so the action never dead-ends. The next order's <code>order_nutrition</code> closes the loop.</div></div>
+        <div class="note"><span class="dot add">+</span><div><b>Signals shown:</b> <code>reordered 6×</code> is the learned <code>repurchase_rate</code>; "best per ₹" is <code>nutrient_per_rupee</code> <b>computed at request time from the live price</b>, never stored. These come from data, not a static list.</div></div>
+        <p style="margin-top:16px">This is the piece no retrospective tracker can build: it doesn't just name the gap, it puts the fix in the cart.</p>
+      </div>
+    </div>
+  </section>
+
+  <div class="callout">
+    <b>Why this is the USP.</b> MyFitnessPal can detect the same protein gap — and then it shows you a number. PantryPilot detects it and drops the paneer in your basket, because it owns purchase history, the nutrition chain, catalog search, and the cart. The mockups above are three screens of one closed loop.
+  </div>
+
+  <p class="footer">Mockups for review · colours, macro bars and confidence badges mirror <code>NutritionCard.tsx</code> · not production markup. Toggle theme top-right.</p>
+</div>
+
+<script>
+  (function () {
+    var btn = document.getElementById('themeBtn');
+    var root = document.documentElement;
+    btn.addEventListener('click', function () {
+      var cur = root.getAttribute('data-theme');
+      if (!cur) cur = matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
+      root.setAttribute('data-theme', cur === 'dark' ? 'light' : 'dark');
+    });
+  })();
+</script>
+</body>
+</html>

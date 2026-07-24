@@ -28,24 +28,6 @@ def _get_household_id(request: Request) -> str | None:
     return request.session.get("household_id")
 
 
-def _icmr_weekly_targets(member_count: int) -> dict:
-    """ICMR RDA defaults scaled to weekly totals."""
-    if member_count == 1:
-        d = {"calories": 2000, "protein_g": 50, "fiber_g": 25, "sodium_mg": 2300}
-    elif member_count == 2:
-        d = {"calories": 4000, "protein_g": 100, "fiber_g": 50, "sodium_mg": 4600}
-    elif member_count == 3:
-        d = {"calories": 5100, "protein_g": 126, "fiber_g": 63, "sodium_mg": 5400}
-    else:
-        d = {
-            "calories":  member_count * 2000,
-            "protein_g": member_count * 50,
-            "fiber_g":   member_count * 25,
-            "sodium_mg": member_count * 2300,
-        }
-    return {k: v * 7 for k, v in d.items()}
-
-
 @router.get("/order/{order_id}", response_model=APIResponse)
 async def get_order_nutrition(
     request: Request,
@@ -106,14 +88,18 @@ async def get_weekly_nutrition(
     if not household_id:
         return APIResponse.error("Not authenticated", 401)
 
-    from app.models.db import Order, OrderNutrition, Household
+    from app.models.db import Order, OrderNutrition, Household, HouseholdMember
+    from app.utils.nutrition_targets import personalised_weekly_targets
 
     hh_result = await db.execute(select(Household).where(Household.id == household_id))
     hh = hh_result.scalar_one_or_none()
     if not hh:
         return APIResponse.error("Household not found", 404)
 
-    weekly_targets = _icmr_weekly_targets(hh.member_count or 1)
+    members = (await db.execute(
+        select(HouseholdMember).where(HouseholdMember.household_id == household_id)
+    )).scalars().all()
+    weekly_targets = personalised_weekly_targets(members, hh.member_count or 1)
 
     cutoff = datetime.utcnow() - timedelta(weeks=weeks)
     result = await db.execute(
