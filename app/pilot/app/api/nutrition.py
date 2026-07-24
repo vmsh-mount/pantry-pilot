@@ -190,3 +190,40 @@ async def update_goals(
         "daily_fiber_g":   goals.daily_fiber_g,
         "daily_sodium_mg": goals.daily_sodium_mg,
     })
+
+
+@router.get("/gaps", response_model=APIResponse)
+async def get_nutrition_gaps(
+    request: Request,
+    db: AsyncSession = Depends(get_db),
+):
+    """
+    Gap-to-Cart Phase B3: this week's shortfall vs personalized targets,
+    each backed by ranked, diet-safe, in-stock, live-priced recommendations.
+    """
+    household_id = _get_household_id(request)
+    if not household_id:
+        return APIResponse.error("Not authenticated", 401)
+
+    from app.models.db import Household
+    from app.services.nutrition_gaps import compute_gaps, get_recommendations_for_nutrient
+
+    hh_result = await db.execute(select(Household).where(Household.id == household_id))
+    household = hh_result.scalar_one_or_none()
+    if not household:
+        return APIResponse.error("Household not found", 404)
+
+    gaps = await compute_gaps(db, household)
+
+    for gap in gaps:
+        if gap["status"] == "short":
+            try:
+                gap["recommendations"] = await get_recommendations_for_nutrient(db, gap["nutrient"], household)
+            except Exception as e:
+                logger.warning("gap_recommendations_failed", nutrient=gap["nutrient"], error=str(e))
+                gap["recommendations"] = []
+
+    return APIResponse.ok({
+        "gaps": gaps,
+        "computed_at": datetime.utcnow().isoformat() + "Z",
+    })
