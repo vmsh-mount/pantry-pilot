@@ -24,25 +24,55 @@ export function NutritionGapsCard() {
   const router = useRouter()
   const [loading, setLoading] = useState(true)
   const [gaps, setGaps]       = useState<NutritionGap[] | null>(null)
+  const [failed, setFailed]   = useState(false)
 
   useEffect(() => {
     let cancelled = false
     ;(async () => {
-      const settingsRes = await api.settings.get()
-      const flag = settingsRes.success ? settingsRes.data?.nutrition_gaps_enabled : false
-      if (!flag) { if (!cancelled) setLoading(false); return }
+      try {
+        const settingsRes = await api.settings.get()
+        const flag = settingsRes.success ? settingsRes.data?.nutrition_gaps_enabled : false
+        if (!flag) return
 
-      const gapsRes = await api.nutrition.gaps()
-      if (cancelled) return
-      if (gapsRes.success && gapsRes.data) {
-        setGaps(gapsRes.data.gaps)
+        // GET /v1/nutrition/gaps does live Swiggy searches + nutrition
+        // resolution per recommendation — routinely 10-15s. Without the
+        // try/catch below, any transient failure on this call (timeout,
+        // dropped connection) left `loading` stuck true forever and the
+        // card silently, permanently vanished for that page load with no
+        // visible error — indistinguishable from "nothing to show."
+        const gapsRes = await api.nutrition.gaps()
+        if (cancelled) return
+        if (gapsRes.success && gapsRes.data) {
+          setGaps(gapsRes.data.gaps)
+        } else {
+          setFailed(true)
+        }
+      } catch {
+        if (!cancelled) setFailed(true)
+      } finally {
+        if (!cancelled) setLoading(false)
       }
-      setLoading(false)
     })()
     return () => { cancelled = true }
   }, [])
 
-  if (loading || gaps === null) return null
+  if (loading) {
+    // Visible "still checking" state so a slow (10-15s) fetch reads as
+    // loading, not as an absent card — the exact ambiguity that made this
+    // look like the card was randomly disappearing.
+    return (
+      <div className="bg-white rounded-xl overflow-hidden px-3.5 py-3.5 flex items-center gap-2.5"
+           style={{ border: "0.5px solid rgba(0,0,0,0.06)" }}>
+        <span className="w-3.5 h-3.5 rounded-full border-2 border-gray-200 border-t-[#2D6A4F] animate-spin shrink-0" />
+        <span className="text-[12px] text-[#8E8E93]">Checking this week&apos;s nutrition…</span>
+      </div>
+    )
+  }
+
+  // A failed fetch (after retries are exhausted / on error) hides the card
+  // rather than showing stale or broken data — but this is now a distinct,
+  // deliberate outcome from a caught error, not an indefinite hang.
+  if (failed || gaps === null) return null
 
   // compute_gaps omits on-track nutrients from the response entirely, so an
   // empty-of-"short" gaps array is ambiguous between two different states:
