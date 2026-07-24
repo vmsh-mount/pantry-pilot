@@ -4,6 +4,7 @@ import { useEffect, useState } from "react"
 import { useRouter } from "next/navigation"
 import { api } from "@/lib/api"
 import { BottomNav, Spinner } from "@/components/ui"
+import { NutritionGapsCard } from "@/components/nutrition/NutritionGapsCard"
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 
@@ -366,6 +367,10 @@ export default function DashboardPage() {
             </button>
           ))}
         </div>
+
+        {/* Nutrition Gap-to-Cart entry card (Phase B4) — self-contained, hides
+            itself when nutrition_gaps_enabled is off or nothing computed yet */}
+        <NutritionGapsCard />
 
         {/* Nutrition */}
         {data.week.has_nutrition_data && (

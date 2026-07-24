@@ -71,6 +71,9 @@ export interface SettingsResponse {
   preferred_order_day: string | null
   is_paused:          boolean
   next_run_at:        string | null
+  nutrition_gaps_enabled?: boolean
+  dry_run?:           boolean
+  whatsapp_enabled?:  boolean
 }
 
 // ── Shared product search result — used by Flow, Quick Order, and Routines ────
@@ -176,6 +179,60 @@ export interface NutritionWeeklyTargets {
   protein_g: number
   fiber_g:   number
   sodium_mg: number
+}
+
+// ── Gap-to-Cart (Phase A targets-UX + B3 gap detection) ──────────────────────
+
+export interface PerMemberTargets {
+  member_id:      string
+  role:           string | null
+  age_years:      number | null
+  daily: {
+    calories:  number
+    protein_g: number
+    fiber_g:   number
+    sodium_mg: number
+  }
+  fallback_used:  boolean
+  health_flags:   string[]
+}
+
+export interface NutritionTargetsResponse {
+  source:     "personalized" | "role_fallback"
+  per_member: PerMemberTargets[]
+  household: {
+    daily:  { calories: number; protein_g: number; fiber_g: number; sodium_mg: number }
+    weekly: { calories: number; protein_g: number; fiber_g: number; sodium_mg: number }
+  }
+}
+
+export interface GapRecommendation {
+  sku_id:           string
+  item_name:        string
+  brand:            string | null
+  unit_price:       number
+  delivers:         number
+  per_rupee:        number
+  confidence:       NutritionConfidence
+  repurchase_rate:  number | null
+  in_stock:         boolean
+}
+
+export interface NutritionGap {
+  nutrient:          string
+  status:            "short" | "insufficient_data"
+  target_weekly?:    number | null
+  actual_weekly?:    number | null
+  short_by?:         number | null
+  unit?:             string
+  coverage?:         number
+  watch_reason?:     string
+  recommendations?:  GapRecommendation[]
+}
+
+export interface NutritionGapsResponse {
+  gaps:         NutritionGap[]
+  computed_at:  string
 }
 
 export interface ComplianceFlag {
@@ -293,6 +350,8 @@ export const api = {
     compliance: ()                => request<{ flags: ComplianceFlag[] }>("/nutrition/compliance"),
     updateGoals:(body: { daily_calories?: number; daily_protein_g?: number; daily_fiber_g?: number; daily_sodium_mg?: number }) =>
                                      request("/nutrition/goals", { method: "PATCH", body: JSON.stringify(body) }),
+    targets:    ()                => request<NutritionTargetsResponse>("/nutrition/targets"),
+    gaps:       ()                => request<NutritionGapsResponse>("/nutrition/gaps"),
   },
   dashboard: {
     get: () => request("/dashboard"),

@@ -102,6 +102,13 @@ async def get_weekly_nutrition(
     weekly_targets = personalised_weekly_targets(members, hh.member_count or 1)
 
     cutoff = datetime.utcnow() - timedelta(weeks=weeks)
+    # Group/order by the output alias ("week_start"), not by repeating the
+    # date_trunc(...) expression — each call to func.date_trunc(...) compiles
+    # to its own bound parameter, so Postgres sees SELECT/GROUP BY/ORDER BY as
+    # three different expressions (even though the literal args are equal)
+    # and rejects the query with "column must appear in GROUP BY". Referencing
+    # the alias sidesteps the duplicate-parameter mismatch entirely.
+    from sqlalchemy import text
     result = await db.execute(
         select(
             func.date_trunc("week", Order.placed_at).label("week_start"),
@@ -116,8 +123,8 @@ async def get_weekly_nutrition(
         .join(Order, Order.id == OrderNutrition.order_id)
         .where(OrderNutrition.household_id == household_id)
         .where(Order.placed_at >= cutoff)
-        .group_by(func.date_trunc("week", Order.placed_at))
-        .order_by(func.date_trunc("week", Order.placed_at).desc())
+        .group_by(text("week_start"))
+        .order_by(text("week_start DESC"))
     )
     rows = result.all()
 
@@ -239,6 +246,7 @@ async def get_nutrition_targets(
             "age_years": m.age_years,
             "daily": per_member_targets(m),
             "fallback_used": fallback_used,
+            "health_flags": m.health_flags or [],
         })
 
     member_count = hh.member_count or 1

@@ -1,0 +1,98 @@
+"use client"
+
+import { useEffect, useState } from "react"
+import { useRouter } from "next/navigation"
+import { api, type NutritionGap } from "@/lib/api"
+
+const NUTRIENT_LABEL: Record<string, string> = {
+  calories: "Calories", protein: "Protein", fiber: "Fiber",
+  iron: "Iron", b12: "B12",
+}
+
+function summaryLine(gaps: NutritionGap[]): string {
+  const parts = gaps.slice(0, 2).map((g) => {
+    const label = NUTRIENT_LABEL[g.nutrient] ?? g.nutrient
+    if (g.status === "short" && g.short_by != null) {
+      return `${label} ${Math.round(g.short_by)}${g.unit ?? ""} short`
+    }
+    return `${label} missing`
+  })
+  return parts.join(" · ")
+}
+
+export function NutritionGapsCard() {
+  const router = useRouter()
+  const [loading, setLoading] = useState(true)
+  const [gaps, setGaps]       = useState<NutritionGap[] | null>(null)
+
+  useEffect(() => {
+    let cancelled = false
+    ;(async () => {
+      const settingsRes = await api.settings.get()
+      const flag = settingsRes.success ? settingsRes.data?.nutrition_gaps_enabled : false
+      if (!flag) { if (!cancelled) setLoading(false); return }
+
+      const gapsRes = await api.nutrition.gaps()
+      if (cancelled) return
+      if (gapsRes.success && gapsRes.data) {
+        setGaps(gapsRes.data.gaps)
+      }
+      setLoading(false)
+    })()
+    return () => { cancelled = true }
+  }, [])
+
+  if (loading || gaps === null) return null
+
+  // "Never successfully computed" proxy: if every entry (including the
+  // always-evaluated calories/protein/fiber) is insufficient_data, there's
+  // no real order_nutrition signal yet — those three are populated by every
+  // resolution source, so this only happens with zero/near-zero order history.
+  const hasRealSignal = gaps.some((g) => g.status !== "insufficient_data")
+  if (!hasRealSignal) return null
+
+  const shortGaps = gaps.filter((g) => g.status === "short")
+  const needsAttention = shortGaps.length > 0
+  const summary = needsAttention ? summaryLine(shortGaps) : summaryLine(gaps.filter((g) => g.status === "insufficient_data"))
+
+  return (
+    <div className="bg-white rounded-xl overflow-hidden" style={{ border: "0.5px solid rgba(0,0,0,0.06)" }}>
+      <div className="px-3.5 pt-3.5 pb-1 flex items-center gap-2">
+        <span className="text-base">🌿</span>
+        <span className="text-[13px] font-bold text-[#1C1C1E] flex-1">Nutrition</span>
+        {needsAttention ? (
+          <span className="text-[10px] font-bold uppercase tracking-wide px-2 py-0.5 rounded-full bg-red-50 text-red-600">
+            needs attention
+          </span>
+        ) : (
+          <span className="text-[10px] font-semibold text-[#8E8E93]">on track</span>
+        )}
+      </div>
+
+      {(needsAttention || summary) && (
+        <p className="px-3.5 pb-2 text-[12px] text-[#5A5A5F]">{summary}</p>
+      )}
+
+      <div className="border-t" style={{ borderColor: "rgba(0,0,0,0.05)" }}>
+        {[
+          { label: "Household targets", sub: "per-member, in Settings", href: "/settings/targets" },
+          { label: "This week's report", sub: "macros vs your targets", href: "/nutrition/weekly" },
+          { label: "Fix these in my cart", sub: needsAttention ? `${shortGaps.length} item${shortGaps.length === 1 ? "" : "s"} close the gap` : "see recommendations", href: "/nutrition/gaps" },
+        ].map((row, i) => (
+          <button
+            key={row.href}
+            onClick={() => router.push(row.href)}
+            className="w-full flex items-center gap-2 px-3.5 py-2.5 text-left"
+            style={i > 0 ? { borderTop: "0.5px solid rgba(0,0,0,0.05)" } : undefined}
+          >
+            <div className="flex-1 min-w-0">
+              <p className="text-[13px] font-semibold text-[#1C1C1E]">{row.label}</p>
+              <p className="text-[11px] text-[#8E8E93] mt-0.5">{row.sub}</p>
+            </div>
+            <span className="text-[12px] text-[#AEAEB2]">›</span>
+          </button>
+        ))}
+      </div>
+    </div>
+  )
+}
