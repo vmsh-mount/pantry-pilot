@@ -93,5 +93,9 @@ celery_app.conf.update(
             "task": "app.tasks.pantry.sync_external_orders_all",
             "schedule": crontab(minute=0, hour="*/4"),
         },
+        "nightly-nutrient-food-map-rebuild": {
+            "task": "app.tasks.nutrition.rebuild_nutrient_food_map",
+            "schedule": crontab(hour=2, minute=0),  # 2 AM IST daily (Gap-to-Cart Phase B2)
+        },
     }
 )

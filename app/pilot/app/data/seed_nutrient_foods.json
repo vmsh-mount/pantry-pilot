@@ -1,0 +1,76 @@
+{
+  "_comment": "Cold-start floor for Gap-to-Cart (Phase B2). Bootstrap only — never hand-edited after ship. Consulted by app.services.nutrient_candidates only when the learned nutrient_food_candidate table has fewer than N rows with sample_size >= M for a given (nutrient, diet). nutrient_per_100g values are approximate, from public nutrition tables (ICMR/USDA), for common Indian grocery items. Ceiling nutrients (sodium, sugar, saturated_fat) are intentionally absent — never a recommendation candidate.",
+
+  "protein": [
+    {"food_concept": "paneer",  "nutrient_per_100g": 18.0, "diet_tags": ["vegetarian"]},
+    {"food_concept": "dal",     "nutrient_per_100g": 24.0, "diet_tags": ["vegetarian", "vegan", "jain"]},
+    {"food_concept": "curd",    "nutrient_per_100g": 3.4,  "diet_tags": ["vegetarian"]},
+    {"food_concept": "milk",    "nutrient_per_100g": 3.2,  "diet_tags": ["vegetarian"]},
+    {"food_concept": "rajma",   "nutrient_per_100g": 22.9, "diet_tags": ["vegetarian", "vegan", "jain"]},
+    {"food_concept": "chana",   "nutrient_per_100g": 19.3, "diet_tags": ["vegetarian", "vegan", "jain"]},
+    {"food_concept": "soya",    "nutrient_per_100g": 36.5, "diet_tags": ["vegetarian", "vegan", "jain"]},
+    {"food_concept": "peanut",  "nutrient_per_100g": 25.8, "diet_tags": ["vegetarian", "vegan", "jain"]},
+    {"food_concept": "tofu",    "nutrient_per_100g": 8.0,  "diet_tags": ["vegetarian", "vegan"]},
+    {"food_concept": "sprouts", "nutrient_per_100g": 13.0, "diet_tags": ["vegetarian", "vegan", "jain"]}
+  ],
+
+  "fiber": [
+    {"food_concept": "oats",   "nutrient_per_100g": 10.6, "diet_tags": ["vegetarian", "vegan", "jain"]},
+    {"food_concept": "atta",   "nutrient_per_100g": 11.2, "diet_tags": ["vegetarian", "vegan", "jain"]},
+    {"food_concept": "rajma",  "nutrient_per_100g": 15.2, "diet_tags": ["vegetarian", "vegan", "jain"]},
+    {"food_concept": "guava",  "nutrient_per_100g": 5.4,  "diet_tags": ["vegetarian", "vegan", "jain"]},
+    {"food_concept": "dal",    "nutrient_per_100g": 8.0,  "diet_tags": ["vegetarian", "vegan", "jain"]},
+    {"food_concept": "oat",    "nutrient_per_100g": 10.6, "diet_tags": ["vegetarian", "vegan", "jain"]},
+    {"food_concept": "spinach","nutrient_per_100g": 2.2,  "diet_tags": ["vegetarian", "vegan"]},
+    {"food_concept": "apple",  "nutrient_per_100g": 2.4,  "diet_tags": ["vegetarian", "vegan", "jain"]}
+  ],
+
+  "iron": [
+    {"food_concept": "spinach", "nutrient_per_100g": 2.7, "diet_tags": ["vegetarian", "vegan"]},
+    {"food_concept": "rajma",   "nutrient_per_100g": 5.0, "diet_tags": ["vegetarian", "vegan", "jain"]},
+    {"food_concept": "jaggery", "nutrient_per_100g": 11.0,"diet_tags": ["vegetarian", "vegan", "jain"]},
+    {"food_concept": "dal",     "nutrient_per_100g": 3.3, "diet_tags": ["vegetarian", "vegan", "jain"]},
+    {"food_concept": "dates",   "nutrient_per_100g": 0.9, "diet_tags": ["vegetarian", "vegan", "jain"]},
+    {"food_concept": "chana",   "nutrient_per_100g": 4.3, "diet_tags": ["vegetarian", "vegan", "jain"]},
+    {"food_concept": "fenugreek","nutrient_per_100g": 1.9,"diet_tags": ["vegetarian", "vegan"]}
+  ],
+
+  "calcium": [
+    {"food_concept": "milk",   "nutrient_per_100g": 125.0, "diet_tags": ["vegetarian"]},
+    {"food_concept": "curd",   "nutrient_per_100g": 149.0, "diet_tags": ["vegetarian"]},
+    {"food_concept": "paneer", "nutrient_per_100g": 208.0, "diet_tags": ["vegetarian"]},
+    {"food_concept": "sesame", "nutrient_per_100g": 975.0, "diet_tags": ["vegetarian", "vegan", "jain"]},
+    {"food_concept": "ragi",   "nutrient_per_100g": 344.0, "diet_tags": ["vegetarian", "vegan", "jain"]},
+    {"food_concept": "spinach","nutrient_per_100g": 99.0,  "diet_tags": ["vegetarian", "vegan"]}
+  ],
+
+  "potassium": [
+    {"food_concept": "banana",  "nutrient_per_100g": 358.0, "diet_tags": ["vegetarian", "vegan", "jain"]},
+    {"food_concept": "potato",  "nutrient_per_100g": 425.0, "diet_tags": ["vegetarian", "vegan"]},
+    {"food_concept": "spinach", "nutrient_per_100g": 558.0, "diet_tags": ["vegetarian", "vegan"]},
+    {"food_concept": "curd",    "nutrient_per_100g": 255.0, "diet_tags": ["vegetarian"]},
+    {"food_concept": "coconut", "nutrient_per_100g": 356.0, "diet_tags": ["vegetarian", "vegan", "jain"]}
+  ],
+
+  "vitamin_c": [
+    {"food_concept": "amla",     "nutrient_per_100g": 600.0, "diet_tags": ["vegetarian", "vegan", "jain"]},
+    {"food_concept": "guava",    "nutrient_per_100g": 228.0, "diet_tags": ["vegetarian", "vegan", "jain"]},
+    {"food_concept": "lemon",    "nutrient_per_100g": 53.0,  "diet_tags": ["vegetarian", "vegan", "jain"]},
+    {"food_concept": "orange",   "nutrient_per_100g": 53.2,  "diet_tags": ["vegetarian", "vegan", "jain"]},
+    {"food_concept": "tomato",   "nutrient_per_100g": 13.7,  "diet_tags": ["vegetarian", "vegan"]},
+    {"food_concept": "capsicum", "nutrient_per_100g": 80.0,  "diet_tags": ["vegetarian", "vegan"]}
+  ],
+
+  "b12": [
+    {"food_concept": "curd",     "nutrient_per_100g": 0.4, "diet_tags": ["vegetarian"]},
+    {"food_concept": "milk",     "nutrient_per_100g": 0.5, "diet_tags": ["vegetarian"]},
+    {"food_concept": "paneer",   "nutrient_per_100g": 0.5, "diet_tags": ["vegetarian"]},
+    {"food_concept": "cereal",   "nutrient_per_100g": 2.4, "diet_tags": ["vegetarian", "vegan"], "note": "fortified only"}
+  ],
+
+  "vitamin_d": [
+    {"food_concept": "milk",  "nutrient_per_100g": 1.0, "diet_tags": ["vegetarian"], "note": "fortified"},
+    {"food_concept": "cereal","nutrient_per_100g": 2.0, "diet_tags": ["vegetarian", "vegan"], "note": "fortified only"},
+    {"food_concept": "curd",  "nutrient_per_100g": 0.4, "diet_tags": ["vegetarian"]}
+  ]
+}
