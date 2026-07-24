@@ -106,6 +106,14 @@ export default function WeeklyNutritionPage() {
     )
   }
 
+  // Mirrors the exact filter /nutrition/gaps itself uses to decide what to
+  // render — not just "any short gap," but one with recommendations
+  // attached. A "short" gap whose recommendation pipeline came back empty
+  // would still land the user on an empty Gap-to-Cart page even with a
+  // naive status-only check; matching the destination's own condition is
+  // what actually makes the CTA's promise honest.
+  const hasFixableGaps = gaps.some((g) => g.status === "short" && g.recommendations && g.recommendations.length > 0)
+
   const actualCalories = week?.total_calories ?? null
   const targetCalories = targets?.calories ?? 0
 
@@ -178,7 +186,22 @@ export default function WeeklyNutritionPage() {
         )}
 
         <div className="px-5 pb-5 pt-3">
-          <Button onClick={() => router.push("/nutrition/gaps")}>Fix these in my cart →</Button>
+          {gapsLoading ? (
+            // Don't offer a CTA to a page whose contents we don't know yet —
+            // sending someone through a hop that might turn out empty is
+            // exactly the "isn't that misleading" problem, just deferred
+            // instead of avoided.
+            <div className="flex items-center justify-center gap-2 py-3.5 text-xs text-gray-400">
+              <span className="w-3 h-3 rounded-full border-2 border-gray-200 border-t-[#2D6A4F] animate-spin shrink-0" />
+              Checking what needs fixing…
+            </div>
+          ) : hasFixableGaps ? (
+            <Button onClick={() => router.push("/nutrition/gaps")}>Fix these in my cart →</Button>
+          ) : (
+            <p className="text-center text-xs text-gray-400 py-1">
+              Nothing to fix this week — you&apos;re on track.
+            </p>
+          )}
         </div>
       </Card>
     </AppShell>

@@ -69,6 +69,13 @@ export function NutritionGapsCard() {
 
   const shortGaps = gaps.filter((g) => g.status === "short")
   const needsAttention = shortGaps.length > 0
+  // Gates the "Fix these in my cart" row specifically — distinct from
+  // needsAttention (which reflects the real deficiency and should still
+  // read as urgent even if, say, the search pipeline found nothing
+  // purchasable for one nutrient). Mirrors the exact filter the
+  // destination page itself uses, so the row is never offered as
+  // clickable when it would land on an empty "No open gaps" page.
+  const fixableGaps = gaps.filter((g) => g.status === "short" && g.recommendations && g.recommendations.length > 0)
   // compute_gaps omits on-track nutrients from the response, so an EMPTY
   // gaps array is real good news (every tracked nutrient — always
   // evaluated — is on target), not "nothing computed." Only when the array
@@ -112,11 +119,18 @@ export function NutritionGapsCard() {
         {[
           { label: "Household targets", sub: "per-member, in Settings", href: "/settings/targets" },
           { label: "This week's report", sub: "macros vs your targets", href: "/nutrition/weekly" },
-          {
-            label: "Fix these in my cart",
-            sub: isLoadingGaps ? "loading…" : needsAttention ? `${shortGaps.length} item${shortGaps.length === 1 ? "" : "s"} close the gap` : "see recommendations",
-            href: "/nutrition/gaps",
-          },
+          // Only offered once we actually know there's something to fix —
+          // "isn't that a misleading/unnecessary hop?" was the exact right
+          // question. While still loading, keep it but be honest that we
+          // don't know yet; once resolved, omit it entirely if there's
+          // nothing the destination page could show.
+          ...(isLoadingGaps || fixableGaps.length > 0
+            ? [{
+                label: "Fix these in my cart",
+                sub: isLoadingGaps ? "checking what needs fixing…" : `${fixableGaps.length} item${fixableGaps.length === 1 ? "" : "s"} close the gap`,
+                href: "/nutrition/gaps",
+              }]
+            : []),
         ].map((row, i) => (
           <button
             key={row.href}
