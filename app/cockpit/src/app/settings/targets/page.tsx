@@ -10,7 +10,7 @@
 import { useEffect, useState } from "react"
 import { useRouter } from "next/navigation"
 import { api, type NutritionTargetsResponse } from "@/lib/api"
-import { AppShell, Card, Spinner } from "@/components/ui"
+import { AppShell, Card, Spinner, Button } from "@/components/ui"
 
 const ROLE_ICON: Record<string, string> = {
   adult: "🧑", elderly: "🧓", child: "🧒", infant: "👶",
@@ -23,15 +23,28 @@ const HEALTH_FLAG_NOTE: Record<string, string> = {
 
 export default function HouseholdTargetsPage() {
   const router = useRouter()
-  const [loading, setLoading] = useState(true)
-  const [data, setData]       = useState<NutritionTargetsResponse | null>(null)
+  const [loading, setLoading]     = useState(true)
+  const [data, setData]           = useState<NutritionTargetsResponse | null>(null)
+  const [reloadToken, setReloadToken] = useState(0)
 
   useEffect(() => {
-    api.nutrition.targets().then((res) => {
-      setLoading(false)
-      if (res.success && res.data) setData(res.data)
-    })
-  }, [])
+    let cancelled = false
+    setLoading(true)
+    ;(async () => {
+      try {
+        const res = await api.nutrition.targets()
+        if (cancelled) return
+        if (res.success && res.data) setData(res.data)
+      } catch {
+        // A thrown fetch (network error, timeout) previously left `loading`
+        // stuck true forever with no .catch() — the page just spun. Falls
+        // through to the existing "Couldn't load" state below either way.
+      } finally {
+        if (!cancelled) setLoading(false)
+      }
+    })()
+    return () => { cancelled = true }
+  }, [reloadToken])
 
   if (loading) {
     return (
@@ -48,7 +61,12 @@ export default function HouseholdTargetsPage() {
           <button onClick={() => router.back()} className="text-[#D8F3DC] text-sm font-semibold">← Back</button>
           <h1 className="text-white font-bold text-lg flex-1">Household targets</h1>
         </div>
-        <Card><div className="p-6 text-sm text-gray-500">Couldn&apos;t load targets.</div></Card>
+        <Card>
+          <div className="p-6 text-sm text-gray-500 text-center space-y-3">
+            <p>Couldn&apos;t load targets.</p>
+            <Button onClick={() => setReloadToken((t) => t + 1)}>Try again</Button>
+          </div>
+        </Card>
       </AppShell>
     )
   }

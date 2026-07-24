@@ -75,20 +75,44 @@ type AddAllState = "idle" | "adding" | "done"
 export default function GapsToCartPage() {
   const router = useRouter()
   const [loading, setLoading]           = useState(true)
+  const [loadFailed, setLoadFailed]     = useState(false)
   const [gaps, setGaps]                 = useState<NutritionGap[]>([])
   const [basketPending, setBasketPending] = useState(false)
   const [addStates, setAddStates]       = useState<Record<string, AddState>>({})
   const [addAllState, setAddAllState]   = useState<AddAllState>("idle")
   const [addAllCount, setAddAllCount]   = useState(0)
+  const [reloadToken, setReloadToken]   = useState(0)
 
   useEffect(() => {
-    Promise.all([api.nutrition.gaps(), api.dashboard.get()]).then(([gapsRes, dashRes]) => {
-      setLoading(false)
-      if (gapsRes.success && gapsRes.data) setGaps(gapsRes.data.gaps)
-      const dash = dashRes.data as { flow?: { basket_pending?: boolean } } | undefined
-      setBasketPending(!!dash?.flow?.basket_pending)
-    })
-  }, [])
+    let cancelled = false
+    setLoading(true)
+    setLoadFailed(false)
+    ;(async () => {
+      try {
+        const [gapsRes, dashRes] = await Promise.all([api.nutrition.gaps(), api.dashboard.get()])
+        if (cancelled) return
+        if (gapsRes.success && gapsRes.data) {
+          setGaps(gapsRes.data.gaps)
+        } else {
+          setLoadFailed(true)
+        }
+        const dash = dashRes.data as { flow?: { basket_pending?: boolean } } | undefined
+        setBasketPending(!!dash?.flow?.basket_pending)
+      } catch {
+        // This page's entire purpose is showing recommendations — unlike
+        // the Home card (which can reasonably hide on failure), silently
+        // showing nothing here would leave the user on a dead page with no
+        // way forward. Show a real error + retry instead of hanging or
+        // vanishing (the exact bug this fixes: no .catch() on the original
+        // Promise.all meant a thrown error left `loading` stuck true
+        // forever — the page just spun with no way out).
+        if (!cancelled) setLoadFailed(true)
+      } finally {
+        if (!cancelled) setLoading(false)
+      }
+    })()
+    return () => { cancelled = true }
+  }, [reloadToken])
 
   async function addToCart(rec: GapRecommendation): Promise<boolean> {
     setAddStates((s) => ({ ...s, [rec.sku_id]: "adding" }))
@@ -133,7 +157,34 @@ export default function GapsToCartPage() {
   if (loading) {
     return (
       <AppShell>
-        <div className="flex items-center justify-center py-20"><Spinner size="lg" /></div>
+        <div className="flex items-center gap-3 px-1 mb-4">
+          <button onClick={() => router.back()} className="text-[#D8F3DC] text-sm font-semibold">← Back</button>
+          <h1 className="text-white font-bold text-lg flex-1">Close your gaps</h1>
+        </div>
+        <div className="flex flex-col items-center gap-3 py-20">
+          <Spinner size="lg" />
+          <p className="text-white/60 text-xs text-center px-8">
+            Searching for the best options — this checks live prices and stock, usually 10-20s
+          </p>
+        </div>
+      </AppShell>
+    )
+  }
+
+  if (loadFailed) {
+    return (
+      <AppShell>
+        <div className="flex items-center gap-3 px-1 mb-4">
+          <button onClick={() => router.back()} className="text-[#D8F3DC] text-sm font-semibold">← Back</button>
+          <h1 className="text-white font-bold text-lg flex-1">Close your gaps</h1>
+        </div>
+        <Card>
+          <div className="p-6 text-center space-y-3">
+            <p className="text-sm text-gray-700 font-semibold">Couldn&apos;t load recommendations</p>
+            <p className="text-xs text-gray-400">This can happen if the search took too long or hit a network hiccup.</p>
+            <Button onClick={() => setReloadToken((t) => t + 1)}>Try again</Button>
+          </div>
+        </Card>
       </AppShell>
     )
   }

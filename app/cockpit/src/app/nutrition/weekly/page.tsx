@@ -33,12 +33,17 @@ const NUTRIENT_LABEL: Record<string, string> = {
 export default function WeeklyNutritionPage() {
   const router = useRouter()
   const [loading, setLoading]         = useState(true)
+  const [loadFailed, setLoadFailed]   = useState(false)
   const [week, setWeek]               = useState<WeekRow | null>(null)
   const [targets, setTargets]         = useState<NutritionWeeklyTargets | null>(null)
   const [gaps, setGaps]               = useState<NutritionGap[]>([])
   const [gapsLoading, setGapsLoading] = useState(true)
+  const [reloadToken, setReloadToken] = useState(0)
 
   useEffect(() => {
+    let cancelled = false
+    setLoading(true)
+    setLoadFailed(false)
     // Decoupled from the gaps fetch below: GET /v1/nutrition/weekly is a
     // plain DB aggregation (fast). GET /v1/nutrition/gaps does live Swiggy
     // searches + resolution and can take 15-20s+. Awaiting both together
@@ -46,24 +51,57 @@ export default function WeeklyNutritionPage() {
     // "Fix these in my cart" CTA button, which doesn't even read gaps data
     // — behind the slow one. The macro bars now render as soon as the fast
     // call resolves; the flagged section shows its own loading row.
-    api.nutrition.weekly(1).then((weeklyRes) => {
-      setLoading(false)
-      if (weeklyRes.success && weeklyRes.data) {
-        const weeks = (weeklyRes.data as { weeks: WeekRow[] }).weeks
-        setWeek(weeks[0] ?? null)
-        setTargets(weeklyRes.data.weekly_targets)
+    ;(async () => {
+      try {
+        const weeklyRes = await api.nutrition.weekly(1)
+        if (cancelled) return
+        if (weeklyRes.success && weeklyRes.data) {
+          const weeks = (weeklyRes.data as { weeks: WeekRow[] }).weeks
+          setWeek(weeks[0] ?? null)
+          setTargets(weeklyRes.data.weekly_targets)
+        } else {
+          setLoadFailed(true)
+        }
+      } catch {
+        // No .catch() here previously meant a thrown error left `loading`
+        // stuck true forever — the whole page (including the CTA button)
+        // just spun with no way out.
+        if (!cancelled) setLoadFailed(true)
+      } finally {
+        if (!cancelled) setLoading(false)
       }
-    })
+    })()
+
     api.nutrition.gaps().then((gapsRes) => {
+      if (cancelled) return
       setGapsLoading(false)
       if (gapsRes.success && gapsRes.data) setGaps(gapsRes.data.gaps)
-    }).catch(() => setGapsLoading(false))
-  }, [])
+    }).catch(() => { if (!cancelled) setGapsLoading(false) })
+
+    return () => { cancelled = true }
+  }, [reloadToken])
 
   if (loading) {
     return (
       <AppShell>
         <div className="flex items-center justify-center py-20"><Spinner size="lg" /></div>
+      </AppShell>
+    )
+  }
+
+  if (loadFailed) {
+    return (
+      <AppShell>
+        <div className="flex items-center gap-3 px-1 mb-4">
+          <button onClick={() => router.back()} className="text-[#D8F3DC] text-sm font-semibold">← Back</button>
+          <h1 className="text-white font-bold text-lg flex-1">This week</h1>
+        </div>
+        <Card>
+          <div className="p-6 text-sm text-gray-500 text-center space-y-3">
+            <p>Couldn&apos;t load this week&apos;s nutrition.</p>
+            <Button onClick={() => setReloadToken((t) => t + 1)}>Try again</Button>
+          </div>
+        </Card>
       </AppShell>
     )
   }
