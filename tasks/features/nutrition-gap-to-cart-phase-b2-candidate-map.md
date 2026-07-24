@@ -33,7 +33,12 @@ The answer is a materialized, periodically-refreshed table — distilled from tw
 Celery beat, maintenance queue, nightly.
 
 ```
-1. Group nutrition_cache by food_concept (post-B1 enrichment).
+1. Group nutrition_cache by food_concept (post-B1 enrichment). Exclude rows
+   where food_concept IS NULL ("not yet attempted" by the B1 backfill) AND
+   rows where food_concept = '' ("attempted, unresolvable" — the B1 backfill
+   task's convergence sentinel, see app/tasks/maintenance.py's
+   backfill_nutrition_concepts). Both are concept-less; only the second is a
+   permanent, expected state — do not treat '' as a real concept to group by.
    For each concept, per nutrient in NUTRIENT_KEYS:
      - nutrient_per_100g = median(density value across contributing SKUs)
        (median, not mean — robust to one bad OFF match skewing the concept)
