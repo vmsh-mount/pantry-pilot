@@ -112,6 +112,45 @@ async def test_targets_endpoint_all_full_data_is_personalized_source(app_client,
 
 
 @pytest.mark.asyncio
+async def test_targets_endpoint_under_18_with_age_only_is_not_fallback(app_client, db):
+    """A child with age but no weight/height must NOT be flagged
+    fallback_used — _member_calories deliberately never looks at weight/
+    height for under-18 members (age-band lookup by design), so two
+    children of the same age get the identical served calorie value
+    regardless of whether weight/height happen to be filled in. Flagging
+    one 'estimated' and not the other would mislabel a value that was
+    never actually estimated differently."""
+    household_id = await create_household(db)
+    await _add_member(db, household_id, role="child", age_years=8, sex="male")  # age only
+    await _add_member(db, household_id, role="child", age_years=8, sex="male",
+                       weight_kg=25, height_cm=128)  # age + weight/height, same age
+
+    set_session(app_client, household_id)
+    resp = await app_client.get("/v1/nutrition/targets")
+    data = resp.json()["data"]
+
+    rows = {row["age_years"]: row for row in data["per_member"]}
+    # Both are 8-year-olds; both must be non-fallback, and must serve the
+    # identical calorie value since weight/height was never consulted.
+    calories = [row["daily"]["calories"] for row in data["per_member"]]
+    assert all(row["fallback_used"] is False for row in data["per_member"])
+    assert calories[0] == calories[1]
+
+
+@pytest.mark.asyncio
+async def test_targets_endpoint_no_age_at_all_is_fallback(app_client, db):
+    """A member with no age_years is a genuine role-default fallback (tier 3) —
+    distinct from the under-18 age-band case above."""
+    household_id = await create_household(db)
+    await _add_member(db, household_id, role="child")  # no age at all
+
+    set_session(app_client, household_id)
+    resp = await app_client.get("/v1/nutrition/targets")
+    data = resp.json()["data"]
+    assert data["per_member"][0]["fallback_used"] is True
+
+
+@pytest.mark.asyncio
 async def test_targets_endpoint_unauthenticated(app_client):
     resp = await app_client.get("/v1/nutrition/targets")
     body = resp.json()

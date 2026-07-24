@@ -44,12 +44,21 @@ export function NutritionGapsCard() {
 
   if (loading || gaps === null) return null
 
-  // "Never successfully computed" proxy: if every entry (including the
-  // always-evaluated calories/protein/fiber) is insufficient_data, there's
-  // no real order_nutrition signal yet — those three are populated by every
-  // resolution source, so this only happens with zero/near-zero order history.
-  const hasRealSignal = gaps.some((g) => g.status !== "insufficient_data")
-  if (!hasRealSignal) return null
+  // compute_gaps omits on-track nutrients from the response entirely, so an
+  // empty-of-"short" gaps array is ambiguous between two different states:
+  //   (a) no order_nutrition data yet (every nutrient, including the
+  //       always-evaluated calories/protein/fiber, comes back
+  //       insufficient_data) — genuinely nothing to show;
+  //   (b) a fully healthy household with real order history — calories/
+  //       protein/fiber all on target — whose only insufficient_data entry
+  //       is a micronutrient (e.g. b12/iron below the 60% coverage guard).
+  // Both cases produce hasNothingToShow = true, and hiding the card is the
+  // right call either way — a household with nothing to fix and no
+  // coverage-worthy signal doesn't need a nutrition card on Home. But (b)
+  // is not "near-zero order history"; don't debug an active household's
+  // missing card by looking for missing orders — check gap statuses instead.
+  const hasNothingToShow = gaps.every((g) => g.status === "insufficient_data")
+  if (hasNothingToShow) return null
 
   const shortGaps = gaps.filter((g) => g.status === "short")
   const needsAttention = shortGaps.length > 0

@@ -235,10 +235,20 @@ async def get_nutrition_targets(
     per_member = []
     any_fallback = False
     for m in members:
-        # Mirrors the tier-1 condition in nutrition_targets.py's
-        # _member_calories: full data present -> Mifflin-St Jeor path.
-        # Anything less is some tier of fallback.
-        fallback_used = not (m.age_years is not None and m.weight_kg is not None and m.height_cm is not None)
+        # Mirrors nutrition_targets.py's actual tiering, not a blanket
+        # "all three fields present" check: _member_calories deliberately
+        # never looks at weight/height for under-18 members (age-band
+        # lookup only, by design — MSJ doesn't model growth needs). Two
+        # children of the same age get the identical served calorie value
+        # regardless of whether weight/height happen to be filled in, so
+        # flagging one of them "estimated" and not the other would be a
+        # transparency label that doesn't track what was actually used.
+        if m.age_years is None:
+            fallback_used = True  # tier 3: no data at all, role default
+        elif m.age_years < 18:
+            fallback_used = False  # age-band lookup is the designed path, not a fallback
+        else:
+            fallback_used = not (m.weight_kg is not None and m.height_cm is not None)
         any_fallback = any_fallback or fallback_used
         per_member.append({
             "member_id": m.id,
