@@ -36,7 +36,7 @@ async def get_order_nutrition(
 ):
     household_id = _get_household_id(request)
     if not household_id:
-        return APIResponse.error("Not authenticated", 401)
+        return APIResponse.fail("NOT_AUTHENTICATED", "Not authenticated.")
 
     from app.models.db import Order, OrderNutrition
 
@@ -46,7 +46,7 @@ async def get_order_nutrition(
     )
     order = order_result.scalar_one_or_none()
     if not order:
-        return APIResponse.error("Order not found", 404)
+        return APIResponse.fail("NOT_FOUND", "Order not found.")
 
     on_result = await db.execute(
         select(OrderNutrition).where(OrderNutrition.order_id == order_id)
@@ -86,7 +86,7 @@ async def get_weekly_nutrition(
 ):
     household_id = _get_household_id(request)
     if not household_id:
-        return APIResponse.error("Not authenticated", 401)
+        return APIResponse.fail("NOT_AUTHENTICATED", "Not authenticated.")
 
     from app.models.db import Order, OrderNutrition, Household, HouseholdMember
     from app.utils.nutrition_targets import personalised_weekly_targets
@@ -94,7 +94,7 @@ async def get_weekly_nutrition(
     hh_result = await db.execute(select(Household).where(Household.id == household_id))
     hh = hh_result.scalar_one_or_none()
     if not hh:
-        return APIResponse.error("Household not found", 404)
+        return APIResponse.fail("NOT_FOUND", "Household not found.")
 
     members = (await db.execute(
         select(HouseholdMember).where(HouseholdMember.household_id == household_id)
@@ -146,7 +146,7 @@ async def get_compliance(
 ):
     household_id = _get_household_id(request)
     if not household_id:
-        return APIResponse.error("Not authenticated", 401)
+        return APIResponse.fail("NOT_AUTHENTICATED", "Not authenticated.")
 
     import json
     from app.redis import get_redis
@@ -163,7 +163,7 @@ async def update_goals(
 ):
     household_id = _get_household_id(request)
     if not household_id:
-        return APIResponse.error("Not authenticated", 401)
+        return APIResponse.fail("NOT_AUTHENTICATED", "Not authenticated.")
 
     body = await request.json()
     from app.models.db import HouseholdNutritionGoals
@@ -192,6 +192,76 @@ async def update_goals(
     })
 
 
+@router.get("/targets", response_model=APIResponse)
+async def get_nutrition_targets(
+    request: Request,
+    db: AsyncSession = Depends(get_db),
+):
+    """
+    Gap-to-Cart Phase A (targets-UX layer): per-member breakdown on top of
+    personalised_weekly_targets. Computes nothing new — per_member_targets()
+    and personalised_weekly_targets() are the same functions /weekly and
+    /dashboard already call; household.weekly here is that exact call,
+    never a re-derivation.
+
+    Note: HouseholdMember has no `name` column (names aren't part of this
+    data model — see onboarding). Per-member rows are identified by `role`
+    instead of the illustrative "name" field in the PRD's example response.
+    """
+    household_id = _get_household_id(request)
+    if not household_id:
+        return APIResponse.fail("NOT_AUTHENTICATED", "Not authenticated.")
+
+    from app.models.db import Household, HouseholdMember
+    from app.utils.nutrition_targets import per_member_targets, personalised_weekly_targets
+
+    hh_result = await db.execute(select(Household).where(Household.id == household_id))
+    hh = hh_result.scalar_one_or_none()
+    if not hh:
+        return APIResponse.fail("NOT_FOUND", "Household not found.")
+
+    members_result = await db.execute(
+        select(HouseholdMember).where(HouseholdMember.household_id == household_id)
+    )
+    members = members_result.scalars().all()
+
+    per_member = []
+    any_fallback = False
+    for m in members:
+        # Mirrors the tier-1 condition in nutrition_targets.py's
+        # _member_calories: full data present -> Mifflin-St Jeor path.
+        # Anything less is some tier of fallback.
+        fallback_used = not (m.age_years is not None and m.weight_kg is not None and m.height_cm is not None)
+        any_fallback = any_fallback or fallback_used
+        per_member.append({
+            "member_id": m.id,
+            "role": m.role,
+            "age_years": m.age_years,
+            "daily": per_member_targets(m),
+            "fallback_used": fallback_used,
+        })
+
+    member_count = hh.member_count or 1
+    if len(members) < member_count:
+        any_fallback = True  # unmapped slots score as adult defaults too
+
+    # Same function /weekly and /dashboard already call — called once, not
+    # recomputed. This is the reconciliation contract the whole endpoint rests on.
+    weekly = personalised_weekly_targets(members, member_count)
+    daily = {
+        "calories":  round(weekly["calories"] / 7),
+        "protein_g": round(weekly["protein_g"] / 7, 1),
+        "fiber_g":   round(weekly["fiber_g"] / 7, 1),
+        "sodium_mg": round(weekly["sodium_mg"] / 7),
+    }
+
+    return APIResponse.ok({
+        "source": "role_fallback" if any_fallback else "personalized",
+        "per_member": per_member,
+        "household": {"daily": daily, "weekly": weekly},
+    })
+
+
 @router.get("/gaps", response_model=APIResponse)
 async def get_nutrition_gaps(
     request: Request,
@@ -203,7 +273,7 @@ async def get_nutrition_gaps(
     """
     household_id = _get_household_id(request)
     if not household_id:
-        return APIResponse.error("Not authenticated", 401)
+        return APIResponse.fail("NOT_AUTHENTICATED", "Not authenticated.")
 
     from app.models.db import Household
     from app.services.nutrition_gaps import compute_gaps, get_recommendations_for_nutrient
@@ -211,7 +281,7 @@ async def get_nutrition_gaps(
     hh_result = await db.execute(select(Household).where(Household.id == household_id))
     household = hh_result.scalar_one_or_none()
     if not household:
-        return APIResponse.error("Household not found", 404)
+        return APIResponse.fail("NOT_FOUND", "Household not found.")
 
     gaps = await compute_gaps(db, household)
 
