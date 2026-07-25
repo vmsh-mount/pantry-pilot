@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react"
 import { useRouter } from "next/navigation"
 import { api } from "@/lib/api"
-import { AppShell, Card, Button, Spinner, Alert } from "@/components/ui"
+import { PageShell, HeroBrandBar, Card, Button, Spinner, Alert } from "@/components/ui"
 
 interface RoutineItem { id: string; item_name: string; quantity: number; unit: string }
 interface Routine {
@@ -74,18 +74,31 @@ export default function RoutinesPage() {
   const paused  = routines.filter(r => r.status === "paused")
   const ended   = routines.filter(r => r.status === "ended")
 
-  return (
-    <AppShell>
-      <div className="flex items-center justify-between px-1 mb-4">
-        <h1 className="text-white font-bold text-lg">Routines</h1>
+  const hero = (
+    <>
+      <HeroBrandBar />
+      <div className="flex items-center justify-between">
+        <div>
+          <h2 className="text-[19px] font-bold text-white tracking-tight">Routines</h2>
+          {active.length > 0 && (
+            <p className="text-[12px] mt-0.5" style={{ color: "rgba(255,255,255,0.6)" }}>
+              {active.length} active
+            </p>
+          )}
+        </div>
         <button
           onClick={() => router.push("/routines/new")}
-          className="text-[#D8F3DC] text-sm font-semibold"
+          className="text-[13px] font-semibold px-3 py-1.5 rounded-full"
+          style={{ background: "rgba(255,255,255,0.16)", color: "white" }}
         >
           + New
         </button>
       </div>
+    </>
+  )
 
+  return (
+    <PageShell hero={hero}>
       {loading && (
         <div className="flex justify-center py-16">
           <Spinner size="lg" />
@@ -144,6 +157,6 @@ export default function RoutinesPage() {
           ))}
         </div>
       )}
-    </AppShell>
+    </PageShell>
   )
 }

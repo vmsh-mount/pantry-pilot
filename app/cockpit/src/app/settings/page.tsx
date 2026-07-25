@@ -17,7 +17,7 @@ import { useEffect, useState, useCallback, useRef } from "react"
 import { useRouter } from "next/navigation"
 import { api } from "@/lib/api"
 import {
-  AppShell, Card, Button, Alert, Spinner,
+  PageShell, PageHero, Card, Button, Alert, Spinner,
   SegmentedSelect, Input, Toggle,
 } from "@/components/ui"
 
@@ -251,51 +251,48 @@ export default function SettingsPage() {
 
   if (loading) {
     return (
-      <AppShell>
-        <div className="flex justify-center py-20 text-white">
+      <PageShell hero={<PageHero title="Settings" showSettingsGear={false} />}>
+        <div className="flex justify-center py-20" style={{ color: "#8E8E93" }}>
           <Spinner size="lg" />
         </div>
-      </AppShell>
+      </PageShell>
     )
   }
 
   if (!settings) {
     return (
-      <AppShell>
+      <PageShell hero={<PageHero title="Settings" showSettingsGear={false} />}>
         <Card className="p-6">
           <Alert type="error" message={error || "Could not load settings."} />
           <div className="mt-4">
             <Button onClick={() => router.push("/")}>Go home</Button>
           </div>
         </Card>
-      </AppShell>
+      </PageShell>
     )
   }
 
   const prefs = settings.preferences
 
+  const settingsHero = (
+    <PageHero
+      title="Settings"
+      showSettingsGear={false}
+      subtitle={
+        prefs.next_run_at
+          ? `${settings.whatsapp_number} · Next basket ${new Date(prefs.next_run_at).toLocaleDateString("en-IN", { day: "numeric", month: "short" })}`
+          : settings.whatsapp_number
+      }
+    />
+  )
+
   return (
-    <AppShell>
-      <div className="flex items-center justify-between px-1 mb-4">
-        <h1 className="text-white font-bold text-lg">Settings</h1>
+    <PageShell hero={settingsHero}>
+      <div className="flex justify-end mb-2 -mt-1">
         <SaveIndicator saving={saving} />
       </div>
 
       <Card>
-        {/* Header */}
-        <div className="bg-[#2D6A4F] px-6 py-6 text-white">
-          <h1 className="text-xl font-bold">Settings</h1>
-          <p className="text-green-300 text-sm mt-1">{settings.whatsapp_number}</p>
-          {prefs.next_run_at && (
-            <p className="text-green-200 text-xs mt-1">
-              Next basket:{" "}
-              {new Date(prefs.next_run_at).toLocaleDateString("en-IN", {
-                weekday: "short", day: "numeric", month: "short"
-              })}
-            </p>
-          )}
-        </div>
-
         {error && (
           <div className="px-6 pt-4">
             <Alert type="error" message={error} />
@@ -561,6 +558,6 @@ export default function SettingsPage() {
           onCancel={() => setDialog(null)}
         />
       )}
-    </AppShell>
+    </PageShell>
   )
 }

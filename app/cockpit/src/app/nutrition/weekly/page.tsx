@@ -13,7 +13,7 @@
 import { useEffect, useState } from "react"
 import { useRouter } from "next/navigation"
 import { api, type NutritionWeeklyTargets, type NutritionGap } from "@/lib/api"
-import { AppShell, Card, Button, Spinner } from "@/components/ui"
+import { PageShell, PageHero, Card, Button, Spinner } from "@/components/ui"
 import { MacroBar } from "@/components/nutrition/NutritionCard"
 import { CeilingBar } from "@/components/nutrition/CeilingBar"
 
@@ -87,19 +87,15 @@ export default function WeeklyNutritionPage() {
 
   if (loading) {
     return (
-      <AppShell>
+      <PageShell hero={<PageHero title="This week" back />}>
         <div className="flex items-center justify-center py-20"><Spinner size="lg" /></div>
-      </AppShell>
+      </PageShell>
     )
   }
 
   if (featureDisabled) {
     return (
-      <AppShell>
-        <div className="flex items-center gap-3 px-1 mb-4">
-          <button onClick={() => router.back()} className="text-[#D8F3DC] text-sm font-semibold">← Back</button>
-          <h1 className="text-white font-bold text-lg flex-1">This week</h1>
-        </div>
+      <PageShell hero={<PageHero title="This week" back />}>
         <Card>
           <div className="p-6 text-sm text-gray-500 text-center space-y-2">
             <p className="text-2xl">🌱</p>
@@ -107,24 +103,20 @@ export default function WeeklyNutritionPage() {
             <p className="text-xs text-gray-400">Ask your household admin to turn on Nutrition Gap-to-Cart in settings.</p>
           </div>
         </Card>
-      </AppShell>
+      </PageShell>
     )
   }
 
   if (loadFailed) {
     return (
-      <AppShell>
-        <div className="flex items-center gap-3 px-1 mb-4">
-          <button onClick={() => router.back()} className="text-[#D8F3DC] text-sm font-semibold">← Back</button>
-          <h1 className="text-white font-bold text-lg flex-1">This week</h1>
-        </div>
+      <PageShell hero={<PageHero title="This week" back />}>
         <Card>
           <div className="p-6 text-sm text-gray-500 text-center space-y-3">
             <p>Couldn&apos;t load this week&apos;s nutrition.</p>
             <Button onClick={() => setReloadToken((t) => t + 1)}>Try again</Button>
           </div>
         </Card>
-      </AppShell>
+      </PageShell>
     )
   }
 
@@ -140,12 +132,7 @@ export default function WeeklyNutritionPage() {
   const targetCalories = targets?.calories ?? 0
 
   return (
-    <AppShell>
-      <div className="flex items-center gap-3 px-1 mb-4">
-        <button onClick={() => router.back()} className="text-[#D8F3DC] text-sm font-semibold">← Back</button>
-        <h1 className="text-white font-bold text-lg flex-1">This week</h1>
-      </div>
-
+    <PageShell hero={<PageHero title="This week" back />}>
       <Card>
         <div className="px-5 pt-5">
           <div className="flex items-baseline gap-2 mb-4">
@@ -226,6 +213,6 @@ export default function WeeklyNutritionPage() {
           )}
         </div>
       </Card>
-    </AppShell>
+    </PageShell>
   )
 }

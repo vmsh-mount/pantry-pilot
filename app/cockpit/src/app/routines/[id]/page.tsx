@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react"
 import { useRouter, useParams } from "next/navigation"
 import { api } from "@/lib/api"
-import { AppShell, Card, Button, Alert, Spinner } from "@/components/ui"
+import { PageShell, PageHero, BackButton, Card, Button, Alert, Spinner } from "@/components/ui"
 import { NutritionCard } from "@/components/nutrition/NutritionCard"
 
 interface RoutineItem  { id: string; item_name: string; quantity: number; unit: string }
@@ -91,15 +91,15 @@ export default function RoutineDetailPage() {
   }
 
   if (loading) return (
-    <AppShell>
-      <div className="flex justify-center py-20"><Spinner size="lg" /></div>
-    </AppShell>
+    <PageShell hero={<PageHero title="Routine details" back={() => router.push("/routines")} />}>
+      <div className="flex justify-center py-20" style={{ color: "#8E8E93" }}><Spinner size="lg" /></div>
+    </PageShell>
   )
 
   if (!routine) return (
-    <AppShell>
+    <PageShell hero={<PageHero title="Routine details" back={() => router.push("/routines")} />}>
       <Card><div className="px-6 py-8"><Alert type="error" message={error || "Not found."} /></div></Card>
-    </AppShell>
+    </PageShell>
   )
 
   const isActive = routine.status === "active"
@@ -111,18 +111,20 @@ export default function RoutineDetailPage() {
     ended:  "bg-gray-100 text-gray-500",
   }
 
-  return (
-    <AppShell>
-      {/* Header bar */}
-      <div className="flex items-center justify-between px-1 mb-4">
-        <button onClick={() => router.push("/routines")} className="text-[#D8F3DC] text-sm font-semibold">
-          ← Routines
-        </button>
-        <button onClick={() => setDialog("delete")} className="text-red-300 text-sm font-semibold">
-          Delete
-        </button>
+  const hero = (
+    <div className="flex items-center justify-between">
+      <div className="flex items-center gap-3">
+        <BackButton variant="on-green" onClick={() => router.push("/routines")} />
+        <h2 className="text-[19px] font-bold text-white tracking-tight">Routine details</h2>
       </div>
+      <button onClick={() => setDialog("delete")} className="text-red-200 text-sm font-semibold">
+        Delete
+      </button>
+    </div>
+  )
 
+  return (
+    <PageShell hero={hero}>
       {error && <div className="mb-3"><Alert type="error" message={error} /></div>}
 
       <div className="space-y-3">
@@ -306,6 +308,6 @@ export default function RoutineDetailPage() {
           </div>
         </div>
       )}
-    </AppShell>
+    </PageShell>
   )
 }

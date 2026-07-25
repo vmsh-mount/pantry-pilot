@@ -3,7 +3,7 @@
 import { useEffect, useState, useCallback } from "react"
 import { useRouter } from "next/navigation"
 import { api, type RunSummary, type RunItem } from "@/lib/api"
-import { AppShell, Card, Spinner, Alert, Button } from "@/components/ui"
+import { PageShell, PageHero, Card, Spinner, Alert, Button } from "@/components/ui"
 import { NutritionCard } from "@/components/nutrition/NutritionCard"
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
@@ -291,17 +291,7 @@ export default function RunsPage() {
   const hasMore = runs.length < filteredCount
 
   return (
-    <AppShell>
-      <div className="flex items-center justify-between px-1 mb-4">
-        <h1 className="text-white font-bold text-lg">Run history</h1>
-        <button
-          onClick={() => router.push("/dashboard")}
-          className="text-[#D8F3DC] text-sm"
-        >
-          ← Back
-        </button>
-      </div>
-
+    <PageShell hero={<PageHero title="Run history" back={() => router.push("/dashboard")} />}>
       {error && <div className="mb-3"><Alert type="error" message={error} /></div>}
 
       {/* Status filter */}
@@ -313,8 +303,8 @@ export default function RunsPage() {
               onClick={() => setStatusFilter(opt.value)}
               className={`shrink-0 px-3 py-1.5 rounded-full text-xs font-medium border transition-colors ${
                 statusFilter === opt.value
-                  ? "bg-white text-[#2D6A4F] border-white"
-                  : "bg-transparent text-[#D8F3DC] border-[#D8F3DC]/40 hover:border-[#D8F3DC]"
+                  ? "bg-[#2D6A4F] text-white border-[#2D6A4F]"
+                  : "bg-white text-[#5A5A5F] border-[rgba(0,0,0,0.1)] hover:border-[#2D6A4F]/40"
               }`}
             >
               {opt.label}
@@ -324,7 +314,7 @@ export default function RunsPage() {
       </div>
 
       {loading ? (
-        <div className="flex justify-center py-20 text-white"><Spinner size="lg" /></div>
+        <div className="flex justify-center py-20" style={{ color: "#8E8E93" }}><Spinner size="lg" /></div>
       ) : runs.length === 0 ? (
         <Card>
           <div className="px-6 py-12 text-center space-y-3">
@@ -371,6 +361,6 @@ export default function RunsPage() {
           </div>
         </div>
       )}
-    </AppShell>
+    </PageShell>
   )
 }

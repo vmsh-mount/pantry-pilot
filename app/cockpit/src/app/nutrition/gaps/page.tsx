@@ -16,7 +16,7 @@
 import { useEffect, useState } from "react"
 import { useRouter } from "next/navigation"
 import { api, type NutritionGap, type GapRecommendation } from "@/lib/api"
-import { AppShell, Card, Button, Spinner } from "@/components/ui"
+import { PageShell, PageHero, Card, Button, Spinner } from "@/components/ui"
 import { ConfidenceBadge } from "@/components/nutrition/NutritionCard"
 
 const NUTRIENT_LABEL: Record<string, string> = {
@@ -160,28 +160,20 @@ export default function GapsToCartPage() {
 
   if (loading) {
     return (
-      <AppShell>
-        <div className="flex items-center gap-3 px-1 mb-4">
-          <button onClick={() => router.back()} className="text-[#D8F3DC] text-sm font-semibold">← Back</button>
-          <h1 className="text-white font-bold text-lg flex-1">Close your gaps</h1>
-        </div>
+      <PageShell hero={<PageHero title="Close your gaps" back />}>
         <div className="flex flex-col items-center gap-3 py-20">
           <Spinner size="lg" />
-          <p className="text-white/60 text-xs text-center px-8">
+          <p className="text-[#8E8E93] text-xs text-center px-8">
             Searching for the best options — this checks live prices and stock, usually 10-20s
           </p>
         </div>
-      </AppShell>
+      </PageShell>
     )
   }
 
   if (featureDisabled) {
     return (
-      <AppShell>
-        <div className="flex items-center gap-3 px-1 mb-4">
-          <button onClick={() => router.back()} className="text-[#D8F3DC] text-sm font-semibold">← Back</button>
-          <h1 className="text-white font-bold text-lg flex-1">Close your gaps</h1>
-        </div>
+      <PageShell hero={<PageHero title="Close your gaps" back />}>
         <Card>
           <div className="p-6 text-center space-y-2">
             <p className="text-2xl">🌱</p>
@@ -189,17 +181,13 @@ export default function GapsToCartPage() {
             <p className="text-xs text-gray-400">Ask your household admin to turn on Nutrition Gap-to-Cart in settings.</p>
           </div>
         </Card>
-      </AppShell>
+      </PageShell>
     )
   }
 
   if (loadFailed) {
     return (
-      <AppShell>
-        <div className="flex items-center gap-3 px-1 mb-4">
-          <button onClick={() => router.back()} className="text-[#D8F3DC] text-sm font-semibold">← Back</button>
-          <h1 className="text-white font-bold text-lg flex-1">Close your gaps</h1>
-        </div>
+      <PageShell hero={<PageHero title="Close your gaps" back />}>
         <Card>
           <div className="p-6 text-center space-y-3">
             <p className="text-sm text-gray-700 font-semibold">Couldn&apos;t load recommendations</p>
@@ -207,19 +195,14 @@ export default function GapsToCartPage() {
             <Button onClick={() => setReloadToken((t) => t + 1)}>Try again</Button>
           </div>
         </Card>
-      </AppShell>
+      </PageShell>
     )
   }
 
   const shortGaps = gaps.filter((g) => g.status === "short" && g.recommendations && g.recommendations.length > 0)
 
   return (
-    <AppShell>
-      <div className="flex items-center gap-3 px-1 mb-4">
-        <button onClick={() => router.back()} className="text-[#D8F3DC] text-sm font-semibold">← Back</button>
-        <h1 className="text-white font-bold text-lg flex-1">Close your gaps</h1>
-      </div>
-
+    <PageShell hero={<PageHero title="Close your gaps" back />}>
       {shortGaps.length === 0 ? (
         <Card>
           <div className="p-6 text-center">
@@ -286,7 +269,7 @@ export default function GapsToCartPage() {
                 <Button onClick={addAllTopPicks} loading={addAllState === "adding"}>
                   {addAllState === "adding" ? "Adding…" : "Add all to cart"}
                 </Button>
-                <p className="text-center text-[11px] text-white/60 mt-2">
+                <p className="text-center text-[11px] text-[#8E8E93] mt-2">
                   → your open Flow basket if one&apos;s pending, else a Quick Order
                 </p>
               </>
@@ -295,11 +278,11 @@ export default function GapsToCartPage() {
         </>
       )}
 
-      <p className="px-2 pb-4 text-[10px] text-white/40 leading-relaxed text-center">
+      <p className="px-2 pb-4 text-[10px] text-[#AEAEB2] leading-relaxed text-center">
         Estimates from labels &amp; food databases. Not medical advice. A single
         pack can numerically close a weekly gap — that&apos;s a week&apos;s
         worth, not one meal&apos;s fix.
       </p>
-    </AppShell>
+    </PageShell>
   )
 }
