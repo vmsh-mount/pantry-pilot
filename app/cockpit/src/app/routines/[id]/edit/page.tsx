@@ -314,7 +314,7 @@ function Step3({
         </p>
 
         <div className="bg-white border border-gray-100 rounded-2xl overflow-hidden">
-          <div className="bg-[#2D6A4F] px-5 py-4">
+          <div className="px-5 py-4" style={{ background: "linear-gradient(135deg, #1B4332, #2D6A4F)" }}>
             <p className="text-white font-semibold text-base">{name}</p>
             <p className="text-green-200 text-xs mt-0.5">{items.map(i => `${i.item_name} ×${i.quantity}`).join(", ")}</p>
           </div>

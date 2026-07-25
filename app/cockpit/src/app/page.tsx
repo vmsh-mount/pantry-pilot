@@ -29,10 +29,10 @@ export default function Landing() {
   }
 
   return (
-    <main className="min-h-screen bg-[#2D6A4F] flex flex-col items-center justify-center p-6">
+    <main className="min-h-screen flex flex-col items-center justify-center p-6" style={{ background: "linear-gradient(135deg, #1B4332, #2D6A4F)" }}>
       <div className="w-full max-w-[390px] bg-white rounded-3xl shadow-2xl overflow-hidden">
         {/* Hero */}
-        <div className="bg-[#2D6A4F] px-8 py-10 text-center">
+        <div className="px-8 py-10 text-center" style={{ background: "linear-gradient(135deg, #1B4332, #2D6A4F)" }}>
           <div className="inline-flex items-center gap-2 mb-6">
             <span className="text-4xl">🥦</span>
             <span className="text-white text-2xl font-bold">PantryPilot</span>
