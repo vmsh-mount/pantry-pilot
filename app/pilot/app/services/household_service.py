@@ -89,6 +89,7 @@ class HouseholdService:
             } if prefs else {},
             "dry_run":          _get_settings().pantrypilot_dry_run,
             "whatsapp_enabled": _get_settings().whatsapp_enabled,
+            "nutrition_gaps_enabled": bool(household.nutrition_gaps_enabled),
         }
 
     async def update_settings(
@@ -104,6 +105,7 @@ class HouseholdService:
         household_fields   = {
             "household_type", "member_count", "diet_type",
             "allergies", "weekly_budget_min", "weekly_budget_max",
+            "nutrition_gaps_enabled",  # Gap-to-Cart dark-launch flag (Phase 0/B4)
         }
         preference_fields  = {
             "preferred_order_day", "preferred_delivery_slot",

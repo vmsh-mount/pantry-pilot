@@ -43,9 +43,10 @@ def _current_week_bounds() -> tuple[datetime, datetime]:
 @router.get("", response_model=APIResponse)
 async def get_dashboard(request: Request, db: AsyncSession = Depends(get_db)):
     from app.models.db import (
-        LoopRun, HouseholdPreferences, Household,
+        LoopRun, HouseholdPreferences, Household, HouseholdMember,
         Routine, Order, OrderItem, OrderNutrition, HouseholdNutritionGoals,
     )
+    from app.utils.nutrition_targets import personalised_weekly_targets
 
     household_id = request.session.get("household_id")
     if not household_id:
@@ -132,16 +133,10 @@ async def get_dashboard(request: Request, db: AsyncSession = Depends(get_db)):
         select(HouseholdNutritionGoals).where(HouseholdNutritionGoals.household_id == household_id)
     )).scalar_one_or_none()
 
-    member_count = hh.member_count or 1
-    # ICMR RDA per-person daily values, scaled to weekly
-    _per_person = {1: (2000, 50, 25, 2300), 2: (2000, 50, 25, 2300), 3: (1700, 42, 21, 1800)}
-    _d = _per_person.get(member_count, (2000, 50, 25, 2300))
-    icmr = {
-        "calories":  _d[0] * member_count * 7,
-        "protein_g": _d[1] * member_count * 7,
-        "fiber_g":   _d[2] * member_count * 7,
-        "sodium_mg": _d[3] * member_count * 7,
-    }
+    members = (await db.execute(
+        select(HouseholdMember).where(HouseholdMember.household_id == household_id)
+    )).scalars().all()
+    icmr = personalised_weekly_targets(members, hh.member_count or 1)
 
     calorie_target  = (goals.daily_calories  * 7 if goals and goals.daily_calories  else icmr["calories"])
     protein_target  = (goals.daily_protein_g * 7 if goals and goals.daily_protein_g else icmr["protein_g"])

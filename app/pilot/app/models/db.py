@@ -33,6 +33,9 @@ class Household(Base):
     weekly_budget_min:   Mapped[int | None] = mapped_column(Integer)
     weekly_budget_max:   Mapped[int | None] = mapped_column(Integer)
 
+    # Gap-to-Cart dark-launch flag (Phase 0). NULL/false = off.
+    nutrition_gaps_enabled: Mapped[bool | None] = mapped_column(Boolean, nullable=True)
+
     onboarding_complete: Mapped[bool] = mapped_column(Boolean, default=False)
     is_active:           Mapped[bool] = mapped_column(Boolean, default=True)
     is_paused:           Mapped[bool] = mapped_column(Boolean, default=False)
@@ -569,6 +572,12 @@ class NutritionCache(Base):
     usda_fdc_id:           Mapped[int | None] = mapped_column(Integer)
     raw_data:              Mapped[dict | None] = mapped_column(JSONB)
 
+    # Gap-to-Cart (Phase B1): canonical food + what it's a meaningful source of.
+    # food_concept: brand-stripped food, e.g. "Nandini Toned Milk" -> "milk"
+    # notable_nutrients: e.g. ["protein", "calcium"] — grouping keys from NUTRIENT_KEYS
+    food_concept:          Mapped[str | None] = mapped_column(String(60))
+    notable_nutrients:     Mapped[list] = mapped_column(JSONB, default=list)
+
     __table_args__ = (
         Index("idx_nutrition_cache_sku_id", "sku_id"),
     )
@@ -628,3 +637,37 @@ class HouseholdNutritionGoals(Base):
     daily_sodium_mg:  Mapped[int | None] = mapped_column(Integer)
 
     updated_at:       Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now(), onupdate=func.now())
+
+
+# ─────────────────────────────────────────────
+# Nutrition: Gap-to-Cart — learned nutrient -> food map
+# ─────────────────────────────────────────────
+class NutrientFoodCandidate(Base):
+    """
+    Materialized output of Phase B2's nightly aggregation job.
+    `nutrient` must be one of the canonical values in NUTRIENT_KEYS
+    (app/services/nutrition_resolution.py) — not DB-enforced, guarded by a test.
+    No price column: nutrient_per_rupee is computed at request time (Phase B3)
+    from a live Swiggy search price, never stored here.
+    """
+    __tablename__ = "nutrient_food_candidate"
+
+    id:                    Mapped[str] = mapped_column(UUID(as_uuid=False), primary_key=True, default=gen_uuid)
+    nutrient:              Mapped[str] = mapped_column(String(20), nullable=False)
+    food_concept:          Mapped[str] = mapped_column(String(60), nullable=False)
+    diet_tags:             Mapped[list] = mapped_column(ARRAY(String), default=list)
+
+    nutrient_per_100g:     Mapped[float | None] = mapped_column(Float)
+    representative_sku_id: Mapped[str | None] = mapped_column(String(50))
+
+    order_frequency:       Mapped[int] = mapped_column(Integer, default=0)
+    repurchase_rate:       Mapped[float | None] = mapped_column(Float)
+
+    confidence:            Mapped[str | None] = mapped_column(String(10))
+    sample_size:           Mapped[int] = mapped_column(Integer, default=0)
+    last_refreshed:        Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+
+    __table_args__ = (
+        Index("idx_nfc_nutrient", "nutrient"),
+        Index("idx_nfc_diet_tags", "diet_tags", postgresql_using="gin"),
+    )

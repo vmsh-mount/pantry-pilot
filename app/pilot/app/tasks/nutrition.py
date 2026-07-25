@@ -309,3 +309,228 @@ def trigger_all_compliance():
         compute_weekly_compliance.delay(str(hh_id))
 
     logger.info("compliance_fanout_dispatched", count=len(household_ids))
+
+
+# ══════════════════════════════════════════════════════════════════════════════
+# Gap-to-Cart Phase B2 — learned nutrient -> food candidate map
+# ══════════════════════════════════════════════════════════════════════════════
+
+# Confidence rank for "worst-case confidence among contributing rows" — lower wins.
+_CONF_RANK = {"unresolved": 0, "estimate": 1, "medium": 2, "high": 3, "verified": 4}
+
+# Concepts that are dairy (vegetarian but not vegan). Egg is already excluded
+# from vegetarian entirely via _NON_VEG_KEYWORDS (this codebase's convention,
+# see app.agent.planning_graph), so it never reaches this list.
+_DAIRY_CONCEPTS = frozenset({
+    "milk", "curd", "paneer", "cheese", "ghee", "butter", "yogurt", "cream", "khoya",
+})
+
+_ORDER_ITEMS_LOOKBACK_DAYS = 90
+
+
+def _diet_tags_for_concept(concept: str) -> list[str]:
+    """
+    vegetarian: everything except a non-veg concept (reuses the same
+    exclusion list planning_graph.py already uses for basket filtering, so
+    this feature's notion of "vegetarian" can't drift from the app's).
+    jain: vegetarian minus root vegetables (_JAIN_BLOCK).
+    vegan: vegetarian minus dairy (_DAIRY_CONCEPTS) — egg is already excluded
+    upstream since it's non-veg in this codebase's convention.
+    """
+    from app.agent.planning_graph import _NON_VEG_KEYWORDS, _JAIN_BLOCK
+
+    if concept in _NON_VEG_KEYWORDS:
+        return []
+    tags = ["vegetarian"]
+    if concept not in _JAIN_BLOCK:
+        tags.append("jain")
+    if concept not in _DAIRY_CONCEPTS:
+        tags.append("vegan")
+    return tags
+
+
+async def _upsert_candidate(db, nutrient: str, food_concept: str, diet_tags: list[str],
+                             nutrient_per_100g: float, representative_sku_id: str | None,
+                             order_frequency: int, repurchase_rate: float | None,
+                             confidence: str | None, sample_size: int) -> None:
+    """
+    Application-level upsert by (nutrient, food_concept) — there's no DB
+    unique constraint on that pair (Phase 0 didn't add one), so idempotency
+    is enforced here: select existing row, update in place, or insert.
+    """
+    from sqlalchemy import select
+    from app.models.db import NutrientFoodCandidate
+
+    result = await db.execute(
+        select(NutrientFoodCandidate).where(
+            NutrientFoodCandidate.nutrient == nutrient,
+            NutrientFoodCandidate.food_concept == food_concept,
+        )
+    )
+    row = result.scalar_one_or_none()
+
+    fields = dict(
+        diet_tags=diet_tags,
+        nutrient_per_100g=nutrient_per_100g,
+        representative_sku_id=representative_sku_id,
+        order_frequency=order_frequency,
+        repurchase_rate=repurchase_rate,
+        confidence=confidence,
+        sample_size=sample_size,
+    )
+    from datetime import datetime, timezone
+    fields["last_refreshed"] = datetime.now(timezone.utc)
+
+    if row:
+        for k, v in fields.items():
+            setattr(row, k, v)
+    else:
+        row = NutrientFoodCandidate(id=str(uuid.uuid4()), nutrient=nutrient, food_concept=food_concept, **fields)
+        db.add(row)
+
+
+async def _rebuild_nutrient_food_map() -> dict:
+    """
+    Async body of rebuild_nutrient_food_map, extracted to a module-level
+    coroutine so tests can `await` it directly against a real DB session
+    (patching app.database.AsyncSessionLocal) — same pattern as
+    app.tasks.maintenance._backfill_nutrition_concepts.
+
+    Aggregation runs in Python, not SQL: nutrition_cache is a small, global,
+    per-SKU table (thousands of rows, not millions), and the density values
+    needed for a per-nutrient median span both first-class columns and a
+    JSONB sub-dict, which is materially simpler to aggregate in Python than
+    to express as a single cross-key-space SQL query — and it keeps the
+    exact same NUTRIENT_KEYS-driven density lookup (_density_value) used
+    everywhere else in this feature, rather than restating the key mapping
+    as raw SQL.
+    """
+    from collections import defaultdict
+    from datetime import datetime, timedelta, timezone
+    from statistics import median
+
+    from sqlalchemy import select
+    from app.database import AsyncSessionLocal
+    from app.models.db import NutritionCache, OrderItem, Order, NutrientFoodCandidate
+    from app.services.nutrition_resolution import _ALLOWED_NOTABLE_KEYS, _density_value, _row_to_dict
+    from app.services.nutrient_candidates import SEED_FALLBACK_MIN_ROWS, SEED_FALLBACK_MIN_SAMPLE_SIZE
+
+    async with AsyncSessionLocal() as db:
+        # 1. Enriched nutrition_cache rows, grouped by food_concept. Exclude
+        #    NULL ("not yet attempted") and "" (B1's convergence sentinel for
+        #    "attempted, unresolvable") — both are concept-less.
+        result = await db.execute(
+            select(NutritionCache).where(
+                NutritionCache.food_concept.isnot(None),
+                NutritionCache.food_concept != "",
+            )
+        )
+        cache_rows = result.scalars().all()
+
+        concept_rows: dict[str, list[NutritionCache]] = defaultdict(list)
+        sku_to_concept: dict[str, str] = {}
+        for row in cache_rows:
+            concept_rows[row.food_concept].append(row)
+            sku_to_concept[row.sku_id] = row.food_concept
+
+        # 2. order_items (last 90 days) joined to Order for placed_at, mapped
+        #    to food_concept via sku_id -> concept lookup above.
+        cutoff = datetime.now(timezone.utc) - timedelta(days=_ORDER_ITEMS_LOOKBACK_DAYS)
+        oi_result = await db.execute(
+            select(OrderItem.swiggy_sku_id, OrderItem.household_id)
+            .join(Order, Order.id == OrderItem.order_id)
+            .where(Order.placed_at >= cutoff)
+        )
+        oi_rows = oi_result.all()
+
+        concept_order_freq: dict[str, int] = defaultdict(int)
+        concept_household_counts: dict[str, dict[str, int]] = defaultdict(lambda: defaultdict(int))
+        concept_sku_freq: dict[str, dict[str, int]] = defaultdict(lambda: defaultdict(int))
+
+        for sku_id, household_id in oi_rows:
+            concept = sku_to_concept.get(sku_id)
+            if not concept:
+                continue
+            concept_order_freq[concept] += 1
+            concept_household_counts[concept][household_id] += 1
+            concept_sku_freq[concept][sku_id] += 1
+
+        # 3+4. Explode by notable_nutrients, aggregate, upsert.
+        upserted = 0
+        for concept, rows in concept_rows.items():
+            order_frequency = concept_order_freq.get(concept, 0)
+            households = concept_household_counts.get(concept, {})
+            repurchase_rate = (
+                sum(1 for c in households.values() if c >= 2) / len(households)
+                if households else None
+            )
+            sku_freq = concept_sku_freq.get(concept, {})
+            # "in-stock" isn't available here — order_items records a past
+            # purchase, not live stock status; B3 does a live search and
+            # checks stock at request time. This is just "most-ordered SKU".
+            representative_sku_id = max(sku_freq, key=sku_freq.get) if sku_freq else rows[0].sku_id
+
+            diet_tags = _diet_tags_for_concept(concept)
+
+            notable: set[str] = set()
+            for r in rows:
+                notable |= (set(r.notable_nutrients or []) & _ALLOWED_NOTABLE_KEYS)
+
+            worst_row = min(rows, key=lambda r: _CONF_RANK.get(r.confidence, 0))
+            worst_confidence = worst_row.confidence
+
+            for nutrient in notable:
+                values = [
+                    v for r in rows
+                    if (v := _density_value(_row_to_dict(r), nutrient)) is not None
+                ]
+                if not values:
+                    continue
+                await _upsert_candidate(
+                    db, nutrient, concept, diet_tags,
+                    nutrient_per_100g=median(values),
+                    representative_sku_id=representative_sku_id,
+                    order_frequency=order_frequency,
+                    repurchase_rate=repurchase_rate,
+                    confidence=worst_confidence,
+                    sample_size=len(values),
+                )
+                upserted += 1
+
+        await db.commit()
+
+        # Observability: which (nutrient, diet) pairs are still below the
+        # seed-fallback threshold after this run — B2's DoD requires this be
+        # logged, not assumed, so seed-reliance shrinkage is visible over time.
+        result = await db.execute(select(NutrientFoodCandidate))
+        all_candidates = result.scalars().all()
+        seed_fallback_pairs = []
+        for nutrient in _ALLOWED_NOTABLE_KEYS:
+            for diet in ("vegetarian", "vegan", "jain"):
+                adequate = [
+                    c for c in all_candidates
+                    if c.nutrient == nutrient
+                    and diet in (c.diet_tags or [])
+                    and (c.sample_size or 0) >= SEED_FALLBACK_MIN_SAMPLE_SIZE
+                ]
+                if len(adequate) < SEED_FALLBACK_MIN_ROWS:
+                    seed_fallback_pairs.append(f"{nutrient}:{diet}")
+
+    logger.info(
+        "nutrient_food_map_rebuilt",
+        rows_upserted=upserted,
+        rows_from_seed_fallback=len(seed_fallback_pairs),
+        seed_fallback_pairs=seed_fallback_pairs,
+    )
+    return {"rows_upserted": upserted, "rows_from_seed_fallback": len(seed_fallback_pairs)}
+
+
+@celery_app.task(queue="nutrition", name="app.tasks.nutrition.rebuild_nutrient_food_map")
+def rebuild_nutrient_food_map():
+    """Beat entry-point (nightly): see _rebuild_nutrient_food_map() for the
+    implementation. Gap-to-Cart Phase B2."""
+    try:
+        return asyncio.run(_rebuild_nutrient_food_map())
+    except Exception as e:
+        logger.error("rebuild_nutrient_food_map_failed", error=str(e))
+        raise

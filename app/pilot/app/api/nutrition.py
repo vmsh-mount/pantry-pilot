@@ -28,22 +28,23 @@ def _get_household_id(request: Request) -> str | None:
     return request.session.get("household_id")
 
 
-def _icmr_weekly_targets(member_count: int) -> dict:
-    """ICMR RDA defaults scaled to weekly totals."""
-    if member_count == 1:
-        d = {"calories": 2000, "protein_g": 50, "fiber_g": 25, "sodium_mg": 2300}
-    elif member_count == 2:
-        d = {"calories": 4000, "protein_g": 100, "fiber_g": 50, "sodium_mg": 4600}
-    elif member_count == 3:
-        d = {"calories": 5100, "protein_g": 126, "fiber_g": 63, "sodium_mg": 5400}
-    else:
-        d = {
-            "calories":  member_count * 2000,
-            "protein_g": member_count * 50,
-            "fiber_g":   member_count * 25,
-            "sodium_mg": member_count * 2300,
-        }
-    return {k: v * 7 for k, v in d.items()}
+async def _require_gap_to_cart_enabled(db: AsyncSession, household_id: str):
+    """
+    Gate for the Gap-to-Cart feature routes (/weekly, /targets, /gaps) —
+    previously the nutrition_gaps_enabled flag only gated the Home entry
+    card client-side, so any of these were reachable directly by URL with
+    the flag off. Returns the Household row on success, or an APIResponse
+    failure to return as-is.
+    """
+    from app.models.db import Household
+
+    hh_result = await db.execute(select(Household).where(Household.id == household_id))
+    household = hh_result.scalar_one_or_none()
+    if not household:
+        return None, APIResponse.fail("NOT_FOUND", "Household not found.")
+    if not household.nutrition_gaps_enabled:
+        return None, APIResponse.fail("FEATURE_DISABLED", "Nutrition Gap-to-Cart is not enabled for this household.")
+    return household, None
 
 
 @router.get("/order/{order_id}", response_model=APIResponse)
@@ -54,7 +55,7 @@ async def get_order_nutrition(
 ):
     household_id = _get_household_id(request)
     if not household_id:
-        return APIResponse.error("Not authenticated", 401)
+        return APIResponse.fail("NOT_AUTHENTICATED", "Not authenticated.")
 
     from app.models.db import Order, OrderNutrition
 
@@ -64,7 +65,7 @@ async def get_order_nutrition(
     )
     order = order_result.scalar_one_or_none()
     if not order:
-        return APIResponse.error("Order not found", 404)
+        return APIResponse.fail("NOT_FOUND", "Order not found.")
 
     on_result = await db.execute(
         select(OrderNutrition).where(OrderNutrition.order_id == order_id)
@@ -104,18 +105,28 @@ async def get_weekly_nutrition(
 ):
     household_id = _get_household_id(request)
     if not household_id:
-        return APIResponse.error("Not authenticated", 401)
+        return APIResponse.fail("NOT_AUTHENTICATED", "Not authenticated.")
 
-    from app.models.db import Order, OrderNutrition, Household
+    from app.models.db import Order, OrderNutrition, HouseholdMember
+    from app.utils.nutrition_targets import personalised_weekly_targets
 
-    hh_result = await db.execute(select(Household).where(Household.id == household_id))
-    hh = hh_result.scalar_one_or_none()
-    if not hh:
-        return APIResponse.error("Household not found", 404)
+    hh, err = await _require_gap_to_cart_enabled(db, household_id)
+    if err:
+        return err
 
-    weekly_targets = _icmr_weekly_targets(hh.member_count or 1)
+    members = (await db.execute(
+        select(HouseholdMember).where(HouseholdMember.household_id == household_id)
+    )).scalars().all()
+    weekly_targets = personalised_weekly_targets(members, hh.member_count or 1)
 
     cutoff = datetime.utcnow() - timedelta(weeks=weeks)
+    # Group/order by the output alias ("week_start"), not by repeating the
+    # date_trunc(...) expression — each call to func.date_trunc(...) compiles
+    # to its own bound parameter, so Postgres sees SELECT/GROUP BY/ORDER BY as
+    # three different expressions (even though the literal args are equal)
+    # and rejects the query with "column must appear in GROUP BY". Referencing
+    # the alias sidesteps the duplicate-parameter mismatch entirely.
+    from sqlalchemy import text
     result = await db.execute(
         select(
             func.date_trunc("week", Order.placed_at).label("week_start"),
@@ -130,8 +141,8 @@ async def get_weekly_nutrition(
         .join(Order, Order.id == OrderNutrition.order_id)
         .where(OrderNutrition.household_id == household_id)
         .where(Order.placed_at >= cutoff)
-        .group_by(func.date_trunc("week", Order.placed_at))
-        .order_by(func.date_trunc("week", Order.placed_at).desc())
+        .group_by(text("week_start"))
+        .order_by(text("week_start DESC"))
     )
     rows = result.all()
 
@@ -160,7 +171,7 @@ async def get_compliance(
 ):
     household_id = _get_household_id(request)
     if not household_id:
-        return APIResponse.error("Not authenticated", 401)
+        return APIResponse.fail("NOT_AUTHENTICATED", "Not authenticated.")
 
     import json
     from app.redis import get_redis
@@ -177,7 +188,7 @@ async def update_goals(
 ):
     household_id = _get_household_id(request)
     if not household_id:
-        return APIResponse.error("Not authenticated", 401)
+        return APIResponse.fail("NOT_AUTHENTICATED", "Not authenticated.")
 
     body = await request.json()
     from app.models.db import HouseholdNutritionGoals
@@ -203,4 +214,119 @@ async def update_goals(
         "daily_protein_g": goals.daily_protein_g,
         "daily_fiber_g":   goals.daily_fiber_g,
         "daily_sodium_mg": goals.daily_sodium_mg,
+    })
+
+
+@router.get("/targets", response_model=APIResponse)
+async def get_nutrition_targets(
+    request: Request,
+    db: AsyncSession = Depends(get_db),
+):
+    """
+    Gap-to-Cart Phase A (targets-UX layer): per-member breakdown on top of
+    personalised_weekly_targets. Computes nothing new — per_member_targets()
+    and personalised_weekly_targets() are the same functions /weekly and
+    /dashboard already call; household.weekly here is that exact call,
+    never a re-derivation.
+
+    Note: HouseholdMember has no `name` column (names aren't part of this
+    data model — see onboarding). Per-member rows are identified by `role`
+    instead of the illustrative "name" field in the PRD's example response.
+    """
+    household_id = _get_household_id(request)
+    if not household_id:
+        return APIResponse.fail("NOT_AUTHENTICATED", "Not authenticated.")
+
+    from app.models.db import HouseholdMember
+    from app.utils.nutrition_targets import per_member_targets, personalised_weekly_targets
+
+    hh, err = await _require_gap_to_cart_enabled(db, household_id)
+    if err:
+        return err
+
+    members_result = await db.execute(
+        select(HouseholdMember).where(HouseholdMember.household_id == household_id)
+    )
+    members = members_result.scalars().all()
+
+    per_member = []
+    any_fallback = False
+    for m in members:
+        # Mirrors nutrition_targets.py's actual tiering, not a blanket
+        # "all three fields present" check: _member_calories deliberately
+        # never looks at weight/height for under-18 members (age-band
+        # lookup only, by design — MSJ doesn't model growth needs). Two
+        # children of the same age get the identical served calorie value
+        # regardless of whether weight/height happen to be filled in, so
+        # flagging one of them "estimated" and not the other would be a
+        # transparency label that doesn't track what was actually used.
+        if m.age_years is None:
+            fallback_used = True  # tier 3: no data at all, role default
+        elif m.age_years < 18:
+            fallback_used = False  # age-band lookup is the designed path, not a fallback
+        else:
+            fallback_used = not (m.weight_kg is not None and m.height_cm is not None)
+        any_fallback = any_fallback or fallback_used
+        per_member.append({
+            "member_id": m.id,
+            "role": m.role,
+            "age_years": m.age_years,
+            "daily": per_member_targets(m),
+            "fallback_used": fallback_used,
+            "health_flags": m.health_flags or [],
+        })
+
+    member_count = hh.member_count or 1
+    if len(members) < member_count:
+        any_fallback = True  # unmapped slots score as adult defaults too
+
+    # Same function /weekly and /dashboard already call — called once, not
+    # recomputed. This is the reconciliation contract the whole endpoint rests on.
+    weekly = personalised_weekly_targets(members, member_count)
+    daily = {
+        "calories":  round(weekly["calories"] / 7),
+        "protein_g": round(weekly["protein_g"] / 7, 1),
+        "fiber_g":   round(weekly["fiber_g"] / 7, 1),
+        "sodium_mg": round(weekly["sodium_mg"] / 7),
+    }
+
+    return APIResponse.ok({
+        "source": "role_fallback" if any_fallback else "personalized",
+        "per_member": per_member,
+        "household": {"daily": daily, "weekly": weekly},
+    })
+
+
+@router.get("/gaps", response_model=APIResponse)
+async def get_nutrition_gaps(
+    request: Request,
+    db: AsyncSession = Depends(get_db),
+):
+    """
+    Gap-to-Cart Phase B3: this week's shortfall vs personalized targets,
+    each backed by ranked, diet-safe, in-stock, live-priced recommendations.
+    """
+    household_id = _get_household_id(request)
+    if not household_id:
+        return APIResponse.fail("NOT_AUTHENTICATED", "Not authenticated.")
+
+    from app.services.nutrition_gaps import compute_gaps, get_recommendations_for_nutrient
+
+    household, err = await _require_gap_to_cart_enabled(db, household_id)
+    if err:
+        return err
+
+    gaps = await compute_gaps(db, household)
+
+    for gap in gaps:
+        if gap["status"] == "short":
+            try:
+                gap["recommendations"] = await get_recommendations_for_nutrient(db, gap["nutrient"], household)
+            except Exception as e:
+                logger.warning("gap_recommendations_failed", nutrient=gap["nutrient"], error=str(e))
+                gap["recommendations"] = []
+
+    return APIResponse.ok({
+        "gaps": gaps,
+        "computed_at": datetime.utcnow().isoformat() + "Z",
     })

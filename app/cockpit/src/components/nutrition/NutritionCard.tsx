@@ -13,7 +13,7 @@ const BADGE_CONFIG: Record<NutritionConfidence, { label: string; className: stri
   unresolved: { label: "—",         className: "bg-gray-50 text-gray-400 dark:bg-gray-900 dark:text-gray-500",     prefix: "" },
 }
 
-function ConfidenceBadge({ confidence }: { confidence: NutritionConfidence }) {
+export function ConfidenceBadge({ confidence }: { confidence: NutritionConfidence }) {
   const cfg = BADGE_CONFIG[confidence] ?? BADGE_CONFIG.unresolved
   return (
     <span className={`inline-flex items-center text-[10px] px-1.5 py-0.5 rounded shrink-0 ${cfg.className}`}>
@@ -24,7 +24,7 @@ function ConfidenceBadge({ confidence }: { confidence: NutritionConfidence }) {
 
 // ── Macro bar ─────────────────────────────────────────────────────────────────
 
-function MacroBar({
+export function MacroBar({
   label,
   value,
   target,
