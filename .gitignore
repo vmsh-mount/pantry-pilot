@@ -19,6 +19,7 @@ htmlcov/
 .coverage
 
 # Node
+node_modules/
 app/cockpit/node_modules/
 app/cockpit/.next/
 app/cockpit/out/
