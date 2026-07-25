@@ -672,7 +672,7 @@ export default function FlowPage() {
             <>
               <Card>
                 {/* Green header */}
-                <div className="bg-[#2D6A4F] px-6 py-5 space-y-3">
+                <div className="px-6 py-5 space-y-3" style={{ background: "linear-gradient(135deg, #1B4332, #2D6A4F)" }}>
                   <div className="flex items-start justify-between">
                     <div>
                       <h1 className="text-xl font-bold text-white">Your basket is ready</h1>

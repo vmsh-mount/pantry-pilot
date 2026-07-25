@@ -621,7 +621,7 @@ function Step7BasketPreview({
   return (
     <div className="pb-6 space-y-4">
       {/* Green header */}
-      <div className="bg-[#2D6A4F] px-6 py-5 space-y-3">
+      <div className="px-6 py-5 space-y-3" style={{ background: "linear-gradient(135deg, #1B4332, #2D6A4F)" }}>
         <div className="flex items-center justify-between">
           <h3 className="text-white font-bold text-base">Your basket this week 🛒</h3>
           <span className="bg-white/20 text-white text-xs font-semibold px-2.5 py-1 rounded-full">

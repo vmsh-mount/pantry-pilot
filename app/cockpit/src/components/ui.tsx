@@ -26,6 +26,8 @@ export const T = {
   ink:       "#1C1C1E",
   ink2:      "#5A5A5F",
   ink3:      "#8E8E93",
+  /** Standard hero/full-green background — same gradient as onboarding's inference step. */
+  gradient:  "linear-gradient(135deg, #1B4332, #2D6A4F)",
 } as const
 
 // ── Shell ─────────────────────────────────────────────────────────────────────
@@ -33,7 +35,7 @@ export const T = {
 /** Full-screen green background — for onboarding / auth flows. */
 export function Shell({ children }: { children: React.ReactNode }) {
   return (
-    <main className="h-dvh bg-[#2D6A4F] flex flex-col items-center overflow-hidden px-4 pt-8 pb-6">
+    <main className="h-dvh flex flex-col items-center overflow-hidden px-4 pt-8 pb-6" style={{ background: T.gradient }}>
       <div className="w-full max-w-[390px] flex flex-col h-full">
         {children}
       </div>
@@ -100,15 +102,19 @@ export function PageShell({
   hero,
   children,
   showNav = true,
+  heroBg = "gradient",
 }: {
   hero: React.ReactNode
   children: React.ReactNode
   showNav?: boolean
+  /** Hero background. "gradient" (default) matches onboarding's inference step; "flat" is the plain green fallback. */
+  heroBg?: "flat" | "gradient"
 }) {
+  const hero_bg = heroBg === "gradient" ? T.gradient : T.green
   return (
     <main className="min-h-screen flex flex-col items-center" style={{ background: T.bg }}>
       {/* Green hero */}
-      <div className="w-full" style={{ background: T.green }}>
+      <div className="w-full" style={{ background: hero_bg }}>
         <div className="w-full max-w-[390px] mx-auto px-4 pt-6 pb-6">{hero}</div>
       </div>
       {/* Gray body */}
