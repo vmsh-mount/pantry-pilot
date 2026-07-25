@@ -6,8 +6,27 @@
 "use client"
 
 import React, { useRef } from "react"
-import { usePathname } from "next/navigation"
+import { usePathname, useRouter } from "next/navigation"
 import Link from "next/link"
+import {
+  IconHome, IconPantry, IconOrders, IconRoutines, IconSettings,
+  IconChevronRight, IconBack,
+} from "./icons"
+
+// ── Design tokens ─────────────────────────────────────────────────────────────
+
+export const T = {
+  green:     "#2D6A4F",
+  greenDark: "#1B4332",
+  pale:      "#D8F3DC",
+  orange:    "#F4845F",
+  bg:        "#F4F4F4",
+  card:      "#FFFFFF",
+  hairline:  "rgba(0,0,0,0.07)",
+  ink:       "#1C1C1E",
+  ink2:      "#5A5A5F",
+  ink3:      "#8E8E93",
+} as const
 
 // ── Shell ─────────────────────────────────────────────────────────────────────
 
@@ -25,11 +44,11 @@ export function Shell({ children }: { children: React.ReactNode }) {
 // ── BottomNav ─────────────────────────────────────────────────────────────────
 
 const NAV_TABS = [
-  { href: "/dashboard", label: "Home",     icon: "🏠" },
-  { href: "/pantry",    label: "Pantry",   icon: "🥫" },
-  { href: "/orders",    label: "Orders",   icon: "📦" },
-  { href: "/routines",  label: "Routines", icon: "🔄" },
-  { href: "/settings",  label: "Settings", icon: "⚙️" },
+  { href: "/dashboard", label: "Home",     Icon: IconHome },
+  { href: "/pantry",    label: "Pantry",   Icon: IconPantry },
+  { href: "/orders",    label: "Orders",   Icon: IconOrders },
+  { href: "/routines",  label: "Routines", Icon: IconRoutines },
+  { href: "/settings",  label: "Settings", Icon: IconSettings },
 ]
 
 export function BottomNav() {
@@ -37,19 +56,29 @@ export function BottomNav() {
   return (
     <nav className="fixed bottom-0 left-0 right-0 z-50 flex justify-center pointer-events-none">
       <div className="w-full max-w-[390px] pointer-events-auto">
-        <div className="mx-3 mb-3 bg-white rounded-2xl shadow-lg border border-gray-100 flex">
-          {NAV_TABS.map((tab) => {
-            const active = pathname === tab.href
+        <div
+          className="mx-3 mb-3 bg-white rounded-2xl shadow-lg border border-gray-100 flex"
+          style={{ paddingBottom: "env(safe-area-inset-bottom)" }}
+        >
+          {NAV_TABS.map(({ href, label, Icon }) => {
+            const active = pathname === href || pathname.startsWith(href + "/")
             return (
               <Link
-                key={tab.href}
-                href={tab.href}
-                className={`flex-1 flex flex-col items-center py-3 gap-0.5 rounded-2xl transition-colors
-                  ${active ? "text-[#2D6A4F]" : "text-gray-400 hover:text-gray-600"}`}
+                key={href}
+                href={href}
+                className="flex-1 flex flex-col items-center py-2.5 gap-1"
               >
-                <span className="text-xl leading-none">{tab.icon}</span>
-                <span className={`text-[10px] font-semibold ${active ? "text-[#2D6A4F]" : "text-gray-400"}`}>
-                  {tab.label}
+                <span
+                  className="flex items-center justify-center rounded-[10px] px-3 py-[3px] transition-colors"
+                  style={{ background: active ? T.pale : "transparent" }}
+                >
+                  <Icon size={20} color={active ? T.green : T.ink3} />
+                </span>
+                <span
+                  className="text-[9.5px] font-semibold"
+                  style={{ color: active ? T.green : T.ink3 }}
+                >
+                  {label}
                 </span>
               </Link>
             )
@@ -60,12 +89,148 @@ export function BottomNav() {
   )
 }
 
-// ── AppShell ──────────────────────────────────────────────────────────────────
+// ── PageShell / PageHero ──────────────────────────────────────────────────────
 
 /**
- * Shell for authenticated main app screens (dashboard, orders, settings).
- * Includes the persistent BottomNav — add extra bottom padding so content
- * doesn't hide under the nav bar.
+ * Canonical authenticated layout: green hero (only as tall as its content) +
+ * light-gray scrollable body + persistent BottomNav. Pass hero content via
+ * `hero`; body content as children.
+ */
+export function PageShell({
+  hero,
+  children,
+  showNav = true,
+}: {
+  hero: React.ReactNode
+  children: React.ReactNode
+  showNav?: boolean
+}) {
+  return (
+    <main className="min-h-screen flex flex-col items-center" style={{ background: T.bg }}>
+      {/* Green hero */}
+      <div className="w-full" style={{ background: T.green }}>
+        <div className="w-full max-w-[390px] mx-auto px-4 pt-6 pb-6">{hero}</div>
+      </div>
+      {/* Gray body */}
+      <div className="w-full flex-1" style={{ background: T.bg }}>
+        <div className="w-full max-w-[390px] mx-auto px-4 pt-4 pb-28">{children}</div>
+      </div>
+      {showNav && <BottomNav />}
+    </main>
+  )
+}
+
+/**
+ * Standard hero content. Two shapes:
+ *  - Tab pages: brand bar (🥦 PantryPilot + settings gear) + title + subtitle.
+ *    Used by Orders, Settings, Routines.
+ *  - Sub pages: a back button + title (+ subtitle), no brand bar. Pass `back`
+ *    (a handler, or `true` to use router.back()). Used by Quick, Flow, Nutrition.
+ *
+ * Data-rich screens (Dashboard, Pantry) supply their own hero via PageShell's
+ * `hero` slot and use <HeroBrandBar/> directly.
+ */
+export function PageHero({
+  title,
+  subtitle,
+  showSettingsGear = true,
+  back,
+}: {
+  title: string
+  subtitle?: string
+  showSettingsGear?: boolean
+  back?: boolean | (() => void)
+}) {
+  if (back) {
+    return (
+      <>
+        <div className="flex items-center gap-3 mb-0.5">
+          <BackButton
+            variant="on-green"
+            onClick={typeof back === "function" ? back : undefined}
+          />
+          <h2 className="text-[19px] font-bold text-white tracking-tight">{title}</h2>
+        </div>
+        {subtitle && (
+          <p className="text-[12px] mt-1 ml-[42px]" style={{ color: "rgba(255,255,255,0.6)" }}>
+            {subtitle}
+          </p>
+        )}
+      </>
+    )
+  }
+  return (
+    <>
+      <HeroBrandBar showSettingsGear={showSettingsGear} />
+      <h2 className="text-[19px] font-bold text-white tracking-tight">{title}</h2>
+      {subtitle && (
+        <p className="text-[12px] mt-0.5" style={{ color: "rgba(255,255,255,0.6)" }}>
+          {subtitle}
+        </p>
+      )}
+    </>
+  )
+}
+
+/** The 🥦 PantryPilot brand row with an optional settings gear (top-right). */
+export function HeroBrandBar({
+  showSettingsGear = true,
+}: {
+  showSettingsGear?: boolean
+}) {
+  const router = useRouter()
+  return (
+    <div className="flex items-center justify-between mb-3.5">
+      <div className="flex items-center gap-2">
+        <span className="text-xl leading-none">🥦</span>
+        <span className="text-[15px] font-bold text-white">PantryPilot</span>
+      </div>
+      {showSettingsGear && (
+        <button onClick={() => router.push("/settings")} aria-label="Settings" style={{ opacity: 0.5 }}>
+          <IconSettings size={18} color="white" />
+        </button>
+      )}
+    </div>
+  )
+}
+
+// ── BackButton ────────────────────────────────────────────────────────────────
+
+/**
+ * Single icon-only back control. The page title carries the label — no "Back"
+ * word. `variant="on-green"` for placement inside the hero; default for light.
+ */
+export function BackButton({
+  onClick,
+  variant = "light",
+  className = "",
+}: {
+  onClick?: () => void
+  variant?: "light" | "on-green"
+  className?: string
+}) {
+  const router = useRouter()
+  const onGreen = variant === "on-green"
+  return (
+    <button
+      type="button"
+      aria-label="Back"
+      onClick={onClick ?? (() => router.back())}
+      className={`w-[30px] h-[30px] rounded-[10px] flex items-center justify-center shrink-0 ${className}`}
+      style={{ background: onGreen ? "rgba(255,255,255,0.16)" : "rgba(0,0,0,0.05)" }}
+    >
+      <IconBack size={18} color={onGreen ? "white" : T.ink} />
+    </button>
+  )
+}
+
+// ── AppShell (deprecated) ─────────────────────────────────────────────────────
+
+/**
+ * @deprecated Migrate to <PageShell/>. Kept only for out-of-scope secondary
+ * screens (flow, quick, runs, routine detail/new/edit, nutrition, reauth)
+ * until they are moved onto PageShell in a follow-up task. Do not use on new
+ * or migrated pages — it renders a full-viewport green background.
  */
 export function AppShell({ children }: { children: React.ReactNode }) {
   return (
@@ -159,7 +324,7 @@ export function Button({
   const base = "w-full py-3.5 rounded-2xl font-semibold text-sm transition-all flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
   const variants = {
     primary:   "bg-[#2D6A4F] hover:bg-[#1B4332] active:bg-[#1B4332] text-white",
-    secondary: "bg-[#F7F8F5] hover:bg-[#D8F3DC] active:bg-[#D8F3DC] text-[#2D6A4F] border border-[#D8F3DC]",
+    secondary: "bg-white hover:bg-[#D8F3DC] active:bg-[#D8F3DC] text-[#2D6A4F] border-[1.5px] border-[#2D6A4F]",
     ghost:     "text-[#2D6A4F] hover:bg-[#D8F3DC]/40",
     danger:    "bg-red-50 hover:bg-red-100 text-red-600 border border-red-200",
   }

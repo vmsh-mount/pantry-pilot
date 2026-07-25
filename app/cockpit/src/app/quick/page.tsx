@@ -10,7 +10,8 @@ import {
   type QuickRecentOrder,
 } from "@/lib/api"
 import {
-  AppShell,
+  PageShell,
+  HeroBrandBar,
   Card,
   Button,
   Alert,
@@ -203,12 +204,7 @@ export default function QuickOrderPage() {
   // ── Confirmed ────────────────────────────────────────────────────────────────
   if (view === "confirmed" && order) {
     return (
-      <AppShell>
-        <div className="flex items-center gap-2 mb-5">
-          <button onClick={() => router.push("/dashboard")} className="text-[#D8F3DC] text-lg">←</button>
-          <h1 className="text-white font-bold text-lg">Order placed</h1>
-        </div>
-
+      <PageShell hero={<><HeroBrandBar /><h2 className="text-[19px] font-bold text-white tracking-tight">Order placed</h2></>}>
         <Card>
           {/* success header */}
           <div className="bg-[#1B4332] px-5 py-6 text-center">
@@ -250,7 +246,7 @@ export default function QuickOrderPage() {
         <div className="mt-4">
           <NutritionCard orderId={order.order_id} />
         </div>
-      </AppShell>
+      </PageShell>
     )
   }
 
@@ -258,13 +254,15 @@ export default function QuickOrderPage() {
   const hasItems = basket.length > 0
   const hasOos   = basket.some(i => i.in_stock === false)
 
-  return (
-    <AppShell>
-      <div className="flex items-center gap-2 mb-5">
-        <button onClick={() => router.push("/dashboard")} className="text-[#D8F3DC] text-lg">←</button>
-        <h1 className="text-white font-bold text-lg">Quick Order</h1>
-      </div>
+  const hero = (
+    <>
+      <HeroBrandBar />
+      <h2 className="text-[19px] font-bold text-white tracking-tight">Quick Order</h2>
+    </>
+  )
 
+  return (
+    <PageShell hero={hero}>
       {error && <div className="mb-3"><Alert type="error" message={error} /></div>}
 
       {loadingBasket ? (
@@ -319,7 +317,7 @@ export default function QuickOrderPage() {
                 setBasket([]); setTotal(0)
                 await api.quick.clearBasket()
               }}
-              className="w-full text-sm font-semibold text-[#D8F3DC]/60 py-2"
+              className="w-full text-sm font-semibold text-[#8E8E93] py-2"
             >
               Clear basket
             </button>
@@ -344,7 +342,7 @@ export default function QuickOrderPage() {
           {/* Recent quick orders */}
           {recentOrders.length > 0 && (
             <div className="mt-4">
-              <p className="text-xs font-bold text-white/30 uppercase tracking-widest mb-2 px-1">Recent orders</p>
+              <p className="text-xs font-bold text-[#8E8E93] uppercase tracking-widest mb-2 px-1">Recent orders</p>
               <Card>
                 <div className="divide-y divide-gray-50">
                   {recentOrders.map(o => (
@@ -371,6 +369,6 @@ export default function QuickOrderPage() {
           )}
         </>
       )}
-    </AppShell>
+    </PageShell>
   )
 }

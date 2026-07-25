@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useRef, useState } from "react"
 import { useRouter } from "next/navigation"
 import { api, type RunSummary, type RunsListResponse, type SettingsResponse } from "@/lib/api"
-import { AppShell, Card, Button, Alert, Spinner, BudgetBar, SubstitutionBanner } from "@/components/ui"
+import { PageShell, HeroBrandBar, Card, Button, Alert, Spinner, BudgetBar, SubstitutionBanner } from "@/components/ui"
 import { ItemSearchDropdown } from "@/components/basket/ItemSearchDropdown"
 import { BasketItemRow } from "@/components/basket/BasketItemRow"
 
@@ -429,22 +429,29 @@ export default function FlowPage() {
     }
   }
 
-  return (
-    <AppShell>
-      {/* Header */}
-      <div className="flex items-center justify-between px-1 mb-4">
-        <div className="flex items-center gap-2 text-white">
-          <button onClick={() => router.push("/dashboard")} className="text-[#D8F3DC] text-sm mr-1">←</button>
-          <span className="font-bold text-white">Flow</span>
-          <span className="px-2 py-0.5 rounded-full bg-white/10 text-[#D8F3DC] text-[10px] font-semibold tracking-wide">on</span>
+  const hero = (
+    <>
+      <HeroBrandBar />
+      <div className="flex items-center justify-between">
+        <div className="flex items-center gap-2">
+          <h2 className="text-[19px] font-bold text-white tracking-tight">Flow</h2>
+          <span className="px-2 py-0.5 rounded-full bg-white/15 text-[#D8F3DC] text-[10px] font-semibold tracking-wide">on</span>
         </div>
-        <button onClick={() => router.push("/runs")} className="text-[#D8F3DC] text-xs">
-          History →
+        <button
+          onClick={() => router.push("/runs")}
+          className="text-[13px] font-semibold px-3 py-1.5 rounded-full"
+          style={{ background: "rgba(255,255,255,0.16)", color: "white" }}
+        >
+          History
         </button>
       </div>
+    </>
+  )
 
+  return (
+    <PageShell hero={hero}>
       {loading ? (
-        <div className="flex justify-center py-20 text-white">
+        <div className="flex justify-center py-20" style={{ color: "#8E8E93" }}>
           <Spinner size="lg" />
         </div>
       ) : (
@@ -480,26 +487,26 @@ export default function FlowPage() {
                   <div className={`rounded-2xl px-4 py-3 flex items-center justify-between gap-3 ${
                     isRunActive
                       ? "bg-amber-50 border border-amber-200"
-                      : "bg-white/10 border border-white/20"
+                      : "bg-white border border-[rgba(0,0,0,0.07)]"
                   }`}>
                     <div>
-                      <p className={`text-xs font-medium ${isRunActive ? "text-amber-700" : "text-[#D8F3DC]"}`}>
+                      <p className={`text-xs font-medium ${isRunActive ? "text-amber-700" : "text-[#8E8E93]"}`}>
                         {isRunActive ? "A run is already in progress" : "Next run"}
                       </p>
                       {!isRunActive && nextRunAt && (
-                        <p className="text-white text-sm font-semibold mt-0.5">
+                        <p className="text-[#1C1C1E] text-sm font-semibold mt-0.5">
                           {new Date(nextRunAt).toLocaleDateString("en-IN", { weekday: "long", day: "numeric", month: "short" })}
                         </p>
                       )}
                       {!isRunActive && !nextRunAt && (
-                        <p className="text-[#D8F3DC] text-sm mt-0.5">Not scheduled</p>
+                        <p className="text-[#8E8E93] text-sm mt-0.5">Not scheduled</p>
                       )}
                     </div>
                     {!isRunActive && (
                       <button
                         onClick={handleTrigger}
                         disabled={!!actionLoading}
-                        className="shrink-0 px-3 py-1.5 rounded-xl bg-white text-[#2D6A4F] text-xs font-semibold disabled:opacity-50"
+                        className="shrink-0 px-3 py-1.5 rounded-xl bg-[#2D6A4F] text-white text-xs font-semibold disabled:opacity-50"
                       >
                         {actionLoading === "trigger" ? "…" : "Plan now"}
                       </button>
@@ -516,9 +523,9 @@ export default function FlowPage() {
                     { label: "Last order", value: runsData.stats.last_order_total != null ? `₹${Math.round(runsData.stats.last_order_total).toLocaleString("en-IN")}` : "—" },
                     { label: "Weekly avg", value: runsData.stats.avg_order_total != null ? `₹${Math.round(runsData.stats.avg_order_total).toLocaleString("en-IN")}` : "—" },
                   ].map((s) => (
-                    <div key={s.label} className="bg-white/10 rounded-2xl px-3 py-2 text-center">
-                      <p className="text-white font-semibold text-sm">{s.value}</p>
-                      <p className="text-[#D8F3DC] text-[10px] mt-0.5">{s.label}</p>
+                    <div key={s.label} className="bg-white rounded-2xl px-3 py-2 text-center border border-[rgba(0,0,0,0.07)]">
+                      <p className="text-[#1C1C1E] font-semibold text-sm">{s.value}</p>
+                      <p className="text-[#8E8E93] text-[10px] mt-0.5">{s.label}</p>
                     </div>
                   ))}
                 </div>
@@ -572,10 +579,10 @@ export default function FlowPage() {
               const dayName = d.toLocaleDateString("en-IN", { weekday: "long" })
               const hour = d.toLocaleTimeString("en-IN", { hour: "numeric", hour12: true })
               return (
-                <div className="flex items-center gap-2 px-4 py-2.5 rounded-2xl bg-white/10 border border-white/20">
+                <div className="flex items-center gap-2 px-4 py-2.5 rounded-2xl bg-white border border-[rgba(0,0,0,0.07)]">
                   <span className="w-2 h-2 rounded-full bg-[#52B788] shrink-0" />
-                  <p className="text-[#D8F3DC] text-sm font-medium">
-                    Next run: <span className="text-white font-semibold">{dayName}, {hour}</span>
+                  <p className="text-[#8E8E93] text-sm font-medium">
+                    Next run: <span className="text-[#1C1C1E] font-semibold">{dayName}, {hour}</span>
                   </p>
                 </div>
               )
@@ -794,13 +801,13 @@ export default function FlowPage() {
                 </Button>
               </div>
 
-              <p className="text-xs text-center text-[#D8F3DC]">
+              <p className="text-xs text-center text-[#8E8E93]">
                 Generated {fmtDate(basket.triggered_at)}
               </p>
             </>
           )}
         </div>
       )}
-    </AppShell>
+    </PageShell>
   )
 }

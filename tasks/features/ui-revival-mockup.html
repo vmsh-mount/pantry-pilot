@@ -1,0 +1,517 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>PantryPilot — UI Revival Mockup</title>
+<style>
+  :root {
+    --green:      #2D6A4F;
+    --green-dk:   #1B4332;
+    --pale:       #D8F3DC;
+    --orange:     #F4845F;
+    --ink:        #1C1C1E;
+    --ink-2:      #5A5A5F;
+    --ink-3:      #8E8E93;
+    --bg:         #F4F4F4;
+    --card:       #FFFFFF;
+    --hair:       rgba(0,0,0,0.07);
+    --canvas:     #E8EAE6;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    background: var(--canvas);
+    color: var(--ink);
+    line-height: 1.5;
+    -webkit-font-smoothing: antialiased;
+    padding: 40px 20px 80px;
+  }
+  .wrap { max-width: 1100px; margin: 0 auto; }
+
+  /* ── Doc header ── */
+  .doc-head { max-width: 720px; margin: 0 auto 48px; }
+  .eyebrow {
+    font-size: 12px; font-weight: 700; letter-spacing: 0.14em; text-transform: uppercase;
+    color: var(--green); margin-bottom: 10px;
+  }
+  h1 { font-size: 30px; font-weight: 800; letter-spacing: -0.02em; margin-bottom: 12px; text-wrap: balance; }
+  .lede { font-size: 15px; color: var(--ink-2); }
+  .lede b { color: var(--ink); font-weight: 650; }
+
+  /* ── Section ── */
+  section { margin-bottom: 56px; }
+  .sec-title { font-size: 20px; font-weight: 750; letter-spacing: -0.01em; margin-bottom: 6px; }
+  .sec-sub { font-size: 14px; color: var(--ink-2); margin-bottom: 22px; max-width: 680px; }
+  .sec-title .num {
+    display: inline-flex; align-items: center; justify-content: center;
+    width: 26px; height: 26px; border-radius: 8px; background: var(--green); color: #fff;
+    font-size: 13px; font-weight: 700; margin-right: 10px; vertical-align: 2px;
+  }
+
+  /* ── Phone frame ── */
+  .frames { display: flex; gap: 28px; flex-wrap: wrap; }
+  .frame-col { flex: 0 0 auto; }
+  .phone {
+    width: 300px; height: 620px; border-radius: 40px; background: #000;
+    padding: 10px; box-shadow: 0 22px 50px -18px rgba(0,0,0,0.4); position: relative;
+  }
+  .screen {
+    width: 100%; height: 100%; border-radius: 30px; overflow: hidden;
+    background: var(--bg); position: relative; display: flex; flex-direction: column;
+  }
+  .frame-label {
+    margin-top: 14px; font-size: 13px; font-weight: 650; text-align: center; color: var(--ink);
+  }
+  .frame-tag {
+    display: inline-block; font-size: 11px; font-weight: 700; padding: 2px 8px; border-radius: 20px;
+    margin-left: 6px; vertical-align: 1px;
+  }
+  .tag-bad  { background: #FBE3E0; color: #B23A2E; }
+  .tag-rec  { background: var(--pale); color: var(--green-dk); }
+  .tag-alt  { background: #E4E9F2; color: #3A4A63; }
+  .frame-note { margin-top: 6px; font-size: 12px; color: var(--ink-3); text-align: center; max-width: 300px; }
+
+  /* ── Screen internals ── */
+  .status-bar {
+    height: 30px; display: flex; align-items: center; justify-content: space-between;
+    padding: 0 18px; font-size: 12px; font-weight: 600; flex-shrink: 0;
+  }
+  .body-scroll { flex: 1; overflow: hidden; display: flex; flex-direction: column; }
+
+  /* Hero (two-section) */
+  .hero { background: var(--green); padding: 14px 16px 16px; color: #fff; flex-shrink: 0; }
+  .hero-top { display: flex; align-items: center; justify-content: space-between; margin-bottom: 14px; }
+  .brand { display: flex; align-items: center; gap: 7px; font-weight: 700; font-size: 15px; }
+  .brand .logo { width: 22px; height: 22px; border-radius: 6px; background: rgba(255,255,255,0.16);
+                 display: flex; align-items: center; justify-content: center; }
+  .hero h2 { font-size: 19px; font-weight: 750; letter-spacing: -0.01em; }
+  .hero .sub { font-size: 12px; color: rgba(255,255,255,0.6); margin-top: 2px; }
+  .hero-stat { font-size: 34px; font-weight: 850; letter-spacing: -1.5px; margin-top: 4px; }
+
+  /* Full-green (old) body */
+  .oldbody { background: var(--green); flex: 1; padding: 8px 16px 16px; overflow: hidden; }
+  .old-title { color: #fff; font-weight: 700; font-size: 15px; margin-bottom: 12px; padding: 4px 2px; }
+
+  /* Gray body (new) */
+  .graybody { background: var(--bg); flex: 1; padding: 12px; overflow: hidden; display: flex; flex-direction: column; gap: 10px; }
+
+  /* Light top-bar (alt) */
+  .topbar { background: #fff; border-bottom: 1px solid var(--hair); padding: 14px 16px;
+            display: flex; align-items: center; gap: 12px; flex-shrink: 0; }
+  .topbar h2 { font-size: 17px; font-weight: 750; }
+
+  /* Cards */
+  .ocard { background: var(--card); border: 1px solid var(--hair); border-radius: 14px; padding: 12px 13px; }
+  .ocard.float { box-shadow: 0 8px 20px -12px rgba(0,0,0,0.25); border-radius: 20px; }
+  .ocard .date { font-size: 13px; font-weight: 650; }
+  .ocard .meta { font-size: 11px; color: var(--ink-3); margin-top: 2px; }
+  .pill-row { display: flex; flex-wrap: wrap; gap: 5px; margin-top: 9px; }
+  .pill { font-size: 10.5px; padding: 2px 8px; border-radius: 20px; background: var(--bg);
+          color: var(--ink-2); border: 1px solid var(--hair); }
+  .pp-badge { font-size: 10px; font-weight: 700; padding: 2px 8px; border-radius: 20px;
+              background: var(--pale); color: var(--green-dk); }
+  .row-between { display: flex; align-items: flex-start; justify-content: space-between; gap: 8px; }
+  .sec-eyebrow { font-size: 10px; font-weight: 800; letter-spacing: 0.12em; text-transform: uppercase;
+                 color: var(--ink-2); padding: 4px 2px 0; }
+
+  /* Settings rows */
+  .set-row { background: var(--card); border: 1px solid var(--hair); border-radius: 14px;
+             padding: 13px 14px; display: flex; align-items: center; gap: 12px; }
+  .set-row .ic { color: var(--green); flex-shrink: 0; }
+  .set-row .lab { font-size: 13.5px; font-weight: 600; flex: 1; }
+  .set-row .chev { color: var(--ink-3); }
+
+  /* Buttons */
+  .btn { border: none; border-radius: 13px; padding: 11px 14px; font-size: 13px; font-weight: 650;
+         width: 100%; display: flex; align-items: center; justify-content: center; gap: 7px; cursor: default; }
+  .btn-primary   { background: var(--green); color: #fff; }
+  .btn-secondary { background: #fff; color: var(--green); border: 1.5px solid var(--green); }
+  .btn-faded     { background: #F7F8F5; color: var(--green); border: 1px solid var(--pale); }
+
+  /* Back affordance */
+  .back-ic { width: 30px; height: 30px; border-radius: 10px; background: rgba(0,0,0,0.05);
+             display: flex; align-items: center; justify-content: center; color: var(--ink); flex-shrink: 0; }
+  .back-ic.on-green { background: rgba(255,255,255,0.16); color: #fff; }
+
+  /* ── Bottom nav ── */
+  .nav-outer { position: absolute; left: 0; right: 0; bottom: 0; padding: 0 10px 10px; }
+  .navbar { background: #fff; border: 1px solid var(--hair); border-radius: 20px;
+            box-shadow: 0 10px 24px -14px rgba(0,0,0,0.3); display: flex; }
+  .nav-item { flex: 1; display: flex; flex-direction: column; align-items: center; gap: 3px;
+              padding: 9px 0; color: var(--ink-3); }
+  .nav-item.active { color: var(--green); }
+  .nav-item .lbl { font-size: 9.5px; font-weight: 650; }
+  .nav-item.emoji .ic { font-size: 19px; line-height: 1; }
+
+  /* Standalone comparison strip */
+  .compare { display: flex; gap: 20px; flex-wrap: wrap; align-items: flex-start; }
+  .compare-card { background: #fff; border: 1px solid var(--hair); border-radius: 18px; padding: 20px;
+                  flex: 1 1 320px; }
+  .compare-card h4 { font-size: 13px; font-weight: 700; margin-bottom: 4px; }
+  .compare-card .cc-tag { font-size: 11px; font-weight: 700; padding: 2px 8px; border-radius: 20px; }
+  .cc-before { color: #B23A2E; }
+  .cc-after  { color: var(--green-dk); }
+  .demo-navbar { margin-top: 16px; }
+  .btn-stack { display: flex; flex-direction: column; gap: 10px; margin-top: 16px; }
+
+  .callout { background: #fff; border: 1px solid var(--hair); border-left: 3px solid var(--green);
+             border-radius: 12px; padding: 14px 16px; font-size: 13.5px; color: var(--ink-2); margin-top: 18px; }
+  .callout b { color: var(--ink); }
+  ul.tight { margin: 8px 0 0 18px; font-size: 13.5px; color: var(--ink-2); }
+  ul.tight li { margin-bottom: 5px; }
+
+  @media (max-width: 680px) {
+    .phone { width: 260px; height: 540px; }
+  }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <div class="doc-head">
+    <div class="eyebrow">Design Mockup · Scope: Shared Shell + Bottom Nav</div>
+    <h1>Reviving the PantryPilot UI</h1>
+    <p class="lede">Today two layout patterns fight each other: a polished <b>green-hero + gray-body</b> pattern (Dashboard, Pantry) and an older <b>full-green floating-card</b> shell (Orders, Settings, Routines, Flow…). This mockup shows the redesigned <b>5-tab bottom nav with standard line icons</b>, and renders the same screen in the candidate layouts so you can pick the direction.</p>
+  </div>
+
+  <!-- ══ SECTION 1: BOTTOM NAV ══ -->
+  <section>
+    <div class="sec-title"><span class="num">1</span>Bottom navigation — 5 tabs, standard icons</div>
+    <p class="sec-sub">Keeping all 5 tabs (incl. Settings) as you asked. The only change is replacing the emoji with a consistent stroke-based line-icon set tuned to the theme, plus a clearer active state.</p>
+
+    <div class="compare">
+      <div class="compare-card">
+        <span class="cc-tag" style="background:#FBE3E0" class="cc-before">BEFORE</span>
+        <h4 style="margin-top:10px;">Emoji icons — inconsistent weight, informal</h4>
+        <div class="demo-navbar">
+          <div class="navbar">
+            <div class="nav-item emoji active"><span class="ic">🏠</span><span class="lbl">Home</span></div>
+            <div class="nav-item emoji"><span class="ic">🥫</span><span class="lbl">Pantry</span></div>
+            <div class="nav-item emoji"><span class="ic">📦</span><span class="lbl">Orders</span></div>
+            <div class="nav-item emoji"><span class="ic">🔄</span><span class="lbl">Routines</span></div>
+            <div class="nav-item emoji"><span class="ic">⚙️</span><span class="lbl">Settings</span></div>
+          </div>
+        </div>
+      </div>
+
+      <div class="compare-card">
+        <span class="cc-tag tag-rec">AFTER</span>
+        <h4 style="margin-top:10px;">Line icons — uniform stroke, active pill</h4>
+        <div class="demo-navbar">
+          <div class="navbar" id="nav-after"></div>
+        </div>
+      </div>
+    </div>
+    <div class="callout"><b>Active state:</b> the current tab gets a soft pale-green pill behind the icon + green label, instead of relying on color alone — clearer at a glance and works for the color-blind.</div>
+  </section>
+
+  <!-- ══ SECTION 2: LAYOUT OPTIONS ══ -->
+  <section>
+    <div class="sec-title"><span class="num">2</span>Layout direction — same screen, three shells</div>
+    <p class="sec-sub">Order History is the worst offender today (full-green, white-on-green title, cards floating in a sea of green). Here it is in the current shell vs. the two candidate replacements. Pick the feel; the whole app standardizes on it.</p>
+
+    <div class="frames">
+      <!-- A: current -->
+      <div class="frame-col">
+        <div class="phone"><div class="screen">
+          <div class="status-bar" style="background:var(--green); color:#fff;">
+            <span>9:41</span><span>▮▮▮ ⌁ ▰</span>
+          </div>
+          <div class="oldbody">
+            <div class="old-title">Order History</div>
+            <div class="ocard float" style="margin-bottom:10px;">
+              <div class="row-between">
+                <div><div class="date">Sat, 25 Jul · 11:12</div><div class="meta">₹1,240 · 3 items</div></div>
+                <span class="pp-badge">PantryPilot</span>
+              </div>
+              <div class="pill-row"><span class="pill">Milk</span><span class="pill">Bananas</span><span class="pill">+1 more</span></div>
+            </div>
+            <div class="ocard float">
+              <div class="row-between">
+                <div><div class="date">Thu, 24 Jul · 21:09</div><div class="meta">₹860 · 4 items</div></div>
+                <span class="pp-badge">PantryPilot</span>
+              </div>
+              <div class="pill-row"><span class="pill">Atta</span><span class="pill">Curd</span><span class="pill">+2 more</span></div>
+            </div>
+          </div>
+          <div class="nav-outer"><div class="navbar" data-nav data-active="2"></div></div>
+        </div></div>
+        <div class="frame-label">A · Current <span class="frame-tag tag-bad">out of place</span></div>
+        <div class="frame-note">Full green. Title is white-on-green, cards float. No visual anchor.</div>
+      </div>
+
+      <!-- B: two-section -->
+      <div class="frame-col">
+        <div class="phone"><div class="screen">
+          <div class="status-bar" style="background:var(--green); color:#fff;"><span>9:41</span><span>▮▮▮ ⌁ ▰</span></div>
+          <div class="hero" style="padding-bottom:14px;">
+            <div class="hero-top">
+              <div class="brand"><span class="logo">🥦</span> PantryPilot</div>
+              <span data-ic="settings" data-sz="18" style="opacity:.5;"></span>
+            </div>
+            <h2>Order History</h2>
+            <div class="sub">7 orders · ₹8,420 this month</div>
+          </div>
+          <div class="graybody">
+            <div class="ocard">
+              <div class="row-between">
+                <div><div class="date">Sat, 25 Jul · 11:12</div><div class="meta">₹1,240 · 3 items</div></div>
+                <span class="pp-badge">PantryPilot</span>
+              </div>
+              <div class="pill-row"><span class="pill">Milk</span><span class="pill">Bananas</span><span class="pill">+1</span></div>
+            </div>
+            <div class="ocard">
+              <div class="row-between">
+                <div><div class="date">Thu, 24 Jul · 21:09</div><div class="meta">₹860 · 4 items</div></div>
+                <span class="pp-badge">PantryPilot</span>
+              </div>
+              <div class="pill-row"><span class="pill">Atta</span><span class="pill">Curd</span><span class="pill">+2</span></div>
+            </div>
+            <div class="ocard">
+              <div class="row-between">
+                <div><div class="date">Tue, 23 Jul · 10:34</div><div class="meta">₹530 · 3 items</div></div>
+              </div>
+              <div class="pill-row"><span class="pill">Eggs</span><span class="pill">Bread</span><span class="pill">+1</span></div>
+            </div>
+          </div>
+          <div class="nav-outer"><div class="navbar" data-nav data-active="2"></div></div>
+        </div></div>
+        <div class="frame-label">B · Two-section <span class="frame-tag tag-rec">recommended</span></div>
+        <div class="frame-note">Green hero anchors identity + context; content lives on calm gray. Matches Dashboard/Pantry.</div>
+      </div>
+
+      <!-- C: light top-bar -->
+      <div class="frame-col">
+        <div class="phone"><div class="screen">
+          <div class="status-bar" style="background:#fff; color:var(--ink);"><span>9:41</span><span>▮▮▮ ⌁ ▰</span></div>
+          <div class="topbar">
+            <div class="back-ic" data-ic="back" data-sz="18"></div>
+            <h2>Order History</h2>
+          </div>
+          <div class="graybody" style="padding-top:12px;">
+            <div class="ocard">
+              <div class="row-between">
+                <div><div class="date">Sat, 25 Jul · 11:12</div><div class="meta">₹1,240 · 3 items</div></div>
+                <span class="pp-badge">PantryPilot</span>
+              </div>
+              <div class="pill-row"><span class="pill">Milk</span><span class="pill">Bananas</span><span class="pill">+1</span></div>
+            </div>
+            <div class="ocard">
+              <div class="row-between">
+                <div><div class="date">Thu, 24 Jul · 21:09</div><div class="meta">₹860 · 4 items</div></div>
+                <span class="pp-badge">PantryPilot</span>
+              </div>
+              <div class="pill-row"><span class="pill">Atta</span><span class="pill">Curd</span><span class="pill">+2</span></div>
+            </div>
+            <div class="ocard">
+              <div class="row-between">
+                <div><div class="date">Tue, 23 Jul · 10:34</div><div class="meta">₹530 · 3 items</div></div>
+              </div>
+              <div class="pill-row"><span class="pill">Eggs</span><span class="pill">Bread</span><span class="pill">+1</span></div>
+            </div>
+          </div>
+          <div class="nav-outer"><div class="navbar" data-nav data-active="2"></div></div>
+        </div></div>
+        <div class="frame-label">C · Light top-bar <span class="frame-tag tag-alt">minimal</span></div>
+        <div class="frame-note">No green hero — compact bar + back. Most iOS-native, but drops the brand moment.</div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ══ SECTION 3: RECOMMENDED APPLIED ══ -->
+  <section>
+    <div class="sec-title"><span class="num">3</span>Recommended shell applied — Dashboard &amp; Settings</div>
+    <p class="sec-sub">How the two-section shell (option B) reads across a data screen and a list screen. Same hero grammar, same gray body, same nav — every transition feels like one app.</p>
+
+    <div class="frames">
+      <!-- Dashboard -->
+      <div class="frame-col">
+        <div class="phone"><div class="screen">
+          <div class="status-bar" style="background:var(--green); color:#fff;"><span>9:41</span><span>▮▮▮ ⌁ ▰</span></div>
+          <div class="hero">
+            <div class="hero-top">
+              <div class="brand"><span class="logo">🥦</span> PantryPilot</div>
+              <span data-ic="settings" data-sz="18" style="opacity:.5;"></span>
+            </div>
+            <div class="sec-eyebrow" style="color:rgba(255,255,255,.5); padding-left:0;">This week</div>
+            <div class="hero-stat">₹1,240</div>
+            <div class="sub">of ₹3,000 budget</div>
+            <div style="height:3px; background:rgba(255,255,255,.15); border-radius:3px; margin-top:12px;">
+              <div style="width:41%; height:100%; background:rgba(255,255,255,.72); border-radius:3px;"></div>
+            </div>
+          </div>
+          <div class="graybody">
+            <div style="display:flex; gap:8px;">
+              <div class="ocard" style="flex:1; text-align:center;"><div style="font-size:18px; font-weight:800;">7</div><div class="meta">orders</div></div>
+              <div class="ocard" style="flex:1; text-align:center;"><div style="font-size:18px; font-weight:800;">₹1.2k</div><div class="meta">avg order</div></div>
+              <div class="ocard" style="flex:1; text-align:center;"><div style="font-size:18px; font-weight:800;">3/3</div><div class="meta">resolved</div></div>
+            </div>
+            <div class="ocard"><div class="row-between" style="align-items:center;">
+              <div><div class="date">🔥 36,078 <span style="color:var(--ink-3); font-weight:400;">/ 50,050 kcal</span></div><div class="meta">Nutrition · this week</div></div>
+              <span data-ic="chevron" data-sz="18" style="color:var(--ink-3);"></span>
+            </div></div>
+            <button class="btn btn-primary">Review this week's basket</button>
+          </div>
+          <div class="nav-outer"><div class="navbar" data-nav data-active="0"></div></div>
+        </div></div>
+        <div class="frame-label">Dashboard</div>
+      </div>
+
+      <!-- Settings -->
+      <div class="frame-col">
+        <div class="phone"><div class="screen">
+          <div class="status-bar" style="background:var(--green); color:#fff;"><span>9:41</span><span>▮▮▮ ⌁ ▰</span></div>
+          <div class="hero" style="padding-bottom:16px;">
+            <div class="hero-top">
+              <div class="brand"><span class="logo">🥦</span> PantryPilot</div>
+            </div>
+            <h2>Settings</h2>
+            <div class="sub">Household · schedule · account</div>
+          </div>
+          <div class="graybody">
+            <div class="sec-eyebrow">Household</div>
+            <div class="set-row"><span class="ic" data-ic="users" data-sz="19"></span><span class="lab">Members &amp; diet</span><span class="chev" data-ic="chevron" data-sz="17"></span></div>
+            <div class="set-row"><span class="ic" data-ic="target" data-sz="19"></span><span class="lab">Nutrition targets</span><span class="chev" data-ic="chevron" data-sz="17"></span></div>
+            <div class="sec-eyebrow">Schedule</div>
+            <div class="set-row"><span class="ic" data-ic="calendar" data-sz="19"></span><span class="lab">Order day &amp; time</span><span class="chev" data-ic="chevron" data-sz="17"></span></div>
+            <div class="set-row"><span class="ic" data-ic="pause" data-sz="19"></span><span class="lab">Pause automation</span><span class="chev" data-ic="chevron" data-sz="17"></span></div>
+          </div>
+          <div class="nav-outer"><div class="navbar" data-nav data-active="4"></div></div>
+        </div></div>
+        <div class="frame-label">Settings</div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ══ SECTION 4: COMPONENT FIXES ══ -->
+  <section>
+    <div class="sec-title"><span class="num">4</span>Component fixes carried by the shell</div>
+    <p class="sec-sub">Three shared primitives cause most of the "out of place" feeling. Fixing them once propagates everywhere.</p>
+
+    <div class="compare">
+      <div class="compare-card">
+        <h4>Buttons</h4>
+        <p style="font-size:12.5px; color:var(--ink-3);">The faded <code>secondary</code> (#F7F8F5) reads as disabled. Replace with a solid-outline secondary.</p>
+        <div class="btn-stack">
+          <div><div style="font-size:11px; color:#B23A2E; font-weight:700; margin-bottom:5px;">BEFORE — washed out</div><button class="btn btn-faded">Sign in again</button></div>
+          <div><div style="font-size:11px; color:var(--green-dk); font-weight:700; margin-bottom:5px;">AFTER — clear affordance</div>
+            <button class="btn btn-primary" style="margin-bottom:8px;">Primary action</button>
+            <button class="btn btn-secondary">Secondary action</button>
+          </div>
+        </div>
+      </div>
+
+      <div class="compare-card">
+        <h4>Back affordance</h4>
+        <p style="font-size:12.5px; color:var(--ink-3);">Today: three conventions — <code>← Back</code>, bare <code>←</code>, ghost button. Standardize on one icon-only control, top-left.</p>
+        <div class="btn-stack">
+          <div><div style="font-size:11px; color:#B23A2E; font-weight:700; margin-bottom:5px;">BEFORE — icon + redundant word</div>
+            <div style="display:flex; gap:14px; align-items:center;">
+              <span style="color:var(--green); font-weight:650; font-size:14px;">← Back</span>
+              <span style="color:var(--green); font-size:18px;">←</span>
+            </div>
+          </div>
+          <div><div style="font-size:11px; color:var(--green-dk); font-weight:700; margin-bottom:5px;">AFTER — one tap target, title carries the label</div>
+            <div style="display:flex; gap:12px; align-items:center;">
+              <div class="back-ic" data-ic="back" data-sz="18"></div>
+              <span style="font-weight:700; font-size:15px;">Nutrition targets</span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="compare-card">
+        <h4>Warning states</h4>
+        <p style="font-size:12.5px; color:var(--ink-3);">The orange token (<code>#F4845F</code>) for over-budget / low-stock — checked for legibility on both green hero and gray body.</p>
+        <div class="btn-stack">
+          <div>
+            <div style="font-size:11px; color:var(--ink-2); font-weight:700; margin-bottom:6px;">Over-budget spend bar (on green hero)</div>
+            <div style="background:var(--green); border-radius:12px; padding:12px 13px;">
+              <div style="display:flex; justify-content:space-between; align-items:baseline;">
+                <span style="color:rgba(255,255,255,.55); font-size:11px; font-weight:700; letter-spacing:.1em; text-transform:uppercase;">This week</span>
+                <span style="color:var(--orange); font-size:12px; font-weight:700;">₹3,240 / ₹3,000</span>
+              </div>
+              <div style="height:4px; background:rgba(255,255,255,.15); border-radius:4px; margin-top:8px;">
+                <div style="width:100%; height:100%; background:var(--orange); border-radius:4px;"></div>
+              </div>
+            </div>
+          </div>
+          <div>
+            <div style="font-size:11px; color:var(--ink-2); font-weight:700; margin-bottom:6px;">Low-stock banner (on gray body)</div>
+            <div style="display:flex; align-items:center; gap:9px; background:#FDEEE9; border:1px solid #F6C9BA; border-radius:12px; padding:10px 12px;">
+              <span style="width:8px; height:8px; border-radius:50%; background:var(--orange); flex-shrink:0;"></span>
+              <span style="font-size:12.5px; font-weight:600; color:#9C3B25;">2 items running low</span>
+              <span data-ic="chevron" data-sz="16" style="color:#C77A63; margin-left:auto;"></span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="compare-card">
+        <h4>What ships in this scope</h4>
+        <ul class="tight">
+          <li><b>PageShell</b> — hero + gray body, one component</li>
+          <li><b>BottomNav</b> — 5 tabs, line icons, active pill</li>
+          <li><b>Button</b> — fixed secondary variant</li>
+          <li><b>BackButton</b> — single icon-only control</li>
+          <li>Migrate all 5 tab screens onto it</li>
+        </ul>
+        <div class="callout" style="margin-top:14px;">Secondary pages (routine detail, nutrition, runs, reauth) follow in a later task — this one proves the system.</div>
+      </div>
+    </div>
+  </section>
+
+</div>
+
+<script>
+  // ── Standard line-icon set (Lucide-style, stroke-based) ──
+  const ICON = {
+    home:     '<path d="M3 10.5 12 3l9 7.5"/><path d="M5 9.5V21h14V9.5"/>',
+    pantry:   '<rect x="3.5" y="3.5" width="17" height="17" rx="2.5"/><path d="M3.5 9h17"/><path d="M9 13h1.5"/>',
+    orders:   '<path d="M6 2.5h12l1.5 4.5H4.5L6 2.5Z"/><path d="M5 7v13.5h14V7"/><path d="M9.5 11.5h5"/>',
+    routines: '<path d="M4 5.5A8 8 0 0 1 19.5 7"/><path d="M20 12.5A8 8 0 0 1 4.5 17"/><path d="M19.5 3.5V7H16"/><path d="M4.5 20.5V17H8"/>',
+    settings: '<circle cx="12" cy="12" r="3"/><path d="M12 2.5v3M12 18.5v3M4.2 7l2.6 1.5M17.2 15.5l2.6 1.5M4.2 17l2.6-1.5M17.2 8.5l2.6-1.5"/>',
+    chevron:  '<path d="M9 5l7 7-7 7"/>',
+    back:     '<path d="M15 5l-7 7 7 7"/>',
+    users:    '<circle cx="9" cy="8" r="3"/><path d="M3.5 20a5.5 5.5 0 0 1 11 0"/><path d="M16 5.5a3 3 0 0 1 0 5.5"/><path d="M17 20a5.5 5.5 0 0 0-2-4"/>',
+    target:   '<circle cx="12" cy="12" r="8.5"/><circle cx="12" cy="12" r="4.5"/><circle cx="12" cy="12" r="1"/>',
+    calendar: '<rect x="3.5" y="5" width="17" height="16" rx="2.5"/><path d="M3.5 9.5h17M8 3v4M16 3v4"/>',
+    pause:    '<circle cx="12" cy="12" r="8.5"/><path d="M10 9v6M14 9v6"/>',
+  };
+  const NAV = [
+    { ic: 'home',     lbl: 'Home' },
+    { ic: 'pantry',   lbl: 'Pantry' },
+    { ic: 'orders',   lbl: 'Orders' },
+    { ic: 'routines', lbl: 'Routines' },
+    { ic: 'settings', lbl: 'Settings' },
+  ];
+  function svg(name, size) {
+    return '<svg width="'+size+'" height="'+size+'" viewBox="0 0 24 24" fill="none" stroke="currentColor" '
+      + 'stroke-width="2" stroke-linecap="round" stroke-linejoin="round">'+ (ICON[name]||'') +'</svg>';
+  }
+  function buildNav(el, active) {
+    el.innerHTML = NAV.map(function(t, i) {
+      var on = i === active;
+      var pill = on
+        ? 'background:var(--pale); border-radius:9px; padding:3px 12px;'
+        : 'padding:3px 12px;';
+      return '<div class="nav-item'+(on?' active':'')+'">'
+        + '<span style="'+pill+'">'+svg(t.ic, 19)+'</span>'
+        + '<span class="lbl">'+t.lbl+'</span></div>';
+    }).join('');
+  }
+  // after-nav in section 1
+  buildNav(document.getElementById('nav-after'), 0);
+  // all phone navs
+  document.querySelectorAll('[data-nav]').forEach(function(el) {
+    buildNav(el, parseInt(el.getAttribute('data-active'), 10));
+  });
+  // inline icons
+  document.querySelectorAll('[data-ic]').forEach(function(el) {
+    el.innerHTML = svg(el.getAttribute('data-ic'), parseInt(el.getAttribute('data-sz')||'20', 10));
+    el.style.display = 'inline-flex';
+  });
+</script>
+</body>
+</html>

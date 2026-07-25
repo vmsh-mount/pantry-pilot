@@ -3,7 +3,7 @@
 import { useState, useCallback } from "react"
 import { useRouter } from "next/navigation"
 import { api, type ProductSearchResult } from "@/lib/api"
-import { AppShell, Button, Alert } from "@/components/ui"
+import { PageShell, PageHero, Button, Alert } from "@/components/ui"
 import { ItemSearchDropdown } from "@/components/basket/ItemSearchDropdown"
 
 // ── Types ─────────────────────────────────────────────────────────────────────
@@ -400,16 +400,8 @@ export default function NewRoutinePage() {
   }
 
   return (
-    <AppShell>
-      <div className="flex items-center gap-3 px-1 mb-4">
-        <button onClick={() => step === 1 ? router.back() : setStep(step - 1)}
-          className="text-[#D8F3DC] text-sm font-semibold">
-          ← Back
-        </button>
-        <h1 className="text-white font-bold text-lg flex-1">New routine</h1>
-      </div>
-
-      <div className="bg-white rounded-3xl shadow-xl overflow-hidden flex flex-col flex-1 min-h-0">
+    <PageShell hero={<PageHero title="New routine" back={() => step === 1 ? router.back() : setStep(step - 1)} />}>
+      <div className="bg-white rounded-3xl shadow-xl overflow-hidden flex flex-col min-h-[420px]">
         <StepDots step={step} />
 
         {error && (
@@ -445,6 +437,6 @@ export default function NewRoutinePage() {
           />
         )}
       </div>
-    </AppShell>
+    </PageShell>
   )
 }

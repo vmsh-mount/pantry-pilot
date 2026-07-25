@@ -10,7 +10,7 @@
 import { useEffect, useState } from "react"
 import { useRouter } from "next/navigation"
 import { api, type NutritionTargetsResponse } from "@/lib/api"
-import { AppShell, Card, Spinner, Button } from "@/components/ui"
+import { PageShell, PageHero, Card, Spinner, Button } from "@/components/ui"
 
 const ROLE_ICON: Record<string, string> = {
   adult: "🧑", elderly: "🧓", child: "🧒", infant: "👶",
@@ -54,19 +54,15 @@ export default function HouseholdTargetsPage() {
 
   if (loading) {
     return (
-      <AppShell>
+      <PageShell hero={<PageHero title="Household targets" back />}>
         <div className="flex items-center justify-center py-20"><Spinner size="lg" /></div>
-      </AppShell>
+      </PageShell>
     )
   }
 
   if (featureDisabled) {
     return (
-      <AppShell>
-        <div className="flex items-center gap-3 px-1 mb-4">
-          <button onClick={() => router.back()} className="text-[#D8F3DC] text-sm font-semibold">← Back</button>
-          <h1 className="text-white font-bold text-lg flex-1">Household targets</h1>
-        </div>
+      <PageShell hero={<PageHero title="Household targets" back />}>
         <Card>
           <div className="p-6 text-sm text-gray-500 text-center space-y-2">
             <p className="text-2xl">🌱</p>
@@ -74,34 +70,25 @@ export default function HouseholdTargetsPage() {
             <p className="text-xs text-gray-400">Ask your household admin to turn on Nutrition Gap-to-Cart in settings.</p>
           </div>
         </Card>
-      </AppShell>
+      </PageShell>
     )
   }
 
   if (!data) {
     return (
-      <AppShell>
-        <div className="flex items-center gap-3 px-1 mb-4">
-          <button onClick={() => router.back()} className="text-[#D8F3DC] text-sm font-semibold">← Back</button>
-          <h1 className="text-white font-bold text-lg flex-1">Household targets</h1>
-        </div>
+      <PageShell hero={<PageHero title="Household targets" back />}>
         <Card>
           <div className="p-6 text-sm text-gray-500 text-center space-y-3">
             <p>Couldn&apos;t load targets.</p>
             <Button onClick={() => setReloadToken((t) => t + 1)}>Try again</Button>
           </div>
         </Card>
-      </AppShell>
+      </PageShell>
     )
   }
 
   return (
-    <AppShell>
-      <div className="flex items-center gap-3 px-1 mb-4">
-        <button onClick={() => router.back()} className="text-[#D8F3DC] text-sm font-semibold">← Back</button>
-        <h1 className="text-white font-bold text-lg flex-1">Household targets</h1>
-      </div>
-
+    <PageShell hero={<PageHero title="Household targets" back />}>
       <Card>
         <div className="px-5 pt-5 pb-1">
           <h2 className="text-base font-bold text-gray-900">
@@ -157,6 +144,6 @@ export default function HouseholdTargetsPage() {
           <span className="font-semibold text-gray-800 tabular-nums">{Math.round(data.household.daily.protein_g)}g</span>
         </div>
       </Card>
-    </AppShell>
+    </PageShell>
   )
 }

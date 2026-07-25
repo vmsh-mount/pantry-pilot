@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react"
 import { useRouter } from "next/navigation"
 import { api } from "@/lib/api"
-import { BottomNav, Spinner } from "@/components/ui"
+import { PageShell, HeroBrandBar, Spinner } from "@/components/ui"
 import { NutritionGapsCard } from "@/components/nutrition/NutritionGapsCard"
 
 // ── Types ─────────────────────────────────────────────────────────────────────
@@ -204,10 +204,11 @@ export default function DashboardPage() {
 
   if (loading || !data) {
     return (
-      <main className="min-h-screen bg-[#F4F4F4] flex items-center justify-center">
-        <Spinner size="lg" />
-        <BottomNav />
-      </main>
+      <PageShell hero={<HeroBrandBar />}>
+        <div className="flex justify-center py-24" style={{ color: "#8E8E93" }}>
+          <Spinner size="lg" />
+        </div>
+      </PageShell>
     )
   }
 
@@ -225,13 +226,8 @@ export default function DashboardPage() {
   const wa = (a: number) => `rgba(255,255,255,${a})`
   const HD = "0.5px solid rgba(255,255,255,0.12)" // hero hairline divider
 
-  return (
-    <main className="min-h-screen bg-[#F4F4F4] flex flex-col items-center">
-
-      {/* ── GREEN HERO ────────────────────────────────────────────────────────── */}
-      <div className="w-full bg-[#2D6A4F]">
-        <div className="w-full max-w-[390px] mx-auto px-4 pt-6 pb-6">
-
+  const hero = (
+    <>
           {/* Logo bar */}
           <div className="flex items-center justify-between mb-5">
             <div className="flex items-center gap-2">
@@ -339,11 +335,12 @@ export default function DashboardPage() {
             </div>
           </div>
 
-        </div>
-      </div>
+    </>
+  )
 
-      {/* ── GRAY BODY ─────────────────────────────────────────────────────────── */}
-      <div className="w-full max-w-[390px] mx-auto px-3 pt-3 pb-28 space-y-3">
+  return (
+    <PageShell hero={hero}>
+      <div className="space-y-3">
 
         {/* Action strip */}
         <div
@@ -450,8 +447,6 @@ export default function DashboardPage() {
         )}
 
       </div>
-
-      <BottomNav />
-    </main>
+    </PageShell>
   )
 }

@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react"
 import { useRouter } from "next/navigation"
 import { api } from "@/lib/api"
-import { AppShell, Card, Spinner, Alert, Button } from "@/components/ui"
+import { PageShell, PageHero, Card, Spinner, Alert, Button } from "@/components/ui"
 import { NutritionCard } from "@/components/nutrition/NutritionCard"
 
 interface Order {
@@ -45,14 +45,15 @@ export default function OrdersPage() {
     })
   }, [])
 
-  return (
-    <AppShell>
-      <div className="px-1 mb-4">
-        <h1 className="text-white font-bold text-lg">Order History</h1>
-      </div>
+  const orderTotal = orders.reduce((sum, o) => sum + (o.total || 0), 0)
+  const subtitle = orders.length > 0
+    ? `${orders.length} order${orders.length === 1 ? "" : "s"} · ₹${Math.round(orderTotal).toLocaleString("en-IN")}`
+    : undefined
 
+  return (
+    <PageShell hero={<PageHero title="Order History" subtitle={subtitle} />}>
       {loading ? (
-        <div className="flex justify-center py-20 text-white">
+        <div className="flex justify-center py-20" style={{ color: "#8E8E93" }}>
           <Spinner size="lg" />
         </div>
       ) : error ? (
@@ -75,7 +76,11 @@ export default function OrdersPage() {
       ) : (
         <div className="space-y-3">
           {orders.map((order) => (
-            <Card key={order.order_id}>
+            <div
+              key={order.order_id}
+              className="bg-white rounded-[14px] overflow-hidden"
+              style={{ border: "1px solid rgba(0,0,0,0.07)" }}
+            >
               <div className="px-4 py-4 space-y-2">
                 {/* Header row */}
                 <div className="flex items-start justify-between gap-2">
@@ -134,10 +139,10 @@ export default function OrdersPage() {
                   </>
                 )}
               </div>
-            </Card>
+            </div>
           ))}
         </div>
       )}
-    </AppShell>
+    </PageShell>
   )
 }

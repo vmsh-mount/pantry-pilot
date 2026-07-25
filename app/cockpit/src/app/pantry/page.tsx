@@ -1,20 +1,8 @@
 "use client"
 
 import { useState, useEffect } from "react"
-import Link from "next/link"
-import { BottomNav, Spinner } from "@/components/ui"
+import { PageShell, HeroBrandBar, Spinner } from "@/components/ui"
 import { api, PantryItemOut, PantryCounts, PantryStatus } from "@/lib/api"
-
-// ── Icons ─────────────────────────────────────────────────────────────────────
-
-function IconSettings() {
-  return (
-    <svg width="21" height="21" viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,0.7)" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
-      <circle cx="12" cy="12" r="3" />
-      <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z" />
-    </svg>
-  )
-}
 
 // ── Constants ─────────────────────────────────────────────────────────────────
 
@@ -343,60 +331,49 @@ export default function PantryPage() {
   const grouped = groupItems(items)
   const showHeroDivider = counts.total > 0
 
-  return (
-    <main className="min-h-screen bg-[#F4F4F4] flex flex-col items-center">
+  const hero = (
+    <>
+      <HeroBrandBar />
 
-      {/* ── HERO ── */}
-      <div className="w-full bg-[#2D6A4F]">
-        <div className="w-full max-w-[390px] mx-auto px-4 pt-6 pb-6">
+      {/* Label */}
+      <p style={{ fontSize: 11, fontWeight: 700, color: "rgba(255,255,255,.45)", textTransform: "uppercase", letterSpacing: "0.08em" }}>
+        PANTRY
+      </p>
 
-          {/* Logo bar */}
-          <div className="flex items-center justify-between mb-5">
-            <span style={{ fontSize: 17, fontWeight: 700, color: "white" }}>🥦 PantryPilot</span>
-            <Link href="/settings">
-              <IconSettings />
-            </Link>
-          </div>
+      {/* Count */}
+      <p style={{ fontSize: 34, fontWeight: 900, color: "white", letterSpacing: "-1px", marginTop: 2 }}>
+        {loading ? "—" : `${counts.total} items`}
+      </p>
 
-          {/* Label */}
-          <p style={{ fontSize: 11, fontWeight: 700, color: "rgba(255,255,255,.45)", textTransform: "uppercase", letterSpacing: "0.08em" }}>
-            PANTRY
-          </p>
-
-          {/* Count */}
-          <p style={{ fontSize: 34, fontWeight: 900, color: "white", letterSpacing: "-1px", marginTop: 2 }}>
-            {loading ? "—" : `${counts.total} items`}
-          </p>
-
-          {/* Stats footer */}
-          {showHeroDivider && (
-            <>
-              <div style={{ height: "0.5px", background: "rgba(255,255,255,0.18)", margin: "12px 0 10px" }} />
-              {(counts.low > 0 || counts.depleted > 0) ? (
-                <div style={{ display: "flex", gap: 24 }}>
-                  {counts.low > 0 && (
-                    <div>
-                      <p style={{ fontSize: 18, fontWeight: 800, color: "rgba(255,255,255,.9)" }}>{counts.low}</p>
-                      <p style={{ fontSize: 11, color: "rgba(255,255,255,.4)", marginTop: 1 }}>running low</p>
-                    </div>
-                  )}
-                  {counts.depleted > 0 && (
-                    <div>
-                      <p style={{ fontSize: 18, fontWeight: 800, color: "rgba(255,255,255,.9)" }}>{counts.depleted}</p>
-                      <p style={{ fontSize: 11, color: "rgba(255,255,255,.4)", marginTop: 1 }}>depleted</p>
-                    </div>
-                  )}
+      {/* Stats footer */}
+      {showHeroDivider && (
+        <>
+          <div style={{ height: "0.5px", background: "rgba(255,255,255,0.18)", margin: "12px 0 10px" }} />
+          {(counts.low > 0 || counts.depleted > 0) ? (
+            <div style={{ display: "flex", gap: 24 }}>
+              {counts.low > 0 && (
+                <div>
+                  <p style={{ fontSize: 18, fontWeight: 800, color: "rgba(255,255,255,.9)" }}>{counts.low}</p>
+                  <p style={{ fontSize: 11, color: "rgba(255,255,255,.4)", marginTop: 1 }}>running low</p>
                 </div>
-              ) : (
-                <p style={{ fontSize: 13, color: "rgba(255,255,255,.7)" }}>All items stocked ✓</p>
               )}
-            </>
+              {counts.depleted > 0 && (
+                <div>
+                  <p style={{ fontSize: 18, fontWeight: 800, color: "rgba(255,255,255,.9)" }}>{counts.depleted}</p>
+                  <p style={{ fontSize: 11, color: "rgba(255,255,255,.4)", marginTop: 1 }}>depleted</p>
+                </div>
+              )}
+            </div>
+          ) : (
+            <p style={{ fontSize: 13, color: "rgba(255,255,255,.7)" }}>All items stocked ✓</p>
           )}
-        </div>
-      </div>
+        </>
+      )}
+    </>
+  )
 
-      {/* ── BODY ── */}
-      <div className="w-full max-w-[390px] mx-auto px-3 pt-3 pb-28">
+  return (
+    <PageShell hero={hero}>
 
         {loading && (
           <div className="flex justify-center pt-16">
@@ -448,9 +425,6 @@ export default function PantryPage() {
             </div>
           </div>
         ))}
-      </div>
-
-      <BottomNav />
-    </main>
+    </PageShell>
   )
 }
