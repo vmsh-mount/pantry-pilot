@@ -14,6 +14,7 @@ class Settings(BaseSettings):
 
     # Swiggy MCP
     swiggy_mcp_base_url: str = "https://mcp.swiggy.com"
+    swiggy_mcp_staging_base_url: str = "https://mcp.swiggy.com/staging"
     swiggy_client_id: str = ""   # auto-registered via DCR if blank
     swiggy_redirect_uri: str = "http://localhost:8000/v1/auth/callback"
 
