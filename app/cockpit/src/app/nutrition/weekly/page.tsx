@@ -34,6 +34,7 @@ export default function WeeklyNutritionPage() {
   const router = useRouter()
   const [loading, setLoading]         = useState(true)
   const [loadFailed, setLoadFailed]   = useState(false)
+  const [featureDisabled, setFeatureDisabled] = useState(false)
   const [week, setWeek]               = useState<WeekRow | null>(null)
   const [targets, setTargets]         = useState<NutritionWeeklyTargets | null>(null)
   const [gaps, setGaps]               = useState<NutritionGap[]>([])
@@ -44,6 +45,7 @@ export default function WeeklyNutritionPage() {
     let cancelled = false
     setLoading(true)
     setLoadFailed(false)
+    setFeatureDisabled(false)
     // Decoupled from the gaps fetch below: GET /v1/nutrition/weekly is a
     // plain DB aggregation (fast). GET /v1/nutrition/gaps does live Swiggy
     // searches + resolution and can take 15-20s+. Awaiting both together
@@ -59,6 +61,8 @@ export default function WeeklyNutritionPage() {
           const weeks = (weeklyRes.data as { weeks: WeekRow[] }).weeks
           setWeek(weeks[0] ?? null)
           setTargets(weeklyRes.data.weekly_targets)
+        } else if (weeklyRes.error?.code === "FEATURE_DISABLED") {
+          setFeatureDisabled(true)
         } else {
           setLoadFailed(true)
         }
@@ -85,6 +89,24 @@ export default function WeeklyNutritionPage() {
     return (
       <AppShell>
         <div className="flex items-center justify-center py-20"><Spinner size="lg" /></div>
+      </AppShell>
+    )
+  }
+
+  if (featureDisabled) {
+    return (
+      <AppShell>
+        <div className="flex items-center gap-3 px-1 mb-4">
+          <button onClick={() => router.back()} className="text-[#D8F3DC] text-sm font-semibold">← Back</button>
+          <h1 className="text-white font-bold text-lg flex-1">This week</h1>
+        </div>
+        <Card>
+          <div className="p-6 text-sm text-gray-500 text-center space-y-2">
+            <p className="text-2xl">🌱</p>
+            <p className="font-semibold text-gray-700">Nutrition tracking isn&apos;t on yet</p>
+            <p className="text-xs text-gray-400">Ask your household admin to turn on Nutrition Gap-to-Cart in settings.</p>
+          </div>
+        </Card>
       </AppShell>
     )
   }

@@ -25,16 +25,22 @@ export default function HouseholdTargetsPage() {
   const router = useRouter()
   const [loading, setLoading]     = useState(true)
   const [data, setData]           = useState<NutritionTargetsResponse | null>(null)
+  const [featureDisabled, setFeatureDisabled] = useState(false)
   const [reloadToken, setReloadToken] = useState(0)
 
   useEffect(() => {
     let cancelled = false
     setLoading(true)
+    setFeatureDisabled(false)
     ;(async () => {
       try {
         const res = await api.nutrition.targets()
         if (cancelled) return
-        if (res.success && res.data) setData(res.data)
+        if (res.success && res.data) {
+          setData(res.data)
+        } else if (res.error?.code === "FEATURE_DISABLED") {
+          setFeatureDisabled(true)
+        }
       } catch {
         // A thrown fetch (network error, timeout) previously left `loading`
         // stuck true forever with no .catch() — the page just spun. Falls
@@ -50,6 +56,24 @@ export default function HouseholdTargetsPage() {
     return (
       <AppShell>
         <div className="flex items-center justify-center py-20"><Spinner size="lg" /></div>
+      </AppShell>
+    )
+  }
+
+  if (featureDisabled) {
+    return (
+      <AppShell>
+        <div className="flex items-center gap-3 px-1 mb-4">
+          <button onClick={() => router.back()} className="text-[#D8F3DC] text-sm font-semibold">← Back</button>
+          <h1 className="text-white font-bold text-lg flex-1">Household targets</h1>
+        </div>
+        <Card>
+          <div className="p-6 text-sm text-gray-500 text-center space-y-2">
+            <p className="text-2xl">🌱</p>
+            <p className="font-semibold text-gray-700">Nutrition tracking isn&apos;t on yet</p>
+            <p className="text-xs text-gray-400">Ask your household admin to turn on Nutrition Gap-to-Cart in settings.</p>
+          </div>
+        </Card>
       </AppShell>
     )
   }

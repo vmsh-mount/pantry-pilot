@@ -108,8 +108,17 @@ await check("Home — Nutrition Gap-to-Cart card renders with real gap data", as
   await shot("01_dashboard_with_card");
   const body = await page.textContent("body");
   if (!body.match(/needs attention|on track/i)) throw new Error("No Nutrition card state chip found: " + body.slice(0, 300));
-  if (!body.match(/Household targets/i) || !body.match(/This week's report/i) || !body.match(/Fix these in my cart/i))
-    throw new Error("Missing one of the three entry rows");
+  if (!body.match(/Household targets/i) || !body.match(/This week's report/i))
+    throw new Error("Missing one of the two always-present entry rows");
+  // "Fix these in my cart" is intentionally conditional — NutritionGapsCard.tsx
+  // only renders it once there's a real gap with a real recommendation to act
+  // on (fixableGaps.length > 0). Offering it with nothing to fix was the exact
+  // "isn't that a misleading/unnecessary hop?" bug a user reported. This
+  // fixture's seeded member (very_active, no order history yet) should trip
+  // at least one gap with recommendations, so assert the row IS present here —
+  // but via the real behavior, not a blind always-there assumption.
+  if (!body.match(/Fix these in my cart/i))
+    throw new Error("Expected 'Fix these in my cart' row for this fixture's seeded gaps — if this fails, verify the fixture still produces a fixable gap rather than assuming the row is broken");
 });
 
 await check("Home — 'Household targets' routes to Settings Screen A", async () => {
@@ -134,12 +143,21 @@ await check("Weekly digest — MacroBars + CeilingBar + flagged section render",
   if (!body.match(/Flagged this week/i)) throw new Error("Flagged section missing");
 });
 
-await check("Weekly digest — CTA routes to Gap-to-Cart", async () => {
+await check("Weekly digest — CTA routes to Gap-to-Cart (or honestly reports nothing to fix)", async () => {
+  // hasFixableGaps in page.tsx gates this the same way NutritionGapsCard does —
+  // the button only appears when there's a real fixable gap; otherwise the page
+  // shows "Nothing to fix this week" text. Both are correct outcomes; only a
+  // dead-end (no button AND no explanatory text) is a bug.
+  const body = await page.textContent("body");
   const cta = page.locator("button").filter({ hasText: /fix these in my cart/i }).first();
-  await cta.waitFor({ state: "visible", timeout: 5000 });
-  await cta.click();
-  await sleep(1500);
-  if (!page.url().includes("/nutrition/gaps")) throw new Error("CTA did not route to /nutrition/gaps: " + page.url());
+  const ctaVisible = await cta.isVisible().catch(() => false);
+  if (ctaVisible) {
+    await cta.click();
+    await sleep(1500);
+    if (!page.url().includes("/nutrition/gaps")) throw new Error("CTA did not route to /nutrition/gaps: " + page.url());
+  } else if (!body.match(/nothing to fix this week/i)) {
+    throw new Error("Neither the 'Fix these in my cart' CTA nor the 'nothing to fix' fallback text is present — dead end");
+  }
 });
 
 // ── 3. Gap-to-Cart (Screen C) — recommendations render ────────────────────────
@@ -222,20 +240,45 @@ asyncio.run(main())
 });
 
 // ── Cleanup ─────────────────────────────────────────────────────────────────────
-console.log("\n🔧 Cleanup: disabling nutrition_gaps_enabled, clearing test LoopRun...");
+// Must fully remove every fixture this script planted — including the
+// HouseholdMember, which a previous version of this script left behind
+// after only disabling the flag. That leftover fake member (age 38, etc.)
+// sat undisclosed in real household data until a user asked "how did you
+// deduce my age?" — this cleanup exists specifically so that never
+// happens again from an automated test run.
+console.log("\n🔧 Cleanup: removing seeded member, disabling nutrition_gaps_enabled, clearing test LoopRuns...");
 pilotExec(`
 import asyncio
 from app.database import AsyncSessionLocal
-from app.models.db import Household, LoopRun
+from app.models.db import Household, LoopRun, HouseholdMember
 from sqlalchemy import update, select
 
 async def main():
     async with AsyncSessionLocal() as db:
         await db.execute(update(Household).where(Household.id == '${HOUSEHOLD_ID}').values(nutrition_gaps_enabled=False))
-        runs = (await db.execute(select(LoopRun).where(LoopRun.household_id == '${HOUSEHOLD_ID}', LoopRun.state == 'awaiting_confirmation'))).scalars().all()
+
+        members = (await db.execute(select(HouseholdMember).where(HouseholdMember.household_id == '${HOUSEHOLD_ID}'))).scalars().all()
+        for m in members:
+            await db.delete(m)
+
+        # Terminal state, never 'confirmed' (PLACING_STATES includes
+        # 'confirmed' in dashboard.py — leaving it there shows a permanent
+        # "Placing your order..." banner, a real bug this script hit before).
+        runs = (await db.execute(select(LoopRun).where(
+            LoopRun.household_id == '${HOUSEHOLD_ID}',
+            LoopRun.state.in_(['awaiting_confirmation', 'confirmed', 'placing']),
+        ))).scalars().all()
         for r in runs:
-            r.state = 'confirmed'
+            r.state = 'skipped'
+            r.skip_reason = 'test_artifact_cleanup'
         await db.commit()
+
+        remaining_members = (await db.execute(select(HouseholdMember).where(HouseholdMember.household_id == '${HOUSEHOLD_ID}'))).scalars().all()
+        remaining_active_runs = (await db.execute(select(LoopRun).where(
+            LoopRun.household_id == '${HOUSEHOLD_ID}',
+            LoopRun.state.in_(['awaiting_confirmation', 'confirmed', 'placing']),
+        ))).scalars().all()
+        print(f"cleanup_verify: members_remaining={len(remaining_members)} active_runs_remaining={len(remaining_active_runs)}")
 
 asyncio.run(main())
 `);

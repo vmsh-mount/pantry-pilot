@@ -76,6 +76,7 @@ export default function GapsToCartPage() {
   const router = useRouter()
   const [loading, setLoading]           = useState(true)
   const [loadFailed, setLoadFailed]     = useState(false)
+  const [featureDisabled, setFeatureDisabled] = useState(false)
   const [gaps, setGaps]                 = useState<NutritionGap[]>([])
   const [basketPending, setBasketPending] = useState(false)
   const [addStates, setAddStates]       = useState<Record<string, AddState>>({})
@@ -87,12 +88,15 @@ export default function GapsToCartPage() {
     let cancelled = false
     setLoading(true)
     setLoadFailed(false)
+    setFeatureDisabled(false)
     ;(async () => {
       try {
         const [gapsRes, dashRes] = await Promise.all([api.nutrition.gaps(), api.dashboard.get()])
         if (cancelled) return
         if (gapsRes.success && gapsRes.data) {
           setGaps(gapsRes.data.gaps)
+        } else if (gapsRes.error?.code === "FEATURE_DISABLED") {
+          setFeatureDisabled(true)
         } else {
           setLoadFailed(true)
         }
@@ -167,6 +171,24 @@ export default function GapsToCartPage() {
             Searching for the best options — this checks live prices and stock, usually 10-20s
           </p>
         </div>
+      </AppShell>
+    )
+  }
+
+  if (featureDisabled) {
+    return (
+      <AppShell>
+        <div className="flex items-center gap-3 px-1 mb-4">
+          <button onClick={() => router.back()} className="text-[#D8F3DC] text-sm font-semibold">← Back</button>
+          <h1 className="text-white font-bold text-lg flex-1">Close your gaps</h1>
+        </div>
+        <Card>
+          <div className="p-6 text-center space-y-2">
+            <p className="text-2xl">🌱</p>
+            <p className="text-sm font-semibold text-gray-700">Nutrition tracking isn&apos;t on yet</p>
+            <p className="text-xs text-gray-400">Ask your household admin to turn on Nutrition Gap-to-Cart in settings.</p>
+          </div>
+        </Card>
       </AppShell>
     )
   }

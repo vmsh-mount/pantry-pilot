@@ -28,6 +28,25 @@ def _get_household_id(request: Request) -> str | None:
     return request.session.get("household_id")
 
 
+async def _require_gap_to_cart_enabled(db: AsyncSession, household_id: str):
+    """
+    Gate for the Gap-to-Cart feature routes (/weekly, /targets, /gaps) —
+    previously the nutrition_gaps_enabled flag only gated the Home entry
+    card client-side, so any of these were reachable directly by URL with
+    the flag off. Returns the Household row on success, or an APIResponse
+    failure to return as-is.
+    """
+    from app.models.db import Household
+
+    hh_result = await db.execute(select(Household).where(Household.id == household_id))
+    household = hh_result.scalar_one_or_none()
+    if not household:
+        return None, APIResponse.fail("NOT_FOUND", "Household not found.")
+    if not household.nutrition_gaps_enabled:
+        return None, APIResponse.fail("FEATURE_DISABLED", "Nutrition Gap-to-Cart is not enabled for this household.")
+    return household, None
+
+
 @router.get("/order/{order_id}", response_model=APIResponse)
 async def get_order_nutrition(
     request: Request,
@@ -88,13 +107,12 @@ async def get_weekly_nutrition(
     if not household_id:
         return APIResponse.fail("NOT_AUTHENTICATED", "Not authenticated.")
 
-    from app.models.db import Order, OrderNutrition, Household, HouseholdMember
+    from app.models.db import Order, OrderNutrition, HouseholdMember
     from app.utils.nutrition_targets import personalised_weekly_targets
 
-    hh_result = await db.execute(select(Household).where(Household.id == household_id))
-    hh = hh_result.scalar_one_or_none()
-    if not hh:
-        return APIResponse.fail("NOT_FOUND", "Household not found.")
+    hh, err = await _require_gap_to_cart_enabled(db, household_id)
+    if err:
+        return err
 
     members = (await db.execute(
         select(HouseholdMember).where(HouseholdMember.household_id == household_id)
@@ -219,13 +237,12 @@ async def get_nutrition_targets(
     if not household_id:
         return APIResponse.fail("NOT_AUTHENTICATED", "Not authenticated.")
 
-    from app.models.db import Household, HouseholdMember
+    from app.models.db import HouseholdMember
     from app.utils.nutrition_targets import per_member_targets, personalised_weekly_targets
 
-    hh_result = await db.execute(select(Household).where(Household.id == household_id))
-    hh = hh_result.scalar_one_or_none()
-    if not hh:
-        return APIResponse.fail("NOT_FOUND", "Household not found.")
+    hh, err = await _require_gap_to_cart_enabled(db, household_id)
+    if err:
+        return err
 
     members_result = await db.execute(
         select(HouseholdMember).where(HouseholdMember.household_id == household_id)
@@ -293,13 +310,11 @@ async def get_nutrition_gaps(
     if not household_id:
         return APIResponse.fail("NOT_AUTHENTICATED", "Not authenticated.")
 
-    from app.models.db import Household
     from app.services.nutrition_gaps import compute_gaps, get_recommendations_for_nutrient
 
-    hh_result = await db.execute(select(Household).where(Household.id == household_id))
-    household = hh_result.scalar_one_or_none()
-    if not household:
-        return APIResponse.fail("NOT_FOUND", "Household not found.")
+    household, err = await _require_gap_to_cart_enabled(db, household_id)
+    if err:
+        return err
 
     gaps = await compute_gaps(db, household)
 
