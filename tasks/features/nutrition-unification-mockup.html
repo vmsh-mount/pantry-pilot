@@ -1,0 +1,604 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Nutrition Unification — Mockup</title>
+<style>
+  :root {
+    --green:#2D6A4F; --green-dk:#1B4332; --pale:#D8F3DC; --orange:#F4845F;
+    --bg:#F4F4F4; --card:#fff; --hair:rgba(0,0,0,0.07);
+    --ink:#1C1C1E; --ink2:#5A5A5F; --ink3:#8E8E93;
+    --grad: linear-gradient(135deg, #1B4332, #2D6A4F);
+  }
+  * { box-sizing:border-box; margin:0; padding:0; }
+  body {
+    font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
+    background:#E8EAE6; padding:40px 20px 90px; color:var(--ink);
+  }
+  .wrap { max-width:1100px; margin:0 auto; }
+  .head { max-width:720px; margin:0 auto 40px; }
+  .eyebrow { font-size:12px; font-weight:700; letter-spacing:.12em; text-transform:uppercase; color:var(--green); margin-bottom:8px; }
+  h1 { font-size:28px; font-weight:800; letter-spacing:-.02em; margin-bottom:12px; }
+  .lede { font-size:14.5px; color:var(--ink2); line-height:1.6; }
+  .lede b { color:var(--ink); font-weight:650; }
+
+  section { margin-bottom:52px; }
+  .sec-title { font-size:19px; font-weight:750; margin-bottom:6px; }
+  .sec-title .num { display:inline-flex; align-items:center; justify-content:center; width:25px; height:25px; border-radius:8px; background:var(--green); color:#fff; font-size:12px; font-weight:700; margin-right:9px; vertical-align:2px; }
+  .sec-sub { font-size:13.5px; color:var(--ink2); margin-bottom:22px; max-width:680px; }
+
+  .frames { display:flex; gap:26px; flex-wrap:wrap; align-items:flex-start; justify-content:center; }
+  .phone { width:290px; height:600px; border-radius:38px; background:#000; padding:9px; box-shadow:0 20px 44px -16px rgba(0,0,0,.4); }
+  .screen { width:100%; height:100%; border-radius:29px; overflow:hidden; background:var(--bg); display:flex; flex-direction:column; }
+  .label { text-align:center; margin-top:12px; font-size:13px; font-weight:650; }
+  .label .tag { display:inline-block; font-size:10.5px; font-weight:700; padding:2px 8px; border-radius:20px; margin-left:6px; vertical-align:1px; }
+  .tag-bad { background:#FBE3E0; color:#B23A2E; }
+  .tag-good { background:var(--pale); color:var(--green-dk); }
+
+  .hero { background:var(--grad); padding:16px 16px 14px; color:#fff; flex-shrink:0; }
+  .brand { display:flex; align-items:center; gap:7px; font-weight:700; font-size:14px; margin-bottom:12px; }
+  .body-scroll { flex:1; padding:11px; display:flex; flex-direction:column; gap:9px; overflow:hidden; }
+
+  .card { background:var(--card); border:1px solid var(--hair); border-radius:14px; overflow:hidden; }
+
+  /* BEFORE: fragmented */
+  .frag-badge { display:flex; align-items:center; gap:2px; font-size:12px; font-weight:700; color:#FF6B00; margin-top:6px; }
+  .before-nutri-head { padding:11px 13px 3px; display:flex; align-items:center; gap:7px; }
+  .before-nutri-head .t { font-size:12.5px; font-weight:700; flex:1; }
+  .status-pill { font-size:9.5px; font-weight:700; text-transform:uppercase; letter-spacing:.04em; padding:2px 7px; border-radius:20px; }
+  .row-link { display:flex; align-items:center; gap:8px; padding:9px 13px; border-top:1px solid rgba(0,0,0,.04); }
+  .row-link .lbl { font-size:12px; font-weight:650; flex:1; }
+  .row-link .sub { font-size:10.5px; color:var(--ink3); }
+  .row-link .chev { color:#B0B0B0; font-size:12px; }
+  .eyebrow2 { font-size:10px; font-weight:800; letter-spacing:.1em; text-transform:uppercase; color:var(--ink2); padding:6px 2px 0; }
+  .macro-panel { background:#F4FBF7; border:0.5px solid rgba(45,106,79,0.14); border-radius:12px; overflow:hidden; }
+  .macro-row { display:flex; align-items:center; gap:8px; padding:9px 12px; border-top:0.5px solid rgba(45,106,79,0.09); }
+  .macro-row:first-child { border-top:none; }
+  .macro-lbl { display:flex; align-items:center; gap:5px; width:58px; flex-shrink:0; font-size:11.5px; font-weight:650; }
+  .dot { width:6px; height:6px; border-radius:50%; flex-shrink:0; }
+  .dotbar { display:flex; gap:2.5px; flex:1; }
+  .db { width:9px; height:9px; border-radius:50%; flex-shrink:0; }
+  .macro-val { font-size:10.5px; color:var(--ink3); width:56px; text-align:right; flex-shrink:0; }
+
+  /* AFTER: unified card */
+  .unicard { background:var(--card); border:1px solid var(--hair); border-radius:16px; overflow:hidden; }
+  .uni-head { padding:13px 14px 12px; display:flex; align-items:center; gap:9px; cursor:pointer; }
+  .uni-ic { font-size:16px; }
+  .uni-title { font-size:13.5px; font-weight:750; flex:1; }
+  .uni-kcal { font-size:12px; font-weight:700; color:#FF6B00; tabular-nums; }
+  .uni-chev { color:var(--ink3); transition:transform .25s; font-size:11px; }
+  .uni-chev.open { transform:rotate(180deg); }
+  .uni-summary { padding:0 14px 12px; display:flex; gap:14px; }
+  .mini-macro { flex:1; }
+  .mini-macro .ml { font-size:9.5px; font-weight:700; color:var(--ink3); text-transform:uppercase; letter-spacing:.05em; margin-bottom:4px; display:flex; justify-content:space-between; }
+  .mini-bar { height:4px; border-radius:4px; background:rgba(45,106,79,0.1); overflow:hidden; }
+  .mini-bar > div { height:100%; border-radius:4px; }
+
+  .expand { max-height:0; overflow:hidden; transition:max-height .35s ease; border-top:1px solid var(--hair); }
+  .expand.open { max-height:600px; }
+  .expand-inner { padding:13px 14px; }
+  .exp-section-t { font-size:9.5px; font-weight:800; letter-spacing:.1em; text-transform:uppercase; color:var(--ink3); margin-bottom:8px; }
+  .exp-macro-row { display:flex; align-items:center; gap:8px; padding:6px 0; }
+  .exp-macro-row .lbl { width:56px; font-size:11.5px; font-weight:650; flex-shrink:0; }
+  .exp-macro-row .val { font-size:10.5px; color:var(--ink3); width:60px; text-align:right; flex-shrink:0; }
+
+  .chip-row { display:flex; gap:6px; flex-wrap:wrap; margin-top:2px; margin-bottom:12px; }
+  .micro-panel { background:#F7F8F5; border-top:0.5px solid rgba(0,0,0,.05); border-bottom:0.5px solid rgba(0,0,0,.05); padding:11px 14px 10px; margin:0 -14px; }
+  .micro-panel .chip-row { margin-bottom:8px; }
+  .micro-panel p { margin-bottom:0 !important; }
+  .chip { display:flex; align-items:center; gap:5px; font-size:11px; font-weight:650; padding:5px 10px; border-radius:20px; }
+  .chip-ok { background:var(--pale); color:var(--green-dk); }
+  .chip-unknown { background:#F0F0EE; color:var(--ink2); }
+  .chip-dot { width:5px; height:5px; border-radius:50%; }
+
+  /* v2: full-size rows, expand reserved for genuinely new content */
+  .uni-head2 { padding:13px 14px 11px; display:flex; align-items:center; gap:8px; }
+  .v2-macro-panel { padding:0 4px; }
+  .v2-macro-row { display:flex; align-items:center; gap:9px; padding:9px 12px; border-top:0.5px solid rgba(0,0,0,.05); }
+  .v2-macro-row:first-child { border-top:0.5px solid rgba(0,0,0,.05); }
+  .v2-macro-lbl { display:flex; align-items:center; gap:6px; width:66px; flex-shrink:0; font-size:12.5px; font-weight:650; }
+  .v2-dotbar { display:flex; gap:3px; flex:1; }
+  .v2-db { width:10px; height:10px; border-radius:50%; flex-shrink:0; }
+  .v2-macro-val { font-size:11.5px; color:var(--ink3); width:70px; text-align:right; flex-shrink:0; tabular-nums; }
+  .v2-expand-tab { display:flex; align-items:center; justify-content:center; gap:6px; padding:10px; border-top:1px solid var(--hair); cursor:pointer; background:#FAFAF9; }
+  .v2-expand-tab span:first-child { font-size:11.5px; font-weight:650; color:var(--green); }
+
+  /* v3: small, subtle reveal — just for micronutrients, distinct from the nav rows below it */
+  .v3-micro-tab { display:flex; align-items:center; gap:6px; padding:8px 14px; border-top:0.5px solid rgba(0,0,0,.05); border-bottom:0.5px solid rgba(0,0,0,.05); cursor:pointer; }
+  .v3-micro-tab.tab-shade { background:#F7F8F5; }
+  .v3-micro-tab span:first-child { font-size:11px; font-weight:650; color:var(--ink3); flex:1; }
+  .v3-micro-tab .uni-chev { font-size:9px; }
+
+  .nav-rows { border-top:1px solid var(--hair); margin-top:2px; }
+  .nav-row { display:flex; align-items:center; gap:8px; padding:9px 0; border-top:0.5px solid rgba(0,0,0,.04); }
+  .nav-row:first-child { border-top:none; }
+  .nav-row .lbl { font-size:12px; font-weight:650; flex:1; }
+  .nav-row .sub { font-size:10px; color:var(--ink3); }
+  .nav-row .chev { color:#B0B0B0; font-size:12px; }
+
+  .callout { background:#fff; border:1px solid var(--hair); border-left:3px solid var(--green); border-radius:12px; padding:16px 18px; font-size:13.5px; color:var(--ink2); max-width:760px; margin:0 auto; line-height:1.6; }
+  .callout b { color:var(--ink); }
+  .callout ul { margin:8px 0 0 18px; }
+  .callout li { margin-bottom:5px; }
+
+  .hint { text-align:center; font-size:11.5px; color:var(--ink3); margin-top:10px; }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <div class="head">
+    <div class="eyebrow">Design Mockup · Nutrition Unification</div>
+    <h1>One nutrition surface, not three</h1>
+    <p class="lede">Today the dashboard has <b>three separate nutrition surfaces</b> stacked back to back: the hero's calorie badge, a "Nutrition" card with a gap summary + nav links, and a second, separately-labeled "Nutrition" macro panel right below it. Micronutrients (iron, B12) exist in the data but are never actually shown — just a buried text fragment. This mockup proposes <b>one card</b> that's glanceable by default and expands for full macro + micro detail.</p>
+  </div>
+
+  <section>
+    <div class="sec-title"><span class="num">1</span>Before — three surfaces, one screen</div>
+    <p class="sec-sub">Hero badge (calories only) → separate gap-card with its own "Nutrition" header + nav rows → a second "Nutrition" eyebrow + dot-bar panel below it. Protein and fiber numbers effectively appear twice.</p>
+    <div class="frames">
+      <div>
+        <div class="phone"><div class="screen">
+          <div class="hero">
+            <div class="brand">🥦 PantryPilot</div>
+            <div style="font-size:11px; font-weight:700; color:rgba(255,255,255,.5); text-transform:uppercase; letter-spacing:.08em;">This week</div>
+            <div style="font-size:32px; font-weight:850; letter-spacing:-1px; margin-top:2px;">₹1,240</div>
+            <div class="frag-badge">🔥 36,078 <span style="color:rgba(255,107,0,.55); font-weight:400;">/ 50,050 kcal</span></div>
+          </div>
+          <div class="body-scroll">
+
+            <!-- gap card -->
+            <div class="card">
+              <div class="before-nutri-head">
+                <span>🌿</span><span class="t">Nutrition</span>
+                <span class="status-pill" style="background:#FEE2E0; color:#B23A2E;">needs attention</span>
+              </div>
+              <p style="padding:0 13px 8px; font-size:11px; color:var(--ink2);">Iron 3mg short · B12 missing</p>
+              <div class="row-link"><div class="lbl">Household targets</div><span class="chev">›</span></div>
+              <div class="row-link"><div class="lbl">This week's report</div><span class="chev">›</span></div>
+              <div class="row-link"><div class="lbl">Fix these in my cart</div><span class="chev">›</span></div>
+            </div>
+
+            <!-- separate macro panel, SAME LABEL again -->
+            <div class="eyebrow2">Nutrition</div>
+            <div class="macro-panel">
+              <div class="macro-row">
+                <div class="macro-lbl"><span class="dot" style="background:#40916C;"></span>Protein</div>
+                <div class="dotbar">
+                  <div class="db" style="background:#4A7FA5;"></div><div class="db" style="background:#4A7FA5;"></div>
+                  <div class="db" style="background:#4A7FA5;"></div><div class="db" style="background:#4A7FA5;"></div>
+                  <div class="db" style="background:#4A7FA5;"></div><div class="db" style="background:rgba(45,106,79,.13);"></div>
+                  <div class="db" style="background:rgba(45,106,79,.13);"></div>
+                </div>
+                <div class="macro-val">1250/1837g</div>
+              </div>
+              <div class="macro-row">
+                <div class="macro-lbl"><span class="dot" style="background:#40916C;"></span>Fiber</div>
+                <div class="dotbar">
+                  <div class="db" style="background:#2D6A4F;"></div><div class="db" style="background:#2D6A4F;"></div>
+                  <div class="db" style="background:#2D6A4F;"></div><div class="db" style="background:#2D6A4F;"></div>
+                  <div class="db" style="background:rgba(45,106,79,.13);"></div><div class="db" style="background:rgba(45,106,79,.13);"></div>
+                  <div class="db" style="background:rgba(45,106,79,.13);"></div>
+                </div>
+                <div class="macro-val">102/175g</div>
+              </div>
+              <div class="macro-row">
+                <div class="macro-lbl"><span class="dot" style="background:#C87941;"></span>Sodium</div>
+                <div class="dotbar">
+                  <div class="db" style="background:#8B6336;"></div><div class="db" style="background:#8B6336;"></div>
+                  <div class="db" style="background:#8B6336;"></div><div class="db" style="background:#8B6336;"></div>
+                  <div class="db" style="background:#8B6336;"></div><div class="db" style="background:#8B6336;"></div>
+                  <div class="db" style="background:#8B6336;"></div>
+                </div>
+                <div class="macro-val">61k/58.8k</div>
+              </div>
+            </div>
+
+          </div>
+        </div></div>
+        <div class="label">Current dashboard <span class="tag tag-bad">3 surfaces</span></div>
+      </div>
+    </div>
+  </section>
+
+  <section>
+    <div class="sec-title"><span class="num">2</span>v2 — full-size rows always visible, expand only for what's new</div>
+    <p class="sec-sub">v1's collapsed state squeezed 3 macros into skinny columns — too tiny to actually read. Fixed: the macro rows keep the <b>exact size and style of today's existing dot-bar panel</b> (already proven legible) and stay visible by default. The only thing behind "expand" is content that doesn't exist on the dashboard <b>at all</b> today — micronutrients and the navigation links — so nothing that's currently easy to read gets harder.</p>
+    <div class="frames">
+
+      <!-- collapsed -->
+      <div>
+        <div class="phone"><div class="screen">
+          <div class="hero">
+            <div class="brand">🥦 PantryPilot</div>
+            <div style="font-size:11px; font-weight:700; color:rgba(255,255,255,.5); text-transform:uppercase; letter-spacing:.08em;">This week</div>
+            <div style="font-size:32px; font-weight:850; letter-spacing:-1px; margin-top:2px;">₹1,240</div>
+            <div class="frag-badge">🔥 36,078 <span style="color:rgba(255,107,0,.55); font-weight:400;">/ 50,050 kcal</span></div>
+          </div>
+          <div class="body-scroll">
+            <div class="unicard" id="card3">
+              <div class="uni-head2">
+                <span class="uni-ic">🌿</span>
+                <span class="uni-title">Nutrition</span>
+                <span class="status-pill" style="background:#FEE2E0; color:#B23A2E;">needs attention</span>
+              </div>
+
+              <div class="v2-macro-panel">
+                <div class="v2-macro-row">
+                  <div class="v2-macro-lbl"><span class="dot" style="background:#FF6B00;"></span>Calories</div>
+                  <div class="v2-dotbar">
+                    <div class="v2-db" style="background:#FF6B00;"></div><div class="v2-db" style="background:#FF6B00;"></div>
+                    <div class="v2-db" style="background:#FF6B00;"></div><div class="v2-db" style="background:#FF6B00;"></div>
+                    <div class="v2-db" style="background:#FF6B00;"></div><div class="v2-db" style="background:rgba(45,106,79,.13);"></div>
+                    <div class="v2-db" style="background:rgba(45,106,79,.13);"></div>
+                  </div>
+                  <div class="v2-macro-val">36.1k/50.1k</div>
+                </div>
+                <div class="v2-macro-row">
+                  <div class="v2-macro-lbl"><span class="dot" style="background:#40916C;"></span>Protein</div>
+                  <div class="v2-dotbar">
+                    <div class="v2-db" style="background:#4A7FA5;"></div><div class="v2-db" style="background:#4A7FA5;"></div>
+                    <div class="v2-db" style="background:#4A7FA5;"></div><div class="v2-db" style="background:#4A7FA5;"></div>
+                    <div class="v2-db" style="background:#4A7FA5;"></div><div class="v2-db" style="background:rgba(45,106,79,.13);"></div>
+                    <div class="v2-db" style="background:rgba(45,106,79,.13);"></div>
+                  </div>
+                  <div class="v2-macro-val">1250/1837g</div>
+                </div>
+                <div class="v2-macro-row">
+                  <div class="v2-macro-lbl"><span class="dot" style="background:#40916C;"></span>Fiber</div>
+                  <div class="v2-dotbar">
+                    <div class="v2-db" style="background:#2D6A4F;"></div><div class="v2-db" style="background:#2D6A4F;"></div>
+                    <div class="v2-db" style="background:#2D6A4F;"></div><div class="v2-db" style="background:#2D6A4F;"></div>
+                    <div class="v2-db" style="background:rgba(45,106,79,.13);"></div><div class="v2-db" style="background:rgba(45,106,79,.13);"></div>
+                    <div class="v2-db" style="background:rgba(45,106,79,.13);"></div>
+                  </div>
+                  <div class="v2-macro-val">102/175g</div>
+                </div>
+                <div class="v2-macro-row">
+                  <div class="v2-macro-lbl"><span class="dot" style="background:#C87941;"></span>Sodium</div>
+                  <div class="v2-dotbar">
+                    <div class="v2-db" style="background:#8B6336;"></div><div class="v2-db" style="background:#8B6336;"></div>
+                    <div class="v2-db" style="background:#8B6336;"></div><div class="v2-db" style="background:#8B6336;"></div>
+                    <div class="v2-db" style="background:#8B6336;"></div><div class="v2-db" style="background:#8B6336;"></div>
+                    <div class="v2-db" style="background:#8B6336;"></div>
+                  </div>
+                  <div class="v2-macro-val">61k/58.8k</div>
+                </div>
+              </div>
+
+              <div class="v2-expand-tab" onclick="toggleV2('card3')">
+                <span id="v2label3">Micronutrients &amp; more</span>
+                <span class="uni-chev" id="v2chev3">▾</span>
+              </div>
+              <div class="expand" id="v2exp3"></div>
+            </div>
+          </div>
+        </div></div>
+        <div class="label">Collapsed <span class="tag tag-good">default state</span></div>
+      </div>
+
+      <!-- expanded -->
+      <div>
+        <div class="phone"><div class="screen">
+          <div class="hero">
+            <div class="brand">🥦 PantryPilot</div>
+            <div style="font-size:11px; font-weight:700; color:rgba(255,255,255,.5); text-transform:uppercase; letter-spacing:.08em;">This week</div>
+            <div style="font-size:32px; font-weight:850; letter-spacing:-1px; margin-top:2px;">₹1,240</div>
+            <div class="frag-badge">🔥 36,078 <span style="color:rgba(255,107,0,.55); font-weight:400;">/ 50,050 kcal</span></div>
+          </div>
+          <div class="body-scroll">
+            <div class="unicard" id="card4">
+              <div class="uni-head2">
+                <span class="uni-ic">🌿</span>
+                <span class="uni-title">Nutrition</span>
+                <span class="status-pill" style="background:#FEE2E0; color:#B23A2E;">needs attention</span>
+              </div>
+
+              <div class="v2-macro-panel">
+                <div class="v2-macro-row">
+                  <div class="v2-macro-lbl"><span class="dot" style="background:#FF6B00;"></span>Calories</div>
+                  <div class="v2-dotbar">
+                    <div class="v2-db" style="background:#FF6B00;"></div><div class="v2-db" style="background:#FF6B00;"></div>
+                    <div class="v2-db" style="background:#FF6B00;"></div><div class="v2-db" style="background:#FF6B00;"></div>
+                    <div class="v2-db" style="background:#FF6B00;"></div><div class="v2-db" style="background:rgba(45,106,79,.13);"></div>
+                    <div class="v2-db" style="background:rgba(45,106,79,.13);"></div>
+                  </div>
+                  <div class="v2-macro-val">36.1k/50.1k</div>
+                </div>
+                <div class="v2-macro-row">
+                  <div class="v2-macro-lbl"><span class="dot" style="background:#40916C;"></span>Protein</div>
+                  <div class="v2-dotbar">
+                    <div class="v2-db" style="background:#4A7FA5;"></div><div class="v2-db" style="background:#4A7FA5;"></div>
+                    <div class="v2-db" style="background:#4A7FA5;"></div><div class="v2-db" style="background:#4A7FA5;"></div>
+                    <div class="v2-db" style="background:#4A7FA5;"></div><div class="v2-db" style="background:rgba(45,106,79,.13);"></div>
+                    <div class="v2-db" style="background:rgba(45,106,79,.13);"></div>
+                  </div>
+                  <div class="v2-macro-val">1250/1837g</div>
+                </div>
+                <div class="v2-macro-row">
+                  <div class="v2-macro-lbl"><span class="dot" style="background:#40916C;"></span>Fiber</div>
+                  <div class="v2-dotbar">
+                    <div class="v2-db" style="background:#2D6A4F;"></div><div class="v2-db" style="background:#2D6A4F;"></div>
+                    <div class="v2-db" style="background:#2D6A4F;"></div><div class="v2-db" style="background:#2D6A4F;"></div>
+                    <div class="v2-db" style="background:rgba(45,106,79,.13);"></div><div class="v2-db" style="background:rgba(45,106,79,.13);"></div>
+                    <div class="v2-db" style="background:rgba(45,106,79,.13);"></div>
+                  </div>
+                  <div class="v2-macro-val">102/175g</div>
+                </div>
+                <div class="v2-macro-row">
+                  <div class="v2-macro-lbl"><span class="dot" style="background:#C87941;"></span>Sodium</div>
+                  <div class="v2-dotbar">
+                    <div class="v2-db" style="background:#8B6336;"></div><div class="v2-db" style="background:#8B6336;"></div>
+                    <div class="v2-db" style="background:#8B6336;"></div><div class="v2-db" style="background:#8B6336;"></div>
+                    <div class="v2-db" style="background:#8B6336;"></div><div class="v2-db" style="background:#8B6336;"></div>
+                    <div class="v2-db" style="background:#8B6336;"></div>
+                  </div>
+                  <div class="v2-macro-val">61k/58.8k</div>
+                </div>
+              </div>
+
+              <div class="v2-expand-tab" onclick="toggleV2('card4')">
+                <span id="v2label4">Hide micronutrients &amp; more</span>
+                <span class="uni-chev open" id="v2chev4">▾</span>
+              </div>
+              <div class="expand open" id="v2exp4">
+                <div class="expand-inner">
+                  <div class="exp-section-t">Micronutrients</div>
+                  <div class="micro-panel">
+                    <div class="chip-row">
+                      <span class="chip chip-unknown"><span class="chip-dot" style="background:#9CA3AF;"></span>Iron — no data</span>
+                      <span class="chip chip-unknown"><span class="chip-dot" style="background:#9CA3AF;"></span>B12 — no data</span>
+                    </div>
+                    <p style="font-size:10.5px; color:var(--ink3); line-height:1.5;">No numeric target for these yet — shown as watch-only until we can verify from your recent orders.</p>
+                  </div>
+
+                  <div class="nav-rows" style="margin-top:10px;">
+                    <div class="nav-row"><div><div class="lbl">Household targets</div><div class="sub">per-member, in Settings</div></div><span class="chev">›</span></div>
+                    <div class="nav-row"><div><div class="lbl">This week's full report</div><div class="sub">trend over time</div></div><span class="chev">›</span></div>
+                    <div class="nav-row"><div><div class="lbl">Fix these in my cart</div><div class="sub">2 items close the gap</div></div><span class="chev">›</span></div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div></div>
+        <div class="label">Expanded <span class="tag tag-good">tap again to close</span></div>
+      </div>
+
+    </div>
+    <p class="hint">Both phones above are live — click "Micronutrients &amp; more" to toggle.</p>
+  </section>
+
+  <section>
+    <div class="sec-title"><span class="num">3</span>v3 — nav rows stay visible; only micronutrients get the reveal</div>
+    <p class="sec-sub">Feedback: don't bury Household targets / This week's report / Fix these in my cart — those are the links people actually tap, not raw data to skim. Only <b>micronutrients</b> — which have no numeric target and are genuinely supplementary — sit behind a small reveal now. Everything else on the old gaps-card stays exactly as visible as it is today.</p>
+    <div class="frames">
+
+      <!-- collapsed micros -->
+      <div>
+        <div class="phone"><div class="screen">
+          <div class="hero">
+            <div class="brand">🥦 PantryPilot</div>
+            <div style="font-size:11px; font-weight:700; color:rgba(255,255,255,.5); text-transform:uppercase; letter-spacing:.08em;">This week</div>
+            <div style="font-size:32px; font-weight:850; letter-spacing:-1px; margin-top:2px;">₹1,240</div>
+            <div class="frag-badge">🔥 36,078 <span style="color:rgba(255,107,0,.55); font-weight:400;">/ 50,050 kcal</span></div>
+          </div>
+          <div class="body-scroll">
+            <div class="unicard" id="card5">
+              <div class="uni-head2">
+                <span class="uni-ic">🌿</span>
+                <span class="uni-title">Nutrition</span>
+                <span class="status-pill" style="background:#FEE2E0; color:#B23A2E;">needs attention</span>
+              </div>
+
+              <div class="v2-macro-panel">
+                <div class="v2-macro-row">
+                  <div class="v2-macro-lbl"><span class="dot" style="background:#FF6B00;"></span>Calories</div>
+                  <div class="v2-dotbar">
+                    <div class="v2-db" style="background:#FF6B00;"></div><div class="v2-db" style="background:#FF6B00;"></div>
+                    <div class="v2-db" style="background:#FF6B00;"></div><div class="v2-db" style="background:#FF6B00;"></div>
+                    <div class="v2-db" style="background:#FF6B00;"></div><div class="v2-db" style="background:rgba(45,106,79,.13);"></div>
+                    <div class="v2-db" style="background:rgba(45,106,79,.13);"></div>
+                  </div>
+                  <div class="v2-macro-val">36.1k/50.1k</div>
+                </div>
+                <div class="v2-macro-row">
+                  <div class="v2-macro-lbl"><span class="dot" style="background:#40916C;"></span>Protein</div>
+                  <div class="v2-dotbar">
+                    <div class="v2-db" style="background:#4A7FA5;"></div><div class="v2-db" style="background:#4A7FA5;"></div>
+                    <div class="v2-db" style="background:#4A7FA5;"></div><div class="v2-db" style="background:#4A7FA5;"></div>
+                    <div class="v2-db" style="background:#4A7FA5;"></div><div class="v2-db" style="background:rgba(45,106,79,.13);"></div>
+                    <div class="v2-db" style="background:rgba(45,106,79,.13);"></div>
+                  </div>
+                  <div class="v2-macro-val">1250/1837g</div>
+                </div>
+                <div class="v2-macro-row">
+                  <div class="v2-macro-lbl"><span class="dot" style="background:#40916C;"></span>Fiber</div>
+                  <div class="v2-dotbar">
+                    <div class="v2-db" style="background:#2D6A4F;"></div><div class="v2-db" style="background:#2D6A4F;"></div>
+                    <div class="v2-db" style="background:#2D6A4F;"></div><div class="v2-db" style="background:#2D6A4F;"></div>
+                    <div class="v2-db" style="background:rgba(45,106,79,.13);"></div><div class="v2-db" style="background:rgba(45,106,79,.13);"></div>
+                    <div class="v2-db" style="background:rgba(45,106,79,.13);"></div>
+                  </div>
+                  <div class="v2-macro-val">102/175g</div>
+                </div>
+                <div class="v2-macro-row">
+                  <div class="v2-macro-lbl"><span class="dot" style="background:#C87941;"></span>Sodium</div>
+                  <div class="v2-dotbar">
+                    <div class="v2-db" style="background:#8B6336;"></div><div class="v2-db" style="background:#8B6336;"></div>
+                    <div class="v2-db" style="background:#8B6336;"></div><div class="v2-db" style="background:#8B6336;"></div>
+                    <div class="v2-db" style="background:#8B6336;"></div><div class="v2-db" style="background:#8B6336;"></div>
+                    <div class="v2-db" style="background:#8B6336;"></div>
+                  </div>
+                  <div class="v2-macro-val">61k/58.8k</div>
+                </div>
+              </div>
+
+              <!-- small micronutrient reveal strip, distinct from nav rows -->
+              <div class="v3-micro-tab tab-shade" id="v3tab5" onclick="toggleV3('card5')">
+                <span id="v3label5">Micronutrients (2)</span>
+                <span class="uni-chev" id="v3chev5">▾</span>
+              </div>
+              <div class="expand" id="v3exp5"></div>
+
+              <!-- nav rows: always visible, never hidden -->
+              <div class="nav-rows" style="margin-top:0;">
+                <div class="nav-row" style="padding-left:14px; padding-right:14px;"><div><div class="lbl">Household targets</div><div class="sub">per-member, in Settings</div></div><span class="chev">›</span></div>
+                <div class="nav-row" style="padding-left:14px; padding-right:14px;"><div><div class="lbl">This week's full report</div><div class="sub">trend over time</div></div><span class="chev">›</span></div>
+                <div class="nav-row" style="padding-left:14px; padding-right:14px;"><div><div class="lbl">Fix these in my cart</div><div class="sub">2 items close the gap</div></div><span class="chev">›</span></div>
+              </div>
+            </div>
+          </div>
+        </div></div>
+        <div class="label">Micronutrients collapsed <span class="tag tag-good">default state</span></div>
+      </div>
+
+      <!-- expanded micros -->
+      <div>
+        <div class="phone"><div class="screen">
+          <div class="hero">
+            <div class="brand">🥦 PantryPilot</div>
+            <div style="font-size:11px; font-weight:700; color:rgba(255,255,255,.5); text-transform:uppercase; letter-spacing:.08em;">This week</div>
+            <div style="font-size:32px; font-weight:850; letter-spacing:-1px; margin-top:2px;">₹1,240</div>
+            <div class="frag-badge">🔥 36,078 <span style="color:rgba(255,107,0,.55); font-weight:400;">/ 50,050 kcal</span></div>
+          </div>
+          <div class="body-scroll">
+            <div class="unicard" id="card6">
+              <div class="uni-head2">
+                <span class="uni-ic">🌿</span>
+                <span class="uni-title">Nutrition</span>
+                <span class="status-pill" style="background:#FEE2E0; color:#B23A2E;">needs attention</span>
+              </div>
+
+              <div class="v2-macro-panel">
+                <div class="v2-macro-row">
+                  <div class="v2-macro-lbl"><span class="dot" style="background:#FF6B00;"></span>Calories</div>
+                  <div class="v2-dotbar">
+                    <div class="v2-db" style="background:#FF6B00;"></div><div class="v2-db" style="background:#FF6B00;"></div>
+                    <div class="v2-db" style="background:#FF6B00;"></div><div class="v2-db" style="background:#FF6B00;"></div>
+                    <div class="v2-db" style="background:#FF6B00;"></div><div class="v2-db" style="background:rgba(45,106,79,.13);"></div>
+                    <div class="v2-db" style="background:rgba(45,106,79,.13);"></div>
+                  </div>
+                  <div class="v2-macro-val">36.1k/50.1k</div>
+                </div>
+                <div class="v2-macro-row">
+                  <div class="v2-macro-lbl"><span class="dot" style="background:#40916C;"></span>Protein</div>
+                  <div class="v2-dotbar">
+                    <div class="v2-db" style="background:#4A7FA5;"></div><div class="v2-db" style="background:#4A7FA5;"></div>
+                    <div class="v2-db" style="background:#4A7FA5;"></div><div class="v2-db" style="background:#4A7FA5;"></div>
+                    <div class="v2-db" style="background:#4A7FA5;"></div><div class="v2-db" style="background:rgba(45,106,79,.13);"></div>
+                    <div class="v2-db" style="background:rgba(45,106,79,.13);"></div>
+                  </div>
+                  <div class="v2-macro-val">1250/1837g</div>
+                </div>
+                <div class="v2-macro-row">
+                  <div class="v2-macro-lbl"><span class="dot" style="background:#40916C;"></span>Fiber</div>
+                  <div class="v2-dotbar">
+                    <div class="v2-db" style="background:#2D6A4F;"></div><div class="v2-db" style="background:#2D6A4F;"></div>
+                    <div class="v2-db" style="background:#2D6A4F;"></div><div class="v2-db" style="background:#2D6A4F;"></div>
+                    <div class="v2-db" style="background:rgba(45,106,79,.13);"></div><div class="v2-db" style="background:rgba(45,106,79,.13);"></div>
+                    <div class="v2-db" style="background:rgba(45,106,79,.13);"></div>
+                  </div>
+                  <div class="v2-macro-val">102/175g</div>
+                </div>
+                <div class="v2-macro-row">
+                  <div class="v2-macro-lbl"><span class="dot" style="background:#C87941;"></span>Sodium</div>
+                  <div class="v2-dotbar">
+                    <div class="v2-db" style="background:#8B6336;"></div><div class="v2-db" style="background:#8B6336;"></div>
+                    <div class="v2-db" style="background:#8B6336;"></div><div class="v2-db" style="background:#8B6336;"></div>
+                    <div class="v2-db" style="background:#8B6336;"></div><div class="v2-db" style="background:#8B6336;"></div>
+                    <div class="v2-db" style="background:#8B6336;"></div>
+                  </div>
+                  <div class="v2-macro-val">61k/58.8k</div>
+                </div>
+              </div>
+
+              <div class="v3-micro-tab" id="v3tab6" onclick="toggleV3('card6')">
+                <span id="v3label6">Hide micronutrients</span>
+                <span class="uni-chev open" id="v3chev6">▾</span>
+              </div>
+              <div class="expand open" id="v3exp6">
+                <div class="expand-inner" style="padding-top:2px; padding-bottom:8px;">
+                  <div class="micro-panel">
+                    <div class="chip-row">
+                      <span class="chip chip-unknown"><span class="chip-dot" style="background:#9CA3AF;"></span>Iron — no data</span>
+                      <span class="chip chip-unknown"><span class="chip-dot" style="background:#9CA3AF;"></span>B12 — no data</span>
+                    </div>
+                    <p style="font-size:10.5px; color:var(--ink3); line-height:1.5;">No numeric target for these yet — shown as watch-only until we can verify from your recent orders.</p>
+                  </div>
+                </div>
+              </div>
+
+              <div class="nav-rows" style="margin-top:0;">
+                <div class="nav-row" style="padding-left:14px; padding-right:14px;"><div><div class="lbl">Household targets</div><div class="sub">per-member, in Settings</div></div><span class="chev">›</span></div>
+                <div class="nav-row" style="padding-left:14px; padding-right:14px;"><div><div class="lbl">This week's full report</div><div class="sub">trend over time</div></div><span class="chev">›</span></div>
+                <div class="nav-row" style="padding-left:14px; padding-right:14px;"><div><div class="lbl">Fix these in my cart</div><div class="sub">2 items close the gap</div></div><span class="chev">›</span></div>
+              </div>
+            </div>
+          </div>
+        </div></div>
+        <div class="label">Micronutrients expanded <span class="tag tag-good">tap again to close</span></div>
+      </div>
+
+    </div>
+    <p class="hint">Household targets / weekly report / fix-cart rows never move — only the micronutrient strip toggles.</p>
+  </section>
+
+  <section>
+    <div class="sec-title"><span class="num">4</span>What this fixes</div>
+    <div class="callout">
+      <b>Unifies:</b> one "Nutrition" label, one card, one visual language (dot-bars, same size and style everywhere) instead of a list-card and a separate panel duplicating protein/fiber.
+      <ul>
+        <li><b>Macro rows</b> (Calories, Protein, Fiber, Sodium) are always visible, full-size — same legibility as today's existing panel. Nothing that's currently easy to read gets smaller.</li>
+        <li><b>Navigation rows</b> (Household targets / This week's report / Fix these in my cart) stay exactly as visible as they are on the current gaps card — never hidden behind a tap.</li>
+        <li><b>Micronutrients</b> (Iron/B12) get the reveal treatment, not the important stuff — they have no numeric target in the backend today, so they're shown as neutral "watch" chips behind a small toggle rather than crowding the main card with two items that read "no data."</li>
+        <li><b>One data fetch</b> — worth flagging for the PRD: today the gap-summary text and the dot-bar panel come from two different API calls with different latency (gaps can take 15–20s). Unifying the UI doesn't by itself unify the data source; that's a backend sequencing question the written PRD needs to resolve.</li>
+      </ul>
+    </div>
+  </section>
+
+</div>
+
+<script>
+  function toggle(id) {
+    var exp  = document.getElementById('exp' + id.slice(-1));
+    var chev = document.getElementById('chev' + id.slice(-1));
+    var open = exp.classList.toggle('open');
+    chev.classList.toggle('open', open);
+    if (open && exp.children.length === 0) {
+      // collapsed card expanding for the first time — populate with same content as card2's expand
+      exp.innerHTML = document.getElementById('exp2').innerHTML;
+    }
+  }
+
+  function toggleV2(id) {
+    var n = id.slice(-1);
+    var exp   = document.getElementById('v2exp' + n);
+    var chev  = document.getElementById('v2chev' + n);
+    var label = document.getElementById('v2label' + n);
+    var open  = exp.classList.toggle('open');
+    chev.classList.toggle('open', open);
+    label.textContent = open ? 'Hide micronutrients & more' : 'Micronutrients & more';
+    if (open && exp.children.length === 0) {
+      exp.innerHTML = document.getElementById('v2exp4').innerHTML;
+    }
+  }
+
+  function toggleV3(id) {
+    var n = id.slice(-1);
+    var exp   = document.getElementById('v3exp' + n);
+    var chev  = document.getElementById('v3chev' + n);
+    var label = document.getElementById('v3label' + n);
+    var tab   = document.getElementById('v3tab' + n);
+    var open  = exp.classList.toggle('open');
+    chev.classList.toggle('open', open);
+    tab.classList.toggle('tab-shade', !open);
+    label.textContent = open ? 'Hide micronutrients' : 'Micronutrients (2)';
+    if (open && exp.children.length === 0) {
+      exp.innerHTML = document.getElementById('v3exp6').innerHTML;
+    }
+  }
+</script>
+</body>
+</html>
