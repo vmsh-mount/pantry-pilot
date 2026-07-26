@@ -1,0 +1,480 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Pantry Arrangement — Mockup</title>
+<style>
+  :root {
+    --green:#2D6A4F; --green-dk:#1B4332; --pale:#D8F3DC; --orange:#F4845F;
+    --bg:#F4F4F4; --card:#fff; --hair:rgba(0,0,0,0.07);
+    --ink:#1C1C1E; --ink2:#5A5A5F; --ink3:#8E8E93;
+    --grad: linear-gradient(135deg, #1B4332, #2D6A4F);
+    --low:#C87941; --depleted:#C0392B; --stocked:#40916C;
+  }
+  * { box-sizing:border-box; margin:0; padding:0; }
+  body {
+    font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
+    background:#E8EAE6; padding:40px 20px 90px; color:var(--ink);
+  }
+  .wrap { max-width:1200px; margin:0 auto; }
+  .head { max-width:760px; margin:0 auto 40px; }
+  .eyebrow { font-size:12px; font-weight:700; letter-spacing:.12em; text-transform:uppercase; color:var(--green); margin-bottom:8px; }
+  h1 { font-size:28px; font-weight:800; letter-spacing:-.02em; margin-bottom:12px; }
+  .lede { font-size:14.5px; color:var(--ink2); line-height:1.6; }
+  .lede b { color:var(--ink); font-weight:650; }
+
+  section { margin-bottom:56px; }
+  .sec-title { font-size:19px; font-weight:750; margin-bottom:6px; }
+  .sec-title .num { display:inline-flex; align-items:center; justify-content:center; width:25px; height:25px; border-radius:8px; background:var(--green); color:#fff; font-size:12px; font-weight:700; margin-right:9px; vertical-align:2px; }
+  .sec-sub { font-size:13.5px; color:var(--ink2); margin-bottom:22px; max-width:720px; }
+
+  .frames { display:flex; gap:26px; flex-wrap:wrap; align-items:flex-start; justify-content:center; }
+  .phone { width:300px; height:640px; border-radius:38px; background:#000; padding:9px; box-shadow:0 20px 44px -16px rgba(0,0,0,.4); }
+  .screen { width:100%; height:100%; border-radius:29px; overflow:hidden; background:var(--bg); display:flex; flex-direction:column; }
+  .label { text-align:center; margin-top:12px; font-size:13px; font-weight:650; }
+  .label .tag { display:inline-block; font-size:10.5px; font-weight:700; padding:2px 8px; border-radius:20px; margin-left:6px; vertical-align:1px; }
+  .tag-bad { background:#FBE3E0; color:#B23A2E; }
+  .tag-good { background:var(--pale); color:var(--green-dk); }
+  .tag-alt { background:#E4E9F2; color:#3A4A63; }
+
+  .hero { background:var(--grad); padding:16px 16px 14px; color:#fff; flex-shrink:0; }
+  .brand { display:flex; align-items:center; gap:7px; font-weight:700; font-size:14px; margin-bottom:10px; }
+  .hero-lbl { font-size:10.5px; font-weight:700; color:rgba(255,255,255,.45); text-transform:uppercase; letter-spacing:.08em; }
+  .hero-count { font-size:30px; font-weight:900; letter-spacing:-1px; margin-top:2px; }
+  .body-scroll { flex:1; padding:11px; overflow:hidden; }
+
+  /* ── BEFORE: current flat list ─────────────────────────────────────────── */
+  .cat-label { font-size:10.5px; font-weight:700; text-transform:uppercase; letter-spacing:.1em; color:var(--ink3); margin:0 0 6px 4px; }
+  .flat-card { background:#fff; border-radius:16px; overflow:hidden; margin-bottom:14px; }
+  .flat-row { display:flex; align-items:center; gap:9px; padding:11px 13px; border-top:0.5px solid rgba(0,0,0,.05); }
+  .flat-row:first-child { border-top:none; }
+  .fr-dot { width:7px; height:7px; border-radius:50%; flex-shrink:0; }
+  .fr-name { flex:1; font-size:12.5px; font-weight:500; color:var(--ink); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+  .fr-bar { width:56px; height:3px; border-radius:99px; background:rgba(0,0,0,.07); flex-shrink:0; overflow:hidden; }
+  .fr-bar > div { height:100%; border-radius:99px; }
+  .fr-qty { font-size:11px; color:var(--ink3); width:44px; text-align:right; flex-shrink:0; }
+
+  /* ── DIRECTION A: Shelf & Jar ──────────────────────────────────────────── */
+  .shelf-zone { margin-bottom:20px; }
+  .shelf-tag { display:inline-flex; align-items:center; gap:5px; font-size:10.5px; font-weight:750; padding:4px 10px 4px 8px; border-radius:7px; margin-bottom:10px; margin-left:2px; }
+  .shelf-strip { position:relative; padding:14px 6px 20px; border-radius:14px; }
+  .jar-row { display:flex; gap:10px; overflow-x:auto; padding:0 6px 4px; }
+  .jar { flex-shrink:0; width:64px; display:flex; flex-direction:column; align-items:center; }
+  .jar-body {
+    width:52px; height:64px; border-radius:8px 8px 14px 14px;
+    background:rgba(255,255,255,.55); border:1.5px solid rgba(255,255,255,.9);
+    position:relative; overflow:hidden;
+    box-shadow: inset 0 2px 4px rgba(0,0,0,.06), 0 3px 6px rgba(0,0,0,.08);
+  }
+  .jar-lid { width:34px; height:7px; border-radius:3px; background:rgba(255,255,255,.85); margin:0 auto -1px; position:relative; z-index:2; border:1px solid rgba(0,0,0,.08); }
+  .jar-fill { position:absolute; bottom:0; left:0; right:0; border-radius:0 0 12px 12px; }
+  .jar-name { font-size:9.5px; font-weight:650; color:var(--ink); text-align:center; margin-top:6px; line-height:1.2; max-width:60px; }
+  .jar-qty { font-size:8.5px; color:var(--ink3); margin-top:1px; }
+  .shelf-lip { position:absolute; left:4px; right:4px; bottom:6px; height:6px; border-radius:3px; opacity:.35; }
+
+  /* ── DIRECTION B: Zone Grid ────────────────────────────────────────────── */
+  .zone { border-radius:16px; padding:12px 10px 14px; margin-bottom:14px; }
+  .zone-head { display:flex; align-items:center; gap:6px; padding:0 4px 10px; }
+  .zone-ic { font-size:15px; }
+  .zone-name { font-size:12px; font-weight:750; flex:1; }
+  .zone-count { font-size:10px; font-weight:650; opacity:.6; }
+  .tile-grid { display:grid; grid-template-columns:repeat(3, 1fr); gap:8px; }
+  .tile { background:rgba(255,255,255,.7); border-radius:12px; padding:9px 6px 7px; display:flex; flex-direction:column; align-items:center; position:relative; }
+  .gauge { width:38px; height:38px; border-radius:50%; display:flex; align-items:center; justify-content:center; margin-bottom:5px; }
+  .gauge-inner { width:29px; height:29px; border-radius:50%; background:#fff; display:flex; align-items:center; justify-content:center; font-size:13px; }
+  .tile-name { font-size:9.5px; font-weight:650; color:var(--ink); text-align:center; line-height:1.15; max-width:56px; }
+  .tile-qty { font-size:8px; color:var(--ink3); margin-top:2px; }
+  .tile-status-dot { position:absolute; top:6px; right:6px; width:6px; height:6px; border-radius:50%; }
+  .tile-more { background:rgba(255,255,255,.4); border:1px dashed rgba(0,0,0,.15); cursor:pointer; }
+  .tile-more .gauge { background:none; }
+  .tile-more .gauge-inner { background:rgba(255,255,255,.7); font-size:13px; font-weight:800; color:var(--ink2); }
+  .tile-more .tile-name { color:var(--ink2); font-weight:700; }
+  .zone-extra { display:none; }
+  .zone-extra.open { display:contents; }
+
+  .callout { background:#fff; border:1px solid var(--hair); border-left:3px solid var(--green); border-radius:12px; padding:16px 18px; font-size:13.5px; color:var(--ink2); max-width:800px; margin:0 auto; line-height:1.6; }
+  .callout b { color:var(--ink); }
+  .callout ul { margin:8px 0 0 18px; }
+  .callout li { margin-bottom:5px; }
+  .compare-grid { display:grid; grid-template-columns:1fr 1fr; gap:16px; max-width:800px; margin:0 auto; }
+  .compare-card { background:#fff; border:1px solid var(--hair); border-radius:14px; padding:16px 18px; }
+  .compare-card h4 { font-size:13.5px; font-weight:750; margin-bottom:8px; }
+  .compare-card ul { margin-left:16px; font-size:12.5px; color:var(--ink2); line-height:1.6; }
+  @media (max-width:700px) { .compare-grid { grid-template-columns:1fr; } }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <div class="head">
+    <div class="eyebrow">Design Mockup · Pantry Arrangement</div>
+    <h1>Make the pantry feel arranged, not listed</h1>
+    <p class="lede">Today every category renders as the same flat white list — a "Staples" section looks identical to "Dairy," which looks identical to "Packaged." Real pantries have <b>zones</b> — a shelf, a fridge door, a fruit bowl — each with its own feel. Two directions below, both keeping the existing tap-to-edit interaction so this stays a UI change, not a rebuild of the editing flow.</p>
+  </div>
+
+  <section>
+    <div class="sec-title"><span class="num">1</span>Before — one flat list, five times</div>
+    <p class="sec-sub">Every category container is the same white rounded card, same row style, same gray uppercase label. Nothing tells you Dairy from Packaged except the text.</p>
+    <div class="frames">
+      <div>
+        <div class="phone"><div class="screen">
+          <div class="hero">
+            <div class="brand">🥦 PantryPilot</div>
+            <div class="hero-lbl">PANTRY</div>
+            <div class="hero-count">14 items</div>
+          </div>
+          <div class="body-scroll">
+            <p class="cat-label">Staples</p>
+            <div class="flat-card">
+              <div class="flat-row"><span class="fr-dot" style="background:var(--stocked);"></span><span class="fr-name">Basmati Rice</span><div class="fr-bar"><div style="width:80%; background:var(--stocked);"></div></div><span class="fr-qty">4 kg</span></div>
+              <div class="flat-row"><span class="fr-dot" style="background:var(--low);"></span><span class="fr-name">Wheat Atta</span><div class="fr-bar"><div style="width:30%; background:var(--low);"></div></div><span class="fr-qty">1.2 kg</span></div>
+              <div class="flat-row"><span class="fr-dot" style="background:var(--stocked);"></span><span class="fr-name">Toor Dal</span><div class="fr-bar"><div style="width:65%; background:var(--stocked);"></div></div><span class="fr-qty">900 g</span></div>
+            </div>
+            <p class="cat-label">Dairy</p>
+            <div class="flat-card">
+              <div class="flat-row"><span class="fr-dot" style="background:var(--depleted);"></span><span class="fr-name">Milk</span><div class="fr-bar"><div style="width:5%; background:var(--depleted);"></div></div><span class="fr-qty">0.1 L</span></div>
+              <div class="flat-row"><span class="fr-dot" style="background:var(--stocked);"></span><span class="fr-name">Curd</span><div class="fr-bar"><div style="width:70%; background:var(--stocked);"></div></div><span class="fr-qty">400 g</span></div>
+            </div>
+            <p class="cat-label">Fresh Produce</p>
+            <div class="flat-card">
+              <div class="flat-row"><span class="fr-dot" style="background:var(--low);"></span><span class="fr-name">Onions</span><div class="fr-bar"><div style="width:25%; background:var(--low);"></div></div><span class="fr-qty">0.5 kg</span></div>
+              <div class="flat-row"><span class="fr-dot" style="background:var(--stocked);"></span><span class="fr-name">Tomatoes</span><div class="fr-bar"><div style="width:60%; background:var(--stocked);"></div></div><span class="fr-qty">700 g</span></div>
+            </div>
+          </div>
+        </div></div>
+        <div class="label">Current pantry page <span class="tag tag-bad">generic list</span></div>
+      </div>
+    </div>
+  </section>
+
+  <section>
+    <div class="sec-title"><span class="num">2</span>Direction A — Shelf &amp; Jar</div>
+    <p class="sec-sub">Each category is a physical <b>shelf</b> — a warm, zone-tinted strip with its own shelf-lip shadow. Items sit on it as jars, horizontally arranged like you'd actually see them, fill level rising from the base like real contents. Swipe a shelf sideways to see everything on it.</p>
+    <div class="frames">
+      <div>
+        <div class="phone"><div class="screen">
+          <div class="hero">
+            <div class="brand">🥦 PantryPilot</div>
+            <div class="hero-lbl">PANTRY</div>
+            <div class="hero-count">14 items</div>
+          </div>
+          <div class="body-scroll">
+
+            <!-- Staples shelf — warm wood tone -->
+            <div class="shelf-zone">
+              <span class="shelf-tag" style="background:#F3E4C8; color:#8A6423;">🌾 Staples</span>
+              <div class="shelf-strip" style="background:linear-gradient(180deg, #FBF3E3, #F3E4C8);">
+                <div class="jar-row">
+                  <div class="jar">
+                    <div class="jar-lid"></div>
+                    <div class="jar-body"><div class="jar-fill" style="height:80%; background:linear-gradient(180deg, #E8C468, #D4A94A);"></div></div>
+                    <div class="jar-name">Basmati Rice</div><div class="jar-qty">4 kg</div>
+                  </div>
+                  <div class="jar">
+                    <div class="jar-lid"></div>
+                    <div class="jar-body"><div class="jar-fill" style="height:30%; background:linear-gradient(180deg, #E3B876, #C87941);"></div></div>
+                    <div class="jar-name">Wheat Atta</div><div class="jar-qty">1.2 kg</div>
+                  </div>
+                  <div class="jar">
+                    <div class="jar-lid"></div>
+                    <div class="jar-body"><div class="jar-fill" style="height:65%; background:linear-gradient(180deg, #C9935A, #A9713A);"></div></div>
+                    <div class="jar-name">Toor Dal</div><div class="jar-qty">900 g</div>
+                  </div>
+                  <div class="jar">
+                    <div class="jar-lid"></div>
+                    <div class="jar-body"><div class="jar-fill" style="height:50%; background:linear-gradient(180deg, #E8DCC0, #D4C49E);"></div></div>
+                    <div class="jar-name">Sugar</div><div class="jar-qty">600 g</div>
+                  </div>
+                </div>
+                <div class="shelf-lip" style="background:#8A6423;"></div>
+              </div>
+            </div>
+
+            <!-- Dairy shelf — cool fridge tone -->
+            <div class="shelf-zone">
+              <span class="shelf-tag" style="background:#DCEAF5; color:#2E5F82;">🥛 Dairy · fridge door</span>
+              <div class="shelf-strip" style="background:linear-gradient(180deg, #EFF6FB, #DCEAF5);">
+                <div class="jar-row">
+                  <div class="jar">
+                    <div class="jar-lid"></div>
+                    <div class="jar-body"><div class="jar-fill" style="height:5%; background:linear-gradient(180deg, #F2C6C0, var(--depleted));"></div></div>
+                    <div class="jar-name">Milk</div><div class="jar-qty">0.1 L</div>
+                  </div>
+                  <div class="jar">
+                    <div class="jar-lid"></div>
+                    <div class="jar-body"><div class="jar-fill" style="height:70%; background:linear-gradient(180deg, #FAFAF6, #EDEADF);"></div></div>
+                    <div class="jar-name">Curd</div><div class="jar-qty">400 g</div>
+                  </div>
+                  <div class="jar">
+                    <div class="jar-lid"></div>
+                    <div class="jar-body"><div class="jar-fill" style="height:40%; background:linear-gradient(180deg, #F5EBB8, #E8D67E);"></div></div>
+                    <div class="jar-name">Butter</div><div class="jar-qty">100 g</div>
+                  </div>
+                </div>
+                <div class="shelf-lip" style="background:#2E5F82;"></div>
+              </div>
+            </div>
+
+            <!-- Fresh produce — crate/green -->
+            <div class="shelf-zone">
+              <span class="shelf-tag" style="background:var(--pale); color:var(--green-dk);">🥬 Fresh Produce · crate</span>
+              <div class="shelf-strip" style="background:linear-gradient(180deg, #F0F9F1, var(--pale));">
+                <div class="jar-row">
+                  <div class="jar">
+                    <div class="jar-lid"></div>
+                    <div class="jar-body"><div class="jar-fill" style="height:25%; background:linear-gradient(180deg, #F0C88A, #D9A24E);"></div></div>
+                    <div class="jar-name">Onions</div><div class="jar-qty">0.5 kg</div>
+                  </div>
+                  <div class="jar">
+                    <div class="jar-lid"></div>
+                    <div class="jar-body"><div class="jar-fill" style="height:60%; background:linear-gradient(180deg, #EE8B75, #D65F44);"></div></div>
+                    <div class="jar-name">Tomatoes</div><div class="jar-qty">700 g</div>
+                  </div>
+                </div>
+                <div class="shelf-lip" style="background:var(--green-dk);"></div>
+              </div>
+            </div>
+
+          </div>
+        </div></div>
+        <div class="label">Shelf &amp; Jar <span class="tag tag-good">most literal metaphor</span></div>
+      </div>
+
+      <div>
+        <div class="phone"><div class="screen">
+          <div class="hero">
+            <div class="brand">🥦 PantryPilot</div>
+            <div class="hero-lbl">PANTRY</div>
+            <div class="hero-count">14 items</div>
+          </div>
+          <div class="body-scroll" style="display:flex; align-items:center; justify-content:center;">
+            <div style="text-align:center; padding:0 20px;">
+              <div class="jar" style="margin:0 auto 14px; transform:scale(1.8);">
+                <div class="jar-lid"></div>
+                <div class="jar-body"><div class="jar-fill" style="height:30%; background:linear-gradient(180deg, #E3B876, #C87941);"></div></div>
+              </div>
+              <p style="font-size:14px; font-weight:700; margin-bottom:4px;">Wheat Atta</p>
+              <p style="font-size:12px; color:var(--ink3); margin-bottom:16px;">1.2 kg remaining · running low</p>
+              <div style="display:flex; gap:8px; justify-content:center;">
+                <div style="width:36px; height:36px; border-radius:10px; background:#fff; border:1px solid var(--hair); display:flex; align-items:center; justify-content:center; font-size:16px; color:var(--green); font-weight:700;">−</div>
+                <div style="width:36px; height:36px; border-radius:10px; background:#fff; border:1px solid var(--hair); display:flex; align-items:center; justify-content:center; font-size:16px; color:var(--green); font-weight:700;">+</div>
+              </div>
+            </div>
+          </div>
+        </div></div>
+        <div class="label">Tap a jar → same inline editor</div>
+      </div>
+    </div>
+  </section>
+
+  <section>
+    <div class="sec-title"><span class="num">3</span>Direction B — Zone Grid</div>
+    <p class="sec-sub">Less illustrative, more "kitchen inventory app": each category is a soft-tinted <b>zone</b> block, items sit in a 3-column grid as tiles with a radial fill gauge instead of a bar — reads more like a gauge cluster than a scrollbar. Lower engineering risk than jars (no custom shapes), still clearly not a plain list.</p>
+    <div class="frames">
+      <div>
+        <div class="phone"><div class="screen">
+          <div class="hero">
+            <div class="brand">🥦 PantryPilot</div>
+            <div class="hero-lbl">PANTRY</div>
+            <div class="hero-count">14 items</div>
+          </div>
+          <div class="body-scroll">
+
+            <div class="zone" style="background:linear-gradient(165deg, #FBF3E3, #F3E4C8);">
+              <div class="zone-head"><span class="zone-ic">🌾</span><span class="zone-name" style="color:#8A6423;">Staples</span><span class="zone-count" style="color:#8A6423;">4</span></div>
+              <div class="tile-grid">
+                <div class="tile">
+                  <div class="tile-status-dot" style="background:var(--stocked);"></div>
+                  <div class="gauge" style="background:conic-gradient(var(--stocked) 288deg, rgba(0,0,0,.08) 0);"><div class="gauge-inner">🍚</div></div>
+                  <div class="tile-name">Basmati Rice</div><div class="tile-qty">4 kg</div>
+                </div>
+                <div class="tile">
+                  <div class="tile-status-dot" style="background:var(--low);"></div>
+                  <div class="gauge" style="background:conic-gradient(var(--low) 108deg, rgba(0,0,0,.08) 0);"><div class="gauge-inner">🌾</div></div>
+                  <div class="tile-name">Wheat Atta</div><div class="tile-qty">1.2 kg</div>
+                </div>
+                <div class="tile">
+                  <div class="tile-status-dot" style="background:var(--stocked);"></div>
+                  <div class="gauge" style="background:conic-gradient(var(--stocked) 234deg, rgba(0,0,0,.08) 0);"><div class="gauge-inner">🫘</div></div>
+                  <div class="tile-name">Toor Dal</div><div class="tile-qty">900 g</div>
+                </div>
+              </div>
+            </div>
+
+            <div class="zone" style="background:linear-gradient(165deg, #EFF6FB, #DCEAF5);">
+              <div class="zone-head"><span class="zone-ic">🥛</span><span class="zone-name" style="color:#2E5F82;">Dairy</span><span class="zone-count" style="color:#2E5F82;">3</span></div>
+              <div class="tile-grid">
+                <div class="tile">
+                  <div class="tile-status-dot" style="background:var(--depleted);"></div>
+                  <div class="gauge" style="background:conic-gradient(var(--depleted) 18deg, rgba(0,0,0,.08) 0);"><div class="gauge-inner">🥛</div></div>
+                  <div class="tile-name">Milk</div><div class="tile-qty">0.1 L</div>
+                </div>
+                <div class="tile">
+                  <div class="tile-status-dot" style="background:var(--stocked);"></div>
+                  <div class="gauge" style="background:conic-gradient(var(--stocked) 252deg, rgba(0,0,0,.08) 0);"><div class="gauge-inner">🧈</div></div>
+                  <div class="tile-name">Curd</div><div class="tile-qty">400 g</div>
+                </div>
+                <div class="tile">
+                  <div class="tile-status-dot" style="background:var(--low);"></div>
+                  <div class="gauge" style="background:conic-gradient(var(--low) 144deg, rgba(0,0,0,.08) 0);"><div class="gauge-inner">🧀</div></div>
+                  <div class="tile-name">Butter</div><div class="tile-qty">100 g</div>
+                </div>
+              </div>
+            </div>
+
+            <div class="zone" style="background:linear-gradient(165deg, #F0F9F1, var(--pale));">
+              <div class="zone-head"><span class="zone-ic">🥬</span><span class="zone-name" style="color:var(--green-dk);">Fresh Produce</span><span class="zone-count" style="color:var(--green-dk);">2</span></div>
+              <div class="tile-grid">
+                <div class="tile">
+                  <div class="tile-status-dot" style="background:var(--low);"></div>
+                  <div class="gauge" style="background:conic-gradient(var(--low) 90deg, rgba(0,0,0,.08) 0);"><div class="gauge-inner">🧅</div></div>
+                  <div class="tile-name">Onions</div><div class="tile-qty">0.5 kg</div>
+                </div>
+                <div class="tile">
+                  <div class="tile-status-dot" style="background:var(--stocked);"></div>
+                  <div class="gauge" style="background:conic-gradient(var(--stocked) 216deg, rgba(0,0,0,.08) 0);"><div class="gauge-inner">🍅</div></div>
+                  <div class="tile-name">Tomatoes</div><div class="tile-qty">700 g</div>
+                </div>
+              </div>
+            </div>
+
+            <!-- Packaged vs Grocery/Other — rendered side-by-side so the tint
+                 separation can actually be judged, not just computed -->
+            <div class="zone" style="background:linear-gradient(165deg, #F0EEF5, #E2DEEE);">
+              <div class="zone-head"><span class="zone-ic">📦</span><span class="zone-name" style="color:#5B4E7A;">Packaged</span><span class="zone-count" style="color:#5B4E7A;">2</span></div>
+              <div class="tile-grid">
+                <div class="tile">
+                  <div class="tile-status-dot" style="background:var(--low);"></div>
+                  <div class="gauge" style="background:conic-gradient(var(--low) 95deg, rgba(0,0,0,.08) 0);"><div class="gauge-inner">🍝</div></div>
+                  <div class="tile-name">Pasta</div><div class="tile-qty">150 g</div>
+                </div>
+                <div class="tile">
+                  <div class="tile-status-dot" style="background:var(--stocked);"></div>
+                  <div class="gauge" style="background:conic-gradient(var(--stocked) 245deg, rgba(0,0,0,.08) 0);"><div class="gauge-inner">🥫</div></div>
+                  <div class="tile-name">Canned Beans</div><div class="tile-qty">3 cans</div>
+                </div>
+              </div>
+            </div>
+
+            <div class="zone" style="background:linear-gradient(165deg, #FCEEE4, #F7DCC7);">
+              <div class="zone-head"><span class="zone-ic">🛒</span><span class="zone-name" style="color:#A0562A;">Grocery</span><span class="zone-count" style="color:#A0562A;">2</span></div>
+              <div class="tile-grid">
+                <div class="tile">
+                  <div class="tile-status-dot" style="background:var(--stocked);"></div>
+                  <div class="gauge" style="background:conic-gradient(var(--stocked) 260deg, rgba(0,0,0,.08) 0);"><div class="gauge-inner">🧴</div></div>
+                  <div class="tile-name">Dish Soap</div><div class="tile-qty">400 ml</div>
+                </div>
+                <div class="tile">
+                  <div class="tile-status-dot" style="background:var(--low);"></div>
+                  <div class="gauge" style="background:conic-gradient(var(--low) 72deg, rgba(0,0,0,.08) 0);"><div class="gauge-inner">🧻</div></div>
+                  <div class="tile-name">Tissues</div><div class="tile-qty">1 roll</div>
+                </div>
+              </div>
+            </div>
+
+          </div>
+        </div></div>
+        <div class="label">Zone Grid <span class="tag tag-alt">tile / gauge cluster</span></div>
+      </div>
+
+      <div>
+        <div class="phone"><div class="screen">
+          <div class="hero">
+            <div class="brand">🥦 PantryPilot</div>
+            <div class="hero-lbl">PANTRY</div>
+            <div class="hero-count">14 items</div>
+          </div>
+          <div class="body-scroll" style="display:flex; align-items:center; justify-content:center;">
+            <div style="text-align:center; padding:0 20px;">
+              <div class="gauge" style="width:76px; height:76px; margin:0 auto 14px; background:conic-gradient(var(--low) 108deg, rgba(0,0,0,.08) 0);">
+                <div class="gauge-inner" style="width:60px; height:60px; font-size:26px;">🌾</div>
+              </div>
+              <p style="font-size:14px; font-weight:700; margin-bottom:4px;">Wheat Atta</p>
+              <p style="font-size:12px; color:var(--ink3); margin-bottom:16px;">1.2 kg remaining · running low</p>
+              <div style="display:flex; gap:8px; justify-content:center;">
+                <div style="width:36px; height:36px; border-radius:10px; background:#fff; border:1px solid var(--hair); display:flex; align-items:center; justify-content:center; font-size:16px; color:var(--green); font-weight:700;">−</div>
+                <div style="width:36px; height:36px; border-radius:10px; background:#fff; border:1px solid var(--hair); display:flex; align-items:center; justify-content:center; font-size:16px; color:var(--green); font-weight:700;">+</div>
+              </div>
+            </div>
+          </div>
+        </div></div>
+        <div class="label">Tap a tile → same inline editor</div>
+      </div>
+    </div>
+  </section>
+
+  <section>
+    <div class="sec-title"><span class="num">4</span>Large categories — capped grid + "N more"</div>
+    <p class="sec-sub">A zone caps at a clean 2-row grid (6 tiles). Items already sort depleted → low → stocked, so the 6 visible slots are always the most urgent ones — nothing that needs attention is ever hidden behind a tap. If there are more, the last slot becomes a <b>+N more</b> tile — same pattern already used for order previews and onboarding's go-to items elsewhere in the app. Tap it to expand the zone in place, same accordion behavior as the Nutrition card's Micronutrients reveal.</p>
+    <div class="frames">
+      <div>
+        <div class="phone"><div class="screen">
+          <div class="hero">
+            <div class="brand">🥦 PantryPilot</div>
+            <div class="hero-lbl">PANTRY</div>
+            <div class="hero-count">23 items</div>
+          </div>
+          <div class="body-scroll">
+            <div class="zone" style="background:linear-gradient(165deg, #F0EEF5, #E2DEEE);">
+              <div class="zone-head"><span class="zone-ic">📦</span><span class="zone-name" style="color:#5B4E7A;">Packaged</span><span class="zone-count" style="color:#5B4E7A;">9</span></div>
+              <div class="tile-grid" id="packagedGrid">
+                <div class="tile"><div class="tile-status-dot" style="background:var(--depleted);"></div><div class="gauge" style="background:conic-gradient(var(--depleted) 14deg, rgba(0,0,0,.08) 0);"><div class="gauge-inner">🍞</div></div><div class="tile-name">Bread</div><div class="tile-qty">0 loaf</div></div>
+                <div class="tile"><div class="tile-status-dot" style="background:var(--depleted);"></div><div class="gauge" style="background:conic-gradient(var(--depleted) 22deg, rgba(0,0,0,.08) 0);"><div class="gauge-inner">🥣</div></div><div class="tile-name">Cereal</div><div class="tile-qty">20 g</div></div>
+                <div class="tile"><div class="tile-status-dot" style="background:var(--low);"></div><div class="gauge" style="background:conic-gradient(var(--low) 95deg, rgba(0,0,0,.08) 0);"><div class="gauge-inner">🍝</div></div><div class="tile-name">Pasta</div><div class="tile-qty">150 g</div></div>
+                <div class="tile"><div class="tile-status-dot" style="background:var(--low);"></div><div class="gauge" style="background:conic-gradient(var(--low) 108deg, rgba(0,0,0,.08) 0);"><div class="gauge-inner">🍪</div></div><div class="tile-name">Biscuits</div><div class="tile-qty">1 pack</div></div>
+                <div class="tile"><div class="tile-status-dot" style="background:var(--stocked);"></div><div class="gauge" style="background:conic-gradient(var(--stocked) 245deg, rgba(0,0,0,.08) 0);"><div class="gauge-inner">🥫</div></div><div class="tile-name">Canned Beans</div><div class="tile-qty">3 cans</div></div>
+                <div class="tile tile-more" id="moreTile" onclick="expandZone()">
+                  <div class="gauge"><div class="gauge-inner">+4</div></div>
+                  <div class="tile-name">4 more</div>
+                </div>
+                <div class="zone-extra" id="extraTiles">
+                  <div class="tile"><div class="tile-status-dot" style="background:var(--stocked);"></div><div class="gauge" style="background:conic-gradient(var(--stocked) 220deg, rgba(0,0,0,.08) 0);"><div class="gauge-inner">🧂</div></div><div class="tile-name">Salt</div><div class="tile-qty">300 g</div></div>
+                  <div class="tile"><div class="tile-status-dot" style="background:var(--stocked);"></div><div class="gauge" style="background:conic-gradient(var(--stocked) 270deg, rgba(0,0,0,.08) 0);"><div class="gauge-inner">🌶️</div></div><div class="tile-name">Chili Powder</div><div class="tile-qty">180 g</div></div>
+                  <div class="tile"><div class="tile-status-dot" style="background:var(--stocked);"></div><div class="gauge" style="background:conic-gradient(var(--stocked) 300deg, rgba(0,0,0,.08) 0);"><div class="gauge-inner">🍯</div></div><div class="tile-name">Honey</div><div class="tile-qty">250 g</div></div>
+                  <div class="tile"><div class="tile-status-dot" style="background:var(--stocked);"></div><div class="gauge" style="background:conic-gradient(var(--stocked) 260deg, rgba(0,0,0,.08) 0);"><div class="gauge-inner">🥜</div></div><div class="tile-name">Peanut Butter</div><div class="tile-qty">180 g</div></div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div></div>
+        <div class="label">Collapsed <span class="tag tag-good">2 depleted, 2 low — all visible</span></div>
+      </div>
+    </div>
+    <p class="sec-sub" style="text-align:center; margin-top:14px; margin-bottom:0;">Click the "+4 more" tile above — it really expands.</p>
+  </section>
+
+  <section>
+    <div class="sec-title"><span class="num">5</span>Tradeoffs</div>
+    <div class="compare-grid">
+      <div class="compare-card">
+        <h4>🌾 Shelf &amp; Jar</h4>
+        <ul>
+          <li>Most literal "arranged pantry" feeling — closest to the actual request</li>
+          <li>Horizontal scroll per shelf could hide items off-screen without a scroll hint</li>
+          <li>Needs a per-category color/tone mapping (wood, fridge, crate…) — more design tokens to maintain</li>
+          <li>Jar shape is custom CSS, not a huge lift, but more surface area than a gauge</li>
+        </ul>
+      </div>
+      <div class="compare-card">
+        <h4>⬡ Zone Grid</h4>
+        <ul>
+          <li>Everything visible at once, no horizontal scroll, easier to scan a full category</li>
+          <li>Radial gauge is a simple conic-gradient — least custom-shape work</li>
+          <li>Reads a bit more "app dashboard" than "physical pantry" — less literal to the ask</li>
+          <li>Needs an emoji/icon per item — either a small mapping table or a generic category icon fallback</li>
+        </ul>
+      </div>
+    </div>
+    <p class="sec-sub" style="text-align:center; margin-top:18px; margin-bottom:0;">Both keep category grouping, status-driven color, and the exact same tap-to-expand inline editor already built — only the "what does a shelf/item look like" visual changes.</p>
+  </section>
+
+</div>
+<script>
+  function expandZone() {
+    document.getElementById('extraTiles').classList.add('open');
+    document.getElementById('moreTile').style.display = 'none';
+  }
+</script>
+</body>
+</html>
