@@ -1,0 +1,243 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Nutrition Snapshot — Mockup</title>
+<style>
+  :root {
+    --green:#2D6A4F; --green-dk:#1B4332; --pale:#D8F3DC; --orange:#F4845F;
+    --bg:#F4F4F4; --card:#fff; --hair:rgba(0,0,0,0.07);
+    --ink:#1C1C1E; --ink2:#5A5A5F; --ink3:#8E8E93;
+    --protein:#4A7FA5; --carbs:#D9A24E; --fat:#C0665C;
+  }
+  * { box-sizing:border-box; margin:0; padding:0; }
+  body {
+    font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
+    background:#E8EAE6; padding:40px 20px 90px; color:var(--ink);
+  }
+  .wrap { max-width:1100px; margin:0 auto; }
+  .head { max-width:760px; margin:0 auto 40px; }
+  .eyebrow { font-size:12px; font-weight:700; letter-spacing:.12em; text-transform:uppercase; color:var(--green); margin-bottom:8px; }
+  h1 { font-size:28px; font-weight:800; letter-spacing:-.02em; margin-bottom:12px; }
+  .lede { font-size:14.5px; color:var(--ink2); line-height:1.6; }
+  .lede b { color:var(--ink); font-weight:650; }
+  section { margin-bottom:56px; }
+  .sec-title { font-size:19px; font-weight:750; margin-bottom:6px; }
+  .sec-title .num { display:inline-flex; align-items:center; justify-content:center; width:25px; height:25px; border-radius:8px; background:var(--green); color:#fff; font-size:12px; font-weight:700; margin-right:9px; vertical-align:2px; }
+  .sec-sub { font-size:13.5px; color:var(--ink2); margin-bottom:22px; max-width:720px; }
+  .frames { display:flex; gap:26px; flex-wrap:wrap; align-items:flex-start; justify-content:center; }
+  .phone { width:300px; height:640px; border-radius:38px; background:#000; padding:9px; box-shadow:0 20px 44px -16px rgba(0,0,0,.4); }
+  .screen { width:100%; height:100%; border-radius:29px; overflow:hidden; background:var(--bg); display:flex; flex-direction:column; }
+  .label { text-align:center; margin-top:12px; font-size:13px; font-weight:650; }
+  .label .tag { display:inline-block; font-size:10.5px; font-weight:700; padding:2px 8px; border-radius:20px; margin-left:6px; vertical-align:1px; }
+  .tag-bad { background:#FBE3E0; color:#B23A2E; }
+  .tag-good { background:var(--pale); color:var(--green-dk); }
+  .body-scroll { flex:1; padding:14px; overflow:hidden; }
+
+  /* BEFORE — recreation of current NutritionCard */
+  .old-card { background:#fff; border:1px solid #E5E7EB; border-radius:12px; overflow:hidden; }
+  .old-head { display:flex; align-items:center; justify-content:space-between; padding:10px 14px; background:#F9FAFB; border-bottom:1px solid #E5E7EB; }
+  .old-head .t { font-size:13px; font-weight:600; color:#1F2937; display:flex; gap:6px; align-items:center; }
+  .old-head .r { font-size:11px; color:#9CA3AF; }
+  .old-body { padding:14px; }
+  .old-kcal { font-size:26px; font-weight:600; color:#C45E18; }
+  .old-kcal-lbl { font-size:12px; color:#6B7280; margin-left:6px; }
+  .old-bar-row { margin-bottom:9px; margin-top:12px; }
+  .old-bar-top { display:flex; justify-content:space-between; font-size:10.5px; margin-bottom:3px; }
+  .old-bar-top .l { color:#6B7280; }
+  .old-bar-track { height:3px; border-radius:99px; background:#F3F4F6; overflow:hidden; }
+  .old-bar-fill { height:100%; border-radius:99px; }
+  .old-item { display:flex; align-items:center; gap:6px; padding:5px 0; border-bottom:1px solid #F3F4F6; }
+  .old-badge { font-size:9px; padding:1px 5px; border-radius:4px; background:#F3F4F6; color:#9CA3AF; flex-shrink:0; }
+  .old-item-name { flex:1; font-size:11px; color:#374151; }
+  .old-item-kcal { font-size:11px; color:#6B7280; }
+
+  /* AFTER — redesigned */
+  .snap-card { background:#fff; border-radius:16px; overflow:hidden; border:1px solid var(--hair); }
+  .snap-head { display:flex; align-items:center; gap:8px; padding:13px 15px 11px; }
+  .snap-head .t { font-size:13px; font-weight:750; color:var(--ink); flex:1; }
+  .snap-head .r { font-size:10.5px; font-weight:650; color:var(--ink3); }
+  .snap-kcal-block { padding:0 15px 14px; }
+  .snap-kcal { font-size:32px; font-weight:850; letter-spacing:-.5px; color:var(--ink); tabular-nums; }
+  .snap-kcal span { font-size:13px; font-weight:500; color:var(--ink3); margin-left:6px; }
+
+  .comp-bar { display:flex; height:10px; border-radius:6px; overflow:hidden; margin:0 15px 10px; }
+  .comp-legend { display:flex; padding:0 15px 14px; gap:14px; }
+  .comp-item { display:flex; align-items:center; gap:5px; }
+  .comp-dot { width:8px; height:8px; border-radius:50%; flex-shrink:0; }
+  .comp-txt .lbl { font-size:10.5px; font-weight:700; color:var(--ink); }
+  .comp-txt .val { font-size:9.5px; color:var(--ink3); }
+
+  .stat-pair { display:flex; gap:10px; padding:0 15px 15px; }
+  .stat-tile { flex:1; background:#F7F8F5; border-radius:12px; padding:10px 12px; }
+  .stat-tile .v { font-size:16px; font-weight:800; color:var(--ink); tabular-nums; }
+  .stat-tile .l { font-size:10px; color:var(--ink3); font-weight:600; text-transform:uppercase; letter-spacing:.04em; margin-top:1px; }
+
+  .snap-items { border-top:1px solid var(--hair); padding:12px 15px 4px; }
+  .snap-items .t { font-size:9.5px; font-weight:800; letter-spacing:.1em; text-transform:uppercase; color:var(--ink3); margin-bottom:6px; }
+  .conf-icon { display:inline-flex; align-items:center; justify-content:center; width:14px; height:14px; flex-shrink:0; cursor:help; }
+  .conf-icon svg { width:12px; height:12px; }
+  .snap-item { display:flex; align-items:center; gap:8px; padding:7px 0; border-top:0.5px solid rgba(0,0,0,.04); }
+  .snap-item:first-child { border-top:none; }
+  .snap-item-name { flex:1; font-size:12px; font-weight:500; color:var(--ink); overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+  .snap-item-kcal { font-size:11px; color:var(--ink3); tabular-nums; flex-shrink:0; }
+
+  .snap-footer { display:flex; align-items:center; justify-content:space-between; padding:10px 15px; border-top:1px solid var(--hair); }
+  .snap-footer .l { font-size:10.5px; color:var(--ink3); }
+  .snap-footer .a { font-size:10.5px; color:var(--green); font-weight:650; }
+
+  .callout { background:#fff; border:1px solid var(--hair); border-left:3px solid var(--green); border-radius:12px; padding:16px 18px; font-size:13.5px; color:var(--ink2); max-width:800px; margin:0 auto; line-height:1.6; }
+  .callout b { color:var(--ink); }
+  .callout ul { margin:8px 0 0 18px; }
+  .callout li { margin-bottom:5px; }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <div class="head">
+    <div class="eyebrow">Design Mockup · Nutrition Snapshot</div>
+    <h1>Fix the framing, then the look</h1>
+    <p class="lede">Today's bars compare one order's totals against a full <b>week's</b> household target — every bar reads as nearly empty, regardless of how good the order actually was. Below: the current card recreated exactly, then a redesign that drops the false "progress toward a target" framing in favor of <b>composition</b> — what this order is actually made of — plus the app's real colors instead of generic Tailwind gray.</p>
+  </div>
+
+  <section>
+    <div class="sec-title"><span class="num">1</span>Before — wrong denominator, generic look</div>
+    <p class="sec-sub">Protein 120g plotted against a 350g <i>weekly</i> target renders as a 34%-filled bar. Every macro, on every order, looks like this — starved, regardless of the order's actual quality.</p>
+    <div class="frames">
+      <div>
+        <div class="phone"><div class="screen">
+          <div class="body-scroll">
+            <div class="old-card">
+              <div class="old-head">
+                <span class="t">🌿 Nutrition snapshot</span>
+                <span class="r">3/3 resolved</span>
+              </div>
+              <div class="old-body">
+                <div><span class="old-kcal">3,240</span><span class="old-kcal-lbl">kcal this order</span></div>
+
+                <div class="old-bar-row">
+                  <div class="old-bar-top"><span class="l">Protein</span><span style="color:#2A60A8;">120g / 350g</span></div>
+                  <div class="old-bar-track"><div class="old-bar-fill" style="width:34%; background:#2A60A8;"></div></div>
+                </div>
+                <div class="old-bar-row">
+                  <div class="old-bar-top"><span class="l">Carbs</span><span style="color:#8A6A10;">340g / 3920g</span></div>
+                  <div class="old-bar-track"><div class="old-bar-fill" style="width:9%; background:#8A6A10;"></div></div>
+                </div>
+                <div class="old-bar-row">
+                  <div class="old-bar-top"><span class="l">Fat</span><span style="color:#A03820;">95g / 770g</span></div>
+                  <div class="old-bar-track"><div class="old-bar-fill" style="width:12%; background:#A03820;"></div></div>
+                </div>
+                <div class="old-bar-row">
+                  <div class="old-bar-top"><span class="l">Fiber</span><span style="color:#2A7030;">18g / 175g</span></div>
+                  <div class="old-bar-track"><div class="old-bar-fill" style="width:10%; background:#2A7030;"></div></div>
+                </div>
+                <div class="old-bar-row">
+                  <div class="old-bar-top"><span class="l">Sodium</span><span style="color:#6038A0;">2100mg / 16100mg</span></div>
+                  <div class="old-bar-track"><div class="old-bar-fill" style="width:13%; background:#6038A0;"></div></div>
+                </div>
+
+                <div style="margin-top:10px; padding-top:8px; border-top:1px solid #F3F4F6;">
+                  <p style="font-size:9px; text-transform:uppercase; letter-spacing:.06em; color:#9CA3AF; margin-bottom:6px;">Per item</p>
+                  <div class="old-item"><span class="old-badge">~Database</span><span class="old-item-name">Basmati Rice 5kg</span><span class="old-item-kcal">1780 kcal</span></div>
+                  <div class="old-item"><span class="old-badge">✓ Verified</span><span class="old-item-name">Amul Milk 1L</span><span class="old-item-kcal">560 kcal</span></div>
+                  <div class="old-item"><span class="old-badge">~AI est.</span><span class="old-item-name">Mixed Vegetables</span><span class="old-item-kcal">~120 kcal</span></div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div></div>
+        <div class="label">Current card <span class="tag tag-bad">all bars near-empty</span></div>
+      </div>
+    </div>
+  </section>
+
+  <section>
+    <div class="sec-title"><span class="num">2</span>After — composition, not comparison</div>
+    <p class="sec-sub">No external target at all — protein/carbs/fat shown as a share of <b>this order's own calories</b>, which is always a coherent number regardless of order size. Fiber and sodium get plain stat tiles instead of bars, since they don't have a natural "share of calories" reading. Item list decluttered: a color dot replaces the heavy badge, italics used sparingly.</p>
+    <div class="frames">
+      <div>
+        <div class="phone"><div class="screen">
+          <div class="body-scroll">
+            <div class="snap-card">
+              <div class="snap-head">
+                <span style="font-size:15px;">🌿</span>
+                <span class="t">Nutrition snapshot</span>
+                <span class="r">3/3 resolved</span>
+              </div>
+
+              <div class="snap-kcal-block">
+                <div class="snap-kcal">3,240<span>kcal this order</span></div>
+              </div>
+
+              <div class="comp-bar">
+                <div style="width:32%; background:var(--protein);"></div>
+                <div style="width:44%; background:var(--carbs);"></div>
+                <div style="width:24%; background:var(--fat);"></div>
+              </div>
+              <div class="comp-legend">
+                <div class="comp-item"><span class="comp-dot" style="background:var(--protein);"></span><div class="comp-txt"><div class="lbl">Protein</div><div class="val">120g · 32%</div></div></div>
+                <div class="comp-item"><span class="comp-dot" style="background:var(--carbs);"></span><div class="comp-txt"><div class="lbl">Carbs</div><div class="val">340g · 44%</div></div></div>
+                <div class="comp-item"><span class="comp-dot" style="background:var(--fat);"></span><div class="comp-txt"><div class="lbl">Fat</div><div class="val">95g · 24%</div></div></div>
+              </div>
+
+              <div class="stat-pair">
+                <div class="stat-tile"><div class="v">18g</div><div class="l">Fiber</div></div>
+                <div class="stat-tile"><div class="v">2.1g</div><div class="l">Sodium</div></div>
+              </div>
+
+              <div class="snap-items">
+                <p class="t">Per item</p>
+
+                <div class="snap-item">
+                  <span class="conf-icon" style="color:#8E8E93;" title="Database match — resolved from our product database">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4a2 2 0 0 0 1-1.73z"/><path d="M3.3 7 12 12l8.7-5"/><path d="M12 22V12"/></svg>
+                  </span>
+                  <span class="snap-item-name">Basmati Rice 5kg</span><span class="snap-item-kcal">1780 kcal</span>
+                </div>
+
+                <div class="snap-item">
+                  <span class="conf-icon" style="color:var(--green);" title="Verified — from the product label">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg>
+                  </span>
+                  <span class="snap-item-name">Amul Milk 1L</span><span class="snap-item-kcal">560 kcal</span>
+                </div>
+
+                <div class="snap-item">
+                  <span class="conf-icon" style="color:#D9A24E;" title="AI estimate — no label or database match found">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m12 3-1.9 5.8a2 2 0 0 1-1.3 1.3L3 12l5.8 1.9a2 2 0 0 1 1.3 1.3L12 21l1.9-5.8a2 2 0 0 1 1.3-1.3L21 12l-5.8-1.9a2 2 0 0 1-1.3-1.3Z"/></svg>
+                  </span>
+                  <span class="snap-item-name" style="font-style:italic; color:#8E8E93;">Mixed Vegetables</span><span class="snap-item-kcal" style="font-style:italic;">~120 kcal</span>
+                </div>
+              </div>
+
+              <div class="snap-footer">
+                <span class="l">3 of 3 items resolved</span>
+                <span class="a">Report incorrect data</span>
+              </div>
+            </div>
+          </div>
+        </div></div>
+        <div class="label">Redesigned <span class="tag tag-good">composition, app-consistent colors</span></div>
+      </div>
+    </div>
+  </section>
+
+  <section>
+    <div class="sec-title"><span class="num">3</span>What this fixes</div>
+    <div class="callout">
+      <b>Reframes:</b> the card stops implying "you're behind on your weekly goal from one order" (never true, always confusing) and instead answers "what did this order actually contain" (always a coherent question).
+      <ul>
+        <li><b>Macro composition bar</b> — protein/carbs/fat as % of <i>this order's</i> calories (kcal from each macro ÷ total kcal), computed entirely from the order's own totals — no external target needed, so it can never show a nonsensically tiny fill.</li>
+        <li><b>Fiber &amp; Sodium</b> — plain stat tiles, not bars. Neither has a natural "share of this order's calories" reading, and comparing them to a weekly ceiling has the same wrong-denominator problem the old card had. Absolute numbers are honest here.</li>
+        <li><b>Confidence dots</b> replace the boxy badges — same 4-state system (verified/database/estimate/unresolved), far less visual weight competing with the item name. A single compact legend row sits once above the item list (not repeated per row) so the dot colors are never unexplained.</li>
+        <li><b>Colors</b> — calorie number and structure now match the rest of the app's real palette instead of arbitrary blue/mustard/purple with no relationship to anything else in PantryPilot.</li>
+        <li><b>No change</b> to the loading/error/polling states, the underlying <code>OrderNutrition</code> data, or the <code>ConfidenceBadge</code>/<code>MacroBar</code> exports used correctly elsewhere (<code>nutrition/weekly</code> keeps using real weekly-vs-weekly <code>MacroBar</code> — that usage isn't touched).</li>
+      </ul>
+    </div>
+  </section>
+
+</div>
+</body>
+</html>
