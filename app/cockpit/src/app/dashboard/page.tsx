@@ -75,16 +75,6 @@ function fmtNextRun(iso: string | null): string {
   return `Next: ${target.toLocaleDateString("en-IN", { weekday: "short" })}`
 }
 
-function fmtNut(n: number | null, target: number | null, unit: string): string {
-  if (n === null || target === null) return "—"
-  if (unit === "mg") {
-    const a = (n      / 1000).toFixed(1).replace(/\.0$/, "")
-    const t = (target / 1000).toFixed(1).replace(/\.0$/, "")
-    return `${a}k / ${t}k`
-  }
-  return `${Math.round(n)} / ${Math.round(target)}${unit}`
-}
-
 // ── Inline SVG icons (Tabler stroke style) ────────────────────────────────────
 
 function IconRefresh({ size = 18, color = "currentColor" }: { size?: number; color?: string }) {
@@ -135,52 +125,6 @@ function IconFlame({ size = 14, color = "currentColor" }: { size?: number; color
     </svg>
   )
 }
-
-// ── Dot bar (7 × 9 px dots) ───────────────────────────────────────────────────
-
-function DotBar({ pct, color }: { pct: number; color: string }) {
-  const filled = Math.round(Math.min(1, Math.max(0, pct)) * 7)
-  return (
-    <div className="flex gap-1 flex-1">
-      {Array.from({ length: 7 }, (_, i) => (
-        <div
-          key={i}
-          className="w-2.5 h-2.5 rounded-full flex-shrink-0"
-          style={{ background: i < filled ? color : "rgba(45,106,79,0.13)" }}
-        />
-      ))}
-    </div>
-  )
-}
-
-// ── Nutrition rows config ─────────────────────────────────────────────────────
-
-const NUTRITION_ROWS = [
-  {
-    label:      "Protein",
-    dotColor:   "#4A7FA5",
-    getActual:  (w: DashboardData["week"]) => w.total_protein_g,
-    getTarget:  (w: DashboardData["week"]) => w.protein_target,
-    unit:       "g",
-    statusGood: (pct: number) => pct >= 0.7,
-  },
-  {
-    label:      "Fiber",
-    dotColor:   "#2D6A4F",
-    getActual:  (w: DashboardData["week"]) => w.total_fiber_g,
-    getTarget:  (w: DashboardData["week"]) => w.fiber_target,
-    unit:       "g",
-    statusGood: (pct: number) => pct >= 0.7,
-  },
-  {
-    label:      "Sodium",
-    dotColor:   "#8B6336",
-    getActual:  (w: DashboardData["week"]) => w.total_sodium_mg,
-    getTarget:  (w: DashboardData["week"]) => w.sodium_target,
-    unit:       "mg",
-    statusGood: (pct: number) => pct <= 1.0,
-  },
-]
 
 // ── Page ──────────────────────────────────────────────────────────────────────
 
@@ -365,52 +309,11 @@ export default function DashboardPage() {
           ))}
         </div>
 
-        {/* Nutrition Gap-to-Cart entry card (Phase B4) — self-contained, hides
-            itself when nutrition_gaps_enabled is off or nothing computed yet */}
-        <NutritionGapsCard />
-
-        {/* Nutrition */}
-        {data.week.has_nutrition_data && (
-          <>
-            <p className="text-[11px] font-extrabold uppercase tracking-widest px-0.5 pt-1" style={{ color: "#5A5A5F" }}>
-              Nutrition
-            </p>
-            <div
-              className="rounded-xl overflow-hidden"
-              style={{ background: "#F4FBF7", border: "0.5px solid rgba(45,106,79,0.14)" }}
-            >
-              {NUTRITION_ROWS.map((row, i) => {
-                const actual      = row.getActual(data.week)
-                const target      = row.getTarget(data.week)
-                const pct         = actual != null && target ? actual / target : 0
-                const statusColor = row.statusGood(pct) ? "#40916C" : "#C87941"
-                return (
-                  <div
-                    key={row.label}
-                    className="flex items-center gap-2 px-3.5"
-                    style={{
-                      paddingTop:    "11px",
-                      paddingBottom: "11px",
-                      borderTop: i > 0 ? "0.5px solid rgba(45,106,79,0.09)" : undefined,
-                    }}
-                  >
-                    <div className="flex items-center gap-1.5 flex-shrink-0" style={{ width: "68px" }}>
-                      <span className="w-[7px] h-[7px] rounded-full flex-shrink-0" style={{ background: statusColor }} />
-                      <span className="text-[13px] font-semibold text-[#1C1C1E]">{row.label}</span>
-                    </div>
-                    <DotBar pct={pct} color={row.dotColor} />
-                    <span
-                      className="text-[12px] tabular-nums flex-shrink-0"
-                      style={{ color: "#8E8E93", width: "64px", textAlign: "right" }}
-                    >
-                      {fmtNut(actual, target, row.unit)}
-                    </span>
-                  </div>
-                )
-              })}
-            </div>
-          </>
-        )}
+        {/* Nutrition — unified card: macro rows + gap status + micronutrients +
+            nav links. Macro rows always show whenever has_nutrition_data is
+            true; the gap-derived section (status badge, micronutrients, nav
+            rows) additionally depends on nutrition_gaps_enabled. */}
+        <NutritionGapsCard week={data.week} />
 
         {/* Recent orders */}
         {data.recent_orders.length > 0 && (
