@@ -22,6 +22,7 @@
   },
   "homepage": "https://github.com/vmsh-mount/pantry-pilot#readme",
   "dependencies": {
+    "docx": "^9.7.1",
     "playwright": "^1.61.1"
   }
 }
