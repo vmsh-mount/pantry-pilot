@@ -82,6 +82,7 @@ export interface ProductSearchResult {
   spin_id:    string
   item_name:  string
   brand:      string | null
+  category:   string | null
   unit:       string
   unit_price: number
   in_stock:   boolean
@@ -97,6 +98,7 @@ export interface QuickBasketItem {
   item_name:  string
   brand:      string | null
   sku_id:     string | null
+  category:   string | null
   unit:       string
   quantity:   number
   unit_price: number
@@ -109,6 +111,7 @@ export interface QuickAddItem {
   brand?:      string | null
   sku_id?:     string | null
   spin_id?:    string
+  category?:   string | null
   unit?:       string
   quantity?:   number
   unit_price?: number

@@ -132,6 +132,7 @@ export default function QuickOrderPage() {
       brand:      product.brand,
       sku_id:     product.sku_id,
       spin_id:    product.spin_id,
+      category:   product.category,
       unit:       product.unit,
       quantity:   1,
       unit_price: product.unit_price,

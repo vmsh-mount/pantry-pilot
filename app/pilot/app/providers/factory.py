@@ -26,6 +26,10 @@ def get_whatsapp_provider() -> WhatsAppProvider:
 
 
 def get_mcp_provider(access_token: str) -> MCPProvider:
+    s = get_settings()
+    if s.swiggy_mcp_mode == "demo":
+        from app.providers.mcp.demo import DemoSwiggyMCPProvider
+        return DemoSwiggyMCPProvider(access_token)
     from app.providers.mcp.swiggy import SwiggyMCPProvider
     return SwiggyMCPProvider(access_token)
 

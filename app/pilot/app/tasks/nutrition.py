@@ -28,9 +28,19 @@ def resolve_order_nutrition(self, order_id: str):
     """
     async def _run():
         from sqlalchemy import select
-        from app.database import AsyncSessionLocal
+        from app.database import AsyncSessionLocal, engine
         from app.models.db import Order, OrderItem, OrderNutrition
         from app.services.nutrition_resolution import resolve_item, compute_item_totals
+
+        # `engine` is a module-level singleton shared across every task this
+        # worker process runs, but asyncio.run() below hands _run() a brand
+        # new event loop each call — and asyncpg connections are bound to the
+        # loop that created them. Without disposing first, any pooled
+        # connection from a previous task's now-closed loop raises
+        # "RuntimeError: Event loop is closed" on first use here, only
+        # succeeding on Celery's retry (30s later) once the pool happens to
+        # get a connection from a different context.
+        await engine.dispose()
 
         async with AsyncSessionLocal() as db:
             # Fetch order + items

@@ -474,6 +474,17 @@ async def _estimate_llm(item_name: str, brand: str | None, qty_desc: str) -> dic
         logger.warning("llm_estimate_failed", item=item_name, error=str(e))
         return None
 
+    # Some providers (seen on Groq/Llama) return syntactically valid JSON that
+    # nonetheless omits every macro field — parsing succeeds, so this wasn't
+    # caught above, but treating it as "resolved" would silently write a
+    # confidently-labelled zero-calorie row. A genuine estimate should have at
+    # least calories; if every core macro is missing, this wasn't a real
+    # estimate and should be retried/left unresolved instead of cached as one.
+    core_macros = ("calories_per_100g", "protein_per_100g", "total_carbs_per_100g", "fat_per_100g")
+    if all(data.get(k) is None for k in core_macros):
+        logger.warning("llm_estimate_empty", item=item_name, raw=raw[:200])
+        return None
+
     nutrients = {
         "sugar_per_100g": data.get("sugar_per_100g"),
         "saturated_fat_per_100g": data.get("saturated_fat_per_100g"),

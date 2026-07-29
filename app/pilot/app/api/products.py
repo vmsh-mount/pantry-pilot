@@ -9,7 +9,7 @@ from sqlalchemy import select
 from app.database import get_db
 from app.schemas.common import APIResponse
 from app.services.auth_service import AuthService
-from app.mcp.swiggy import SwiggyMCPClient
+from app.providers.factory import get_mcp_provider
 from app.models.db import HouseholdPreferences, Address
 
 router = APIRouter(prefix="/products", tags=["products"])
@@ -45,7 +45,7 @@ async def search_products(
     if not swiggy_address_id:
         return APIResponse.fail("NO_ADDRESS", "No delivery address configured.")
 
-    mcp = SwiggyMCPClient(token)
+    mcp = get_mcp_provider(token)
 
     try:
         results = await mcp.search_products(q, swiggy_address_id)

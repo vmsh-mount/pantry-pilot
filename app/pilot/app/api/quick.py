@@ -130,6 +130,7 @@ async def search_products(
                 "spin_id":    _p(r, "spin_id", "") or "",
                 "item_name":  _p(r, "name") or _p(r, "item_name", ""),
                 "brand":      _p(r, "brand"),
+                "category":   _p(r, "category"),
                 "unit":       _p(r, "unit", None) or _p(r, "quantity", None) or "units",
                 "unit_price": float(_p(r, "price") or _p(r, "unit_price", 0)),
                 "in_stock":   _p(r, "in_stock", True),
@@ -166,6 +167,7 @@ class AddItemRequest(BaseModel):
     brand: Optional[str] = None
     sku_id: Optional[str] = None
     spin_id: Optional[str] = None
+    category: Optional[str] = None
     unit: str = "units"
     quantity: int = 1
     unit_price: float = 0.0
@@ -449,6 +451,7 @@ async def checkout(
             swiggy_sku_id=i.get("sku_id", ""),
             product_name=i["item_name"],
             brand=i.get("brand"),
+            category=i.get("category"),
             quantity=i["quantity"],
             unit=i.get("unit", "units"),
             unit_price=i["unit_price"],
