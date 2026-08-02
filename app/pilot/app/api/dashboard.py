@@ -202,8 +202,9 @@ async def get_dashboard(request: Request, db: AsyncSession = Depends(get_db)):
         "total_orders":    int(all_time.total_orders),
         "avg_order_total": round(float(all_time.avg_order_total), 2) if all_time.avg_order_total else None,
         "last_nutrition": {
-            "resolved_items": last_on.resolved_items,
-            "total_items":    last_on.total_items,
+            "resolved_items":   last_on.resolved_items,
+            "unresolved_items": last_on.unresolved_items,
+            "total_items":      last_on.total_items,
         } if last_on else None,
     }
 

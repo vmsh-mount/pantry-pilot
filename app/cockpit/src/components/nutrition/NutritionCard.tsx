@@ -11,6 +11,11 @@ const BADGE_CONFIG: Record<NutritionConfidence, { label: string; className: stri
   medium:   { label: "~Database",    className: "bg-gray-100 text-gray-600 dark:bg-gray-800 dark:text-gray-300",    prefix: "~" },
   estimate: { label: "~AI est.",     className: "bg-gray-50 text-gray-400 dark:bg-gray-900 dark:text-gray-500 italic", prefix: "~" },
   unresolved: { label: "—",         className: "bg-gray-50 text-gray-400 dark:bg-gray-900 dark:text-gray-500",     prefix: "" },
+  // Never actually rendered — non-food items are filtered out of the
+  // per-item list before it reaches ItemRow/ConfidenceBadge (see
+  // NutritionCard's item_breakdown filter below). Present only so
+  // Record<NutritionConfidence, ...> stays exhaustive.
+  not_food: { label: "—",           className: "bg-gray-50 text-gray-400 dark:bg-gray-900 dark:text-gray-500",     prefix: "" },
 }
 
 export function ConfidenceBadge({ confidence }: { confidence: NutritionConfidence }) {
@@ -96,8 +101,15 @@ export function NutritionCard({ orderId }: Props) {
         return
       }
       const nutrition = payload as OrderNutrition
-      // If nothing resolved, treat as error rather than showing 0 kcal
-      if (nutrition.resolved_items === 0 && nutrition.total_items > 0) {
+      // total_items counts every order item, including non-food ones (soap,
+      // detergent) that resolved_items/unresolved_items both deliberately
+      // exclude — see tasks/features/nutrition-non-food-gate.md. Compare
+      // against the eligible total (resolved + unresolved), not the raw
+      // total, so an order that's entirely non-food items (0 eligible)
+      // doesn't render as an error.
+      const eligibleTotal = nutrition.resolved_items + nutrition.unresolved_items
+      // If nothing resolved despite having eligible items, treat as error rather than showing 0 kcal
+      if (nutrition.resolved_items === 0 && eligibleTotal > 0) {
         setState("error")
         return
       }
@@ -120,6 +132,13 @@ export function NutritionCard({ orderId }: Props) {
   // ICMR single-person weekly defaults as fallback targets (no API call needed for display)
   const targets = { calories: 14000, protein_g: 350, carbs_g: 3920, fat_g: 770, fiber_g: 175, sodium_mg: 16100 }
 
+  // total_items counts every order item, including non-food ones that
+  // resolved_items/unresolved_items both deliberately exclude — see
+  // tasks/features/nutrition-non-food-gate.md. Derive both so the header
+  // and footer show a denominator that actually accounts for every item.
+  const eligibleTotal = data ? data.resolved_items + data.unresolved_items : 0
+  const nonFoodItems = data ? data.total_items - eligibleTotal : 0
+
   return (
     <div className="rounded-xl border border-gray-200 dark:border-gray-700 overflow-hidden">
       {/* Header */}
@@ -129,7 +148,7 @@ export function NutritionCard({ orderId }: Props) {
           <span>Nutrition snapshot</span>
         </div>
         <span className="text-xs text-gray-400 dark:text-gray-500">
-          {state === "loading" ? "computing…" : state === "error" ? "unavailable" : `${data!.resolved_items} / ${data!.total_items} resolved`}
+          {state === "loading" ? "computing…" : state === "error" ? "unavailable" : `${data!.resolved_items} / ${eligibleTotal} resolved`}
         </span>
       </div>
 
@@ -173,17 +192,24 @@ export function NutritionCard({ orderId }: Props) {
             {/* Per-item list */}
             <div className="mt-3 pt-3 border-t border-gray-100 dark:border-gray-800">
               <p className="text-[10px] uppercase tracking-wider text-gray-400 dark:text-gray-500 mb-2">Per item</p>
-              {data.item_breakdown.map((item, i) => (
-                <ItemRow key={item.sku_id ?? i} item={item} />
-              ))}
+              {/* Non-food items (soap, detergent, etc.) carry no nutrition
+                  data by design — showing "no data" for them is noise, not
+                  signal, so they're excluded here rather than given a row.
+                  See tasks/features/nutrition-non-food-gate.md. */}
+              {data.item_breakdown
+                .filter((item) => item.confidence !== "not_food")
+                .map((item, i) => (
+                  <ItemRow key={item.sku_id ?? i} item={item} />
+                ))}
             </div>
           </div>
 
           {/* Footer */}
           <div className="flex items-center justify-between px-4 py-2 border-t border-gray-100 dark:border-gray-800">
             <span className="text-[11px] text-gray-400 dark:text-gray-500">
-              {data.resolved_items} of {data.total_items} items resolved
+              {data.resolved_items} of {eligibleTotal} items resolved
               {data.unresolved_items > 0 && ` · ${data.unresolved_items} excluded`}
+              {nonFoodItems > 0 && ` · ${nonFoodItems} not food`}
             </span>
             <button className="text-[11px] text-green-700 dark:text-green-400 hover:underline">
               Report incorrect data

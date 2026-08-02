@@ -85,6 +85,7 @@ def resolve_order_nutrition(self, order_id: str):
             high_conf_count = 0
             llm_count = 0
             unresolved_count = 0
+            non_food_count = 0
 
             for item in items:
                 qty_desc = f"{float(item.quantity)} {item.unit}" if item.quantity and item.unit else ""
@@ -99,6 +100,11 @@ def resolve_order_nutrition(self, order_id: str):
                 confidence = resolved.get("confidence", "unresolved")
                 if confidence == "unresolved":
                     unresolved_count += 1
+                elif confidence == "not_food":
+                    # Not pending retry (unlike "unresolved") and never a
+                    # candidate to carry nutrient data — don't count as
+                    # resolved either. See nutrition-non-food-gate.md.
+                    non_food_count += 1
                 else:
                     resolved_count += 1
                     if confidence in ("high", "verified"):
@@ -178,6 +184,7 @@ def resolve_order_nutrition(self, order_id: str):
                 total_items=len(items),
                 resolved=resolved_count,
                 unresolved=unresolved_count,
+                non_food=non_food_count,
             )
 
     try:

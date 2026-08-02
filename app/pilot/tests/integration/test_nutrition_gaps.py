@@ -160,6 +160,36 @@ async def test_b12_adequate_coverage_and_zero_actual_triggers_watch_gap(db):
     assert b12_gap["target_weekly"] is None
 
 
+@pytest.mark.asyncio
+async def test_non_food_item_does_not_dilute_coverage(db):
+    """A non-food item (soap, detergent) in the same week's order must not
+    count toward the coverage denominator — same 2/2 = 100% b12 coverage as
+    if the non-food item weren't there at all. Without excluding "not_food"
+    in _weekly_actual_and_coverage, this would incorrectly compute 2/3.
+    See tasks/features/nutrition-non-food-gate.md."""
+    from app.services.nutrition_gaps import compute_gaps
+
+    hh = await _create_household_with_address(db, diet_type="vegetarian")
+    items = [
+        _item("Fortified Cereal", "SKU1", calories=100, protein_g=3, fiber_g=2,
+              nutrients={"vitamin_b12_g": 0.0}),
+        _item("Rice", "SKU2", calories=130, protein_g=2, fiber_g=0,
+              nutrients={"vitamin_b12_g": 0.0}),
+        {
+            "item_name": "Dove Soap", "sku_id": "SKU3", "source": "not_food",
+            "confidence": "not_food", "quantity_g": None,
+            "calories": None, "protein_g": None, "carbs_g": None,
+            "fat_g": None, "fiber_g": None, "sodium_mg": None, "nutrients": {},
+        },
+    ]
+    await _add_order_nutrition(db, hh.id, items)
+
+    gaps = await compute_gaps(db, hh)
+    b12_gap = next(g for g in gaps if g["nutrient"] == "b12")
+    assert b12_gap["status"] == "short"
+    assert b12_gap["watch_reason"] == "no_source_in_window"
+
+
 # ── 3. Recommendation pipeline: guardrails + dal/paneer recommended ──────────
 
 @pytest.mark.asyncio

@@ -87,8 +87,12 @@ async def _fetch_week_item_breakdown(db: AsyncSession, household_id: str) -> lis
 def _weekly_actual_and_coverage(items: list[dict], nutrient_key: str) -> tuple[float, float]:
     """(actual weekly total, coverage fraction) for one nutrient, over the
     week's RESOLVED items only — an unresolved item was never a candidate to
-    carry this nutrient's data, so it shouldn't dilute the coverage denominator."""
-    resolved_items = [i for i in items if i.get("confidence") not in (None, "unresolved")]
+    carry this nutrient's data, so it shouldn't dilute the coverage denominator.
+    Same reasoning excludes "not_food" items (soap, detergent, etc. — see
+    tasks/features/nutrition-non-food-gate.md): they were never candidates
+    to carry nutrient data either, just for a different reason than
+    "unresolved" (not pending retry, doesn't apply at all)."""
+    resolved_items = [i for i in items if i.get("confidence") not in (None, "unresolved", "not_food")]
     if not resolved_items:
         return 0.0, 0.0
     values = [_item_total_value(i, nutrient_key) for i in resolved_items]

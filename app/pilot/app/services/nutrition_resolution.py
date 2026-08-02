@@ -143,6 +143,53 @@ def _liquid_density_for(item_name: str) -> float:
     return 1.0
 
 
+# ── Non-food gate (tasks/features/nutrition-non-food-gate.md) ───────────────────
+# Curated, not exhaustive by design — the LLM prompt hardening in _estimate_llm
+# is the backstop for anything this vocabulary misses. Word-boundary matched,
+# same convention as the pantry page's ITEM_ICON_KEYWORDS, so "soap" doesn't
+# match inside an unrelated word like "soapstone".
+_NON_FOOD_KEYWORDS = {
+    "soap", "shampoo", "conditioner", "detergent", "toothpaste", "mouthwash",
+    "sanitizer", "dishwash", "handwash", "deodorant", "talcum", "lotion",
+    "sunscreen", "razor", "shaving cream", "floor cleaner", "toilet cleaner",
+    "phenyl", "naphthalene", "diaper", "sanitary pad", "tampon", "tissue",
+    "napkin", "insecticide", "mosquito repellent", "air freshener",
+    "dishwashing liquid", "fabric softener", "stain remover", "bleach",
+}
+_NON_FOOD_PATTERN = re.compile(
+    r"\b(" + "|".join(re.escape(k) for k in _NON_FOOD_KEYWORDS) + r")\b"
+)
+
+
+def _is_non_food(item_name: str, brand: str | None) -> bool:
+    """Mechanical, no-LLM check — same inputs and philosophy as
+    _mechanical_food_concept. False negatives are expected and handled by
+    the LLM prompt hardening in _estimate_llm; false positives are the
+    costlier failure mode, so the vocabulary stays conservative."""
+    return bool(_NON_FOOD_PATTERN.search(item_name.lower()))
+
+
+async def _cache_not_food(db: AsyncSession, sku_id: str) -> dict:
+    """Cache a non-food determination so the keyword check doesn't re-run
+    on every reorder of the same SKU. confidence="not_food" is a distinct
+    terminal state from "unresolved" — it means resolution doesn't apply
+    here, not "we tried and failed, worth retrying later"."""
+    resolved = {
+        "source": "not_food", "confidence": "not_food",
+        "quantity_g": None, "quantity_unresolvable": True,
+        "serving_size_g": None, "calories_per_100g": None,
+        "protein_per_100g": None, "total_carbs_per_100g": None,
+        "fat_per_100g": None, "fiber_per_100g": None,
+        "sodium_mg_per_100g": None, "nutrients": {},
+        "matched_name": None, "nutriscore_grade": None,
+        "food_concept": None, "notable_nutrients": [],
+    }
+    row = await _db_upsert(db, sku_id, None, True, resolved)
+    data = _row_to_dict(row)
+    await _redis_set(sku_id, data)
+    return data
+
+
 # ── Gap-to-Cart: mechanical food_concept + notable_nutrients (B1) ───────────────
 
 def _mechanical_food_concept(name: str | None, brand: str | None) -> str | None:
@@ -428,6 +475,10 @@ Quantity as sold: {qty_desc}
 Return ONLY valid JSON. Use null for values you cannot reasonably estimate.
 Use published nutritional data, ICMR tables, or USDA averages as your source.
 
+If this item is not food or a beverage (e.g. it's a cleaning product,
+personal care item, or household good), return {{"not_food": true}} and
+null for every numeric field.
+
 Also identify:
 - "food_concept": the canonical brand-stripped food, lowercase, e.g. "milk",
   "paneer", "dal" — not the product name or brand.
@@ -473,6 +524,12 @@ async def _estimate_llm(item_name: str, brand: str | None, qty_desc: str) -> dic
     except Exception as e:
         logger.warning("llm_estimate_failed", item=item_name, error=str(e))
         return None
+
+    # The model itself flagged this as non-food (prompt-hardening backstop
+    # for the keyword gate in resolve_item) — signal it distinctly so the
+    # caller caches "not_food", not a fabricated estimate.
+    if data.get("not_food") is True:
+        return {"not_food_signal": True}
 
     # Some providers (seen on Groq/Llama) return syntactically valid JSON that
     # nonetheless omits every macro field — parsing succeeds, so this wasn't
@@ -565,7 +622,11 @@ async def _db_upsert(db: AsyncSession, sku_id: str, quantity_g: float | None,
     }
 
     if row:
-        # Only overwrite if new confidence is higher
+        # Only overwrite if new confidence is higher. "not_food" is
+        # deliberately unranked (defaults to 0) — if a SKU was already
+        # cached with real food data and a later reorder trips the
+        # non-food gate (e.g. a display-name change), that real row is
+        # correctly left untouched here rather than clobbered.
         _rank = {"verified": 4, "high": 3, "medium": 2, "estimate": 1}
         if _rank.get(resolved["confidence"], 0) >= _rank.get(row.confidence, 0):
             for k, v in fields.items():
@@ -595,6 +656,9 @@ async def resolve_item(
     Resolution order: Redis → DB → OFF → USDA → Haiku.
     Always writes back to Redis + DB on a fresh resolution.
     """
+    if _is_non_food(item_name, brand):
+        return await _cache_not_food(db, sku_id)
+
     # 1. Redis hot cache
     cached = await _redis_get(sku_id)
     if cached:
@@ -624,6 +688,13 @@ async def resolve_item(
     # 5. Claude Haiku
     if not resolved:
         resolved = await _estimate_llm(item_name, brand, qty_desc)
+
+    # Defense-in-depth: the LLM itself flagged this as non-food (backstop
+    # for whatever _is_non_food's keyword vocabulary missed). Must be
+    # checked before the falsy-check below — this sentinel is a non-empty,
+    # truthy dict, not something `if not resolved` would ever catch.
+    if resolved and resolved.get("not_food_signal"):
+        return await _cache_not_food(db, sku_id)
 
     if not resolved:
         unresolved = {

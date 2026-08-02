@@ -142,7 +142,7 @@ export interface QuickOrderResult {
   items:           QuickBasketItem[]
 }
 
-export type NutritionConfidence = "verified" | "high" | "medium" | "estimate" | "unresolved"
+export type NutritionConfidence = "verified" | "high" | "medium" | "estimate" | "unresolved" | "not_food"
 
 export interface NutritionItemBreakdown {
   item_name:        string

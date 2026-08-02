@@ -38,7 +38,7 @@ interface DashboardData {
   stats: {
     total_orders:    number
     avg_order_total: number | null
-    last_nutrition:  { resolved_items: number; total_items: number } | null
+    last_nutrition:  { resolved_items: number; unresolved_items: number; total_items: number } | null
   }
   recent_orders: {
     placed_at:   string | null
@@ -272,7 +272,12 @@ export default function DashboardPage() {
             <div style={{ borderLeft: HD, paddingLeft: "14px" }}>
               <p className="text-[18px] font-extrabold tabular-nums" style={{ color: wa(0.9) }}>
                 {data.stats.last_nutrition
-                  ? `${data.stats.last_nutrition.resolved_items}/${data.stats.last_nutrition.total_items}`
+                  // total_items counts every order item, including non-food
+                  // ones (soap, detergent) that resolved_items/
+                  // unresolved_items both exclude — see
+                  // tasks/features/nutrition-non-food-gate.md. Denominator
+                  // is the eligible total, not the raw item count.
+                  ? `${data.stats.last_nutrition.resolved_items}/${data.stats.last_nutrition.resolved_items + data.stats.last_nutrition.unresolved_items}`
                   : "—"}
               </p>
               <p className="text-[11px] mt-0.5" style={{ color: wa(0.4) }}>items resolved</p>
