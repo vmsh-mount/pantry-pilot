@@ -98,13 +98,14 @@ _UNIT_WEIGHTS_G: dict[str, float] = {
 
 # ── Quantity normalization ────────────────────────────────────────────────────
 
-def _parse_quantity_g(qty_desc: str, item_name: str) -> float | None:
-    """Convert a Swiggy quantity description to grams. Returns None if unresolvable."""
-    if not qty_desc:
-        return None
-    s = qty_desc.lower().strip()
+_DOZEN = 12
 
-    # Weight: "1 kg", "500 g", "500gm", "250 grams"
+
+def _parse_weight_or_volume(s: str, item_name: str) -> float | None:
+    """Plain weight/volume parsing — "1 kg", "500 g", "1 l", "500 ml".
+    Factored out so the multipack branch in _parse_quantity_g can reuse it
+    on a reconstructed "number+unit" substring instead of duplicating the
+    kg/g/l/ml conversion logic a second time."""
     m = re.search(r"([\d.]+)\s*(kg|kilogram)", s)
     if m:
         return float(m.group(1)) * 1000
@@ -113,24 +114,83 @@ def _parse_quantity_g(qty_desc: str, item_name: str) -> float | None:
     if m:
         return float(m.group(1))
 
-    # Volume: "1 l", "500 ml"
     m = re.search(r"([\d.]+)\s*(l|litre|liter|liters)", s)
     if m:
         ml = float(m.group(1)) * 1000
-        density = _liquid_density_for(item_name)
-        return ml * density
+        return ml * _liquid_density_for(item_name)
 
     m = re.search(r"([\d.]+)\s*ml", s)
     if m:
         ml = float(m.group(1))
-        density = _liquid_density_for(item_name)
-        return ml * density
+        return ml * _liquid_density_for(item_name)
 
-    # Count × known unit weight
-    for unit, weight in _UNIT_WEIGHTS_G.items():
-        m = re.search(rf"(\d+)\s*{unit}", s)
-        if m:
-            return float(m.group(1)) * weight
+    return None
+
+
+def _parse_count(s: str) -> float | None:
+    """Extract a bare count from a Swiggy quantity string — "6 pcs",
+    "1 dozen", "12 units" — decoupled from which food it's counting
+    (that's a separate string, item_name; see _parse_quantity_g)."""
+    m = re.search(r"([\d.]+)\s*dozen", s)
+    if m:
+        return float(m.group(1)) * _DOZEN
+    m = re.search(r"([\d.]+)\s*(pcs?|pieces?|units?|nos?)\b", s)
+    if m:
+        return float(m.group(1))
+    return None
+
+
+def _parse_quantity_g(qty_desc: str, item_name: str) -> float | None:
+    """Convert a Swiggy quantity description to grams. Returns None if unresolvable."""
+    if not qty_desc:
+        return None
+    s = qty_desc.lower().strip()
+
+    # Multipack: "2 x 200 g", "3x1kg". Must run before plain weight/volume
+    # below — those would otherwise match just the trailing weight and
+    # silently drop the multiplier (a confidently wrong number, not an
+    # honest miss — see tasks/features/nutrition-quantity-parsing.md).
+    m = re.search(r"([\d.]+)\s*x\s*([\d.]+)\s*(kg|kilogram|g|gm|gram|grams|l|litre|liter|liters|ml)", s)
+    if m:
+        pack_count = float(m.group(1))
+        single_g = _parse_weight_or_volume(f"{m.group(2)}{m.group(3)}", item_name)
+        return pack_count * single_g if single_g is not None else None
+
+    # Something shaped like a multipack ("N x M") that isn't a weight/volume
+    # multipack we recognize — e.g. "2 x 6 pcs" (multipacks of countable
+    # items are out of scope). Bail out here rather than falling through to
+    # the plain weight or count branches below, which would misparse the
+    # second number on its own and silently drop the "2 x" multiplier.
+    if re.search(r"[\d.]+\s*x\s*[\d.]+", s):
+        return None
+
+    # Plain weight/volume: "1 kg", "500 g", "1 l", "500 ml".
+    single_g = _parse_weight_or_volume(s, item_name)
+    if single_g is not None:
+        return single_g
+
+    # Count × known food-specific unit weight. "How many" comes from
+    # qty_desc (via _parse_count); "what food it's counting" comes from
+    # item_name — two separate strings that were never cross-referenced
+    # before this fix. Mirrors the pattern _liquid_density_for already uses
+    # correctly, one branch above — but word-boundary + plural matched, not
+    # raw substring: plain `in` would let "egg" match inside "Eggless"
+    # (Eggless Mayonnaise, Eggless Cake — a common Indian grocery naming
+    # convention), attributing egg weight to a product with no eggs. The
+    # "(e?s)?" isn't decoration — a bare \bnoun\b wouldn't match "eggs"
+    # (no word boundary between "egg" and a following "s"), and it also
+    # produces the correct irregular plural for "potato"/"tomato"/"chilli"
+    # (→ "potatoes"/"tomatoes"/"chillies") via its "es" branch.
+    count = _parse_count(s)
+    if count is not None:
+        name_lower = item_name.lower()
+        for noun, weight in _UNIT_WEIGHTS_G.items():
+            if re.search(rf"\b{re.escape(noun)}(e?s)?\b", name_lower):
+                return count * weight
+        # Count is known, but no per-unit weight for this specific food —
+        # stay unresolvable rather than guess. A confidently wrong number
+        # is worse than an honest miss.
+        return None
 
     return None
 
