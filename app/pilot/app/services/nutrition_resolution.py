@@ -667,17 +667,47 @@ async def resolve_item(
     return data
 
 
-def compute_item_totals(resolved: dict) -> dict:
+def estimate_consumed_g(
+    quantity_g: float,
+    avg_weekly_consumption: float | None,
+    consumption_unit: str | None,
+    item_name: str,
+) -> float:
     """
-    Scale per-100g values by quantity_g to get absolute totals for this order item.
-    Returns a dict with calories, protein_g, carbs_g, fat_g, fiber_g, sodium_mg.
-    All None if quantity_unresolvable or any per-100g value is missing.
+    Cap this order's nutrition attribution at what the household is
+    estimated to get through in a week, not the full purchased pack —
+    a 5kg rice bag isn't eaten in the week it's bought.
+
+    Falls back to the full pack when there's no learned rate yet (a
+    brand-new item) or the rate's unit can't be parsed to grams.
+    """
+    if not avg_weekly_consumption or not consumption_unit:
+        return quantity_g
+    weekly_g = _parse_quantity_g(f"{avg_weekly_consumption} {consumption_unit}", item_name)
+    if weekly_g is None:
+        return quantity_g
+    return min(quantity_g, weekly_g)
+
+
+def compute_item_totals(resolved: dict, consumed_g: float | None = None) -> dict:
+    """
+    Scale per-100g values by the estimated consumed quantity to get absolute
+    totals for this order item. Returns a dict with calories, protein_g,
+    carbs_g, fat_g, fiber_g, sodium_mg. All None if quantity_unresolvable or
+    any per-100g value is missing.
+
+    consumed_g, when given, caps the scaling quantity at estimated weekly
+    consumption rather than the full purchased pack (see
+    tasks/features/nutrition-consumed-not-purchased.md). Defaults to the full
+    pack (today's behavior) when not supplied.
     """
     if resolved.get("quantity_unresolvable") or not resolved.get("quantity_g"):
         return {"calories": None, "protein_g": None, "carbs_g": None,
                 "fat_g": None, "fiber_g": None, "sodium_mg": None}
 
-    q = resolved["quantity_g"] / 100.0
+    pack_g = resolved["quantity_g"]
+    effective_g = pack_g if consumed_g is None else min(pack_g, consumed_g)
+    q = effective_g / 100.0
 
     def _s(key: str) -> float | None:
         v = resolved.get(key)
@@ -697,4 +727,6 @@ def compute_item_totals(resolved: dict) -> dict:
         "fiber_g": _s("fiber_per_100g"),
         "sodium_mg": _s("sodium_mg_per_100g"),
         "nutrient_totals": nutrient_totals,
+        "pack_quantity_g": pack_g,
+        "consumed_g": effective_g,
     }

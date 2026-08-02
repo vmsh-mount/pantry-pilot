@@ -145,18 +145,19 @@ export interface QuickOrderResult {
 export type NutritionConfidence = "verified" | "high" | "medium" | "estimate" | "unresolved"
 
 export interface NutritionItemBreakdown {
-  item_name:   string
-  sku_id:      string | null
-  source:      string
-  confidence:  NutritionConfidence
-  quantity_g:  number | null
-  calories:    number | null
-  protein_g:   number | null
-  carbs_g:     number | null
-  fat_g:       number | null
-  fiber_g:     number | null
-  sodium_mg:   number | null
-  nutrients:   Record<string, number | null>
+  item_name:        string
+  sku_id:           string | null
+  source:           string
+  confidence:       NutritionConfidence
+  pack_quantity_g:  number | null
+  consumed_g:       number | null
+  calories:         number | null
+  protein_g:        number | null
+  carbs_g:          number | null
+  fat_g:            number | null
+  fiber_g:          number | null
+  sodium_mg:        number | null
+  nutrients:        Record<string, number | null>
 }
 
 export interface OrderNutrition {

@@ -29,8 +29,8 @@ def resolve_order_nutrition(self, order_id: str):
     async def _run():
         from sqlalchemy import select
         from app.database import AsyncSessionLocal, engine
-        from app.models.db import Order, OrderItem, OrderNutrition
-        from app.services.nutrition_resolution import resolve_item, compute_item_totals
+        from app.models.db import Order, OrderItem, OrderNutrition, PantryItem
+        from app.services.nutrition_resolution import resolve_item, compute_item_totals, estimate_consumed_g
 
         # `engine` is a module-level singleton shared across every task this
         # worker process runs, but asyncio.run() below hands _run() a brand
@@ -60,6 +60,19 @@ def resolve_order_nutrition(self, order_id: str):
             if not items:
                 logger.info("resolve_nutrition_no_items", order_id=order_id)
                 return
+
+            # Batch-fetch matching PantryItem rows (household's learned weekly
+            # consumption rate per exact product name) to cap nutrition
+            # attribution at what's estimated consumed this week, not the
+            # full purchased pack — see
+            # tasks/features/nutrition-consumed-not-purchased.md.
+            pantry_result = await db.execute(
+                select(PantryItem).where(
+                    PantryItem.household_id == order.household_id,
+                    PantryItem.item_name.in_([i.product_name for i in items]),
+                )
+            )
+            pantry_by_name = {p.item_name: p for p in pantry_result.scalars().all()}
 
             # Resolve each item (sequentially to avoid rate-limiting OFF/USDA)
             item_breakdown = []
@@ -93,7 +106,17 @@ def resolve_order_nutrition(self, order_id: str):
                     elif confidence == "estimate":
                         llm_count += 1
 
-                scaled = compute_item_totals(resolved)
+                pantry_item = pantry_by_name.get(item.product_name)
+                consumed_g = estimate_consumed_g(
+                    quantity_g=resolved.get("quantity_g") or 0,
+                    avg_weekly_consumption=(
+                        float(pantry_item.avg_weekly_consumption)
+                        if pantry_item and pantry_item.avg_weekly_consumption else None
+                    ),
+                    consumption_unit=pantry_item.standard_unit if pantry_item else None,
+                    item_name=item.product_name,
+                )
+                scaled = compute_item_totals(resolved, consumed_g)
 
                 # Accumulate totals (skip None values)
                 for key in ("calories", "protein_g", "carbs_g", "fat_g", "fiber_g", "sodium_mg"):
@@ -109,7 +132,8 @@ def resolve_order_nutrition(self, order_id: str):
                     "sku_id": item.swiggy_sku_id,
                     "source": resolved.get("source"),
                     "confidence": confidence,
-                    "quantity_g": resolved.get("quantity_g"),
+                    "pack_quantity_g": scaled.get("pack_quantity_g"),
+                    "consumed_g": scaled.get("consumed_g"),
                     "calories": scaled.get("calories"),
                     "protein_g": scaled.get("protein_g"),
                     "carbs_g": scaled.get("carbs_g"),
