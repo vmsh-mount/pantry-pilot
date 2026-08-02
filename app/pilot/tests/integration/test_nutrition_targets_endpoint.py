@@ -15,7 +15,7 @@ import uuid
 
 import pytest
 
-from tests.integration.conftest import create_household, set_session
+from tests.integration.conftest import create_household, set_session, enable_nutrition_gaps
 
 
 async def _add_member(db, household_id: str, **kwargs) -> str:
@@ -68,6 +68,7 @@ async def test_per_member_targets_sum_reconciles_with_household_total(db):
 @pytest.mark.asyncio
 async def test_targets_endpoint_per_member_sums_to_household_total(app_client, db):
     household_id = await create_household(db)
+    await enable_nutrition_gaps(db, household_id)
     await _add_member(db, household_id, role="adult", age_years=40, sex="male",
                        weight_kg=70, height_cm=175, activity_level="moderately_active")
     await _add_member(db, household_id, role="adult", age_years=38, sex="female")  # missing biometrics
@@ -98,6 +99,7 @@ async def test_targets_endpoint_all_full_data_is_personalized_source(app_client,
     # the slot with no row at all (see get_nutrition_targets's
     # `len(members) < member_count` check).
     household_id = await create_household(db)
+    await enable_nutrition_gaps(db, household_id)
     await _add_member(db, household_id, role="adult", age_years=30, sex="male",
                        weight_kg=70, height_cm=175, activity_level="sedentary")
     await _add_member(db, household_id, role="adult", age_years=28, sex="female",
@@ -121,6 +123,7 @@ async def test_targets_endpoint_under_18_with_age_only_is_not_fallback(app_clien
     one 'estimated' and not the other would mislabel a value that was
     never actually estimated differently."""
     household_id = await create_household(db)
+    await enable_nutrition_gaps(db, household_id)
     await _add_member(db, household_id, role="child", age_years=8, sex="male")  # age only
     await _add_member(db, household_id, role="child", age_years=8, sex="male",
                        weight_kg=25, height_cm=128)  # age + weight/height, same age
@@ -142,6 +145,7 @@ async def test_targets_endpoint_no_age_at_all_is_fallback(app_client, db):
     """A member with no age_years is a genuine role-default fallback (tier 3) —
     distinct from the under-18 age-band case above."""
     household_id = await create_household(db)
+    await enable_nutrition_gaps(db, household_id)
     await _add_member(db, household_id, role="child")  # no age at all
 
     set_session(app_client, household_id)

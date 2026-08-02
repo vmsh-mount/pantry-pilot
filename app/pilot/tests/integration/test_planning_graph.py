@@ -88,7 +88,18 @@ def pantry_item(name, remaining, threshold, category="staples", unit="kg", last_
 def mock_db_ctx():
     """Context-manager mock for _db_context() used inside graph nodes."""
     mock_db = AsyncMock()
-    mock_db.execute = AsyncMock(return_value=MagicMock())
+    # scalar_one_or_none() must return None (no row), not a truthy MagicMock —
+    # the validate node's staleness check (`if flow_basket and
+    # flow_basket.generated_at:`) treats any truthy value as a real
+    # FlowBasket and compares .generated_at (itself an auto-mocked attribute
+    # here, not a datetime) against an int, raising a TypeError. A fresh-user
+    # test scenario genuinely has no FlowBasket row yet, so None is correct,
+    # not just a workaround.
+    execute_result = MagicMock()
+    execute_result.scalar_one_or_none.return_value = None
+    execute_result.scalars.return_value.all.return_value = []
+    execute_result.scalars.return_value.first.return_value = None
+    mock_db.execute = AsyncMock(return_value=execute_result)
     mock_db.commit  = AsyncMock()
     ctx = MagicMock()
     ctx.__aenter__ = AsyncMock(return_value=mock_db)

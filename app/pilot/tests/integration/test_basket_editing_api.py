@@ -287,9 +287,9 @@ async def test_search_happy_path(app_client, db, swiggy_mcp):
     assert len(results) >= 1
     # Each result must have the required fields
     for r in results:
-        assert "swiggy_product_id" in r
-        assert "name"              in r
-        assert "price"             in r
+        assert "sku_id" in r
+        assert "item_name"         in r
+        assert "unit_price"        in r
 
 
 @pytest.mark.asyncio
@@ -411,9 +411,9 @@ async def test_add_item_happy_path(app_client, db):
     run = await seed_loop_run(db, household_id)
 
     payload = {
-        "swiggy_product_id": "sku_amul_milk_002",
-        "name":              "Amul Toned Milk 1L",
-        "price":             64.0,
+        "sku_id":            "sku_amul_milk_002",
+        "item_name":         "Amul Toned Milk 1L",
+        "unit_price":        64.0,
         "brand":             "Amul",
         "image_url":         None,
         "category":          "dairy",
@@ -435,7 +435,7 @@ async def test_add_item_happy_path(app_client, db):
 @pytest.mark.asyncio
 async def test_add_item_unauthenticated(app_client):
     """No session → NOT_AUTHENTICATED."""
-    payload = {"swiggy_product_id": "x", "name": "Test", "price": 10.0}
+    payload = {"sku_id": "x", "item_name": "Test", "unit_price": 10.0}
     resp = await app_client.post("/v1/basket/item", json=payload)
     body = resp.json()
     assert body["success"] is False
@@ -448,7 +448,7 @@ async def test_add_item_no_pending_basket(app_client, db):
     household_id = await create_household(db)
     await auth_session(app_client, household_id)
 
-    payload = {"swiggy_product_id": "x", "name": "Test", "price": 10.0}
+    payload = {"sku_id": "x", "item_name": "Test", "unit_price": 10.0}
     resp = await app_client.post("/v1/basket/item", json=payload)
     body = resp.json()
     assert body["success"] is False
@@ -463,9 +463,9 @@ async def test_add_item_appears_in_pending(app_client, db):
     await seed_loop_run(db, household_id)
 
     payload = {
-        "swiggy_product_id": "sku_amul_milk_002",
-        "name":              "Amul Toned Milk 1L",
-        "price":             64.0,
+        "sku_id":            "sku_amul_milk_002",
+        "item_name":         "Amul Toned Milk 1L",
+        "unit_price":        64.0,
         "brand":             "Amul",
     }
     await app_client.post("/v1/basket/item", json=payload)
@@ -486,7 +486,7 @@ async def test_add_item_total_updated(app_client, db):
     run = await seed_loop_run(db, household_id)
     await seed_item(db, run.id, household_id, name="Salt", price=28.0)
 
-    payload = {"swiggy_product_id": "sku_milk", "name": "Milk", "price": 64.0}
+    payload = {"sku_id": "sku_milk", "item_name": "Milk", "unit_price": 64.0}
     resp = await app_client.post("/v1/basket/item", json=payload)
 
     data = resp.json()["data"]
@@ -501,7 +501,7 @@ async def test_add_item_added_by_is_user_added(app_client, db):
     await auth_session(app_client, household_id)
     await seed_loop_run(db, household_id)
 
-    payload = {"swiggy_product_id": "sku_x", "name": "Oats", "price": 120.0}
+    payload = {"sku_id": "sku_x", "item_name": "Oats", "unit_price": 120.0}
     resp = await app_client.post("/v1/basket/item", json=payload)
 
     item = resp.json()["data"]["item"]
@@ -530,7 +530,7 @@ async def test_edit_then_confirm_flow(app_client, db):
 
     # Add Oats
     add_resp = await app_client.post("/v1/basket/item", json={
-        "swiggy_product_id": "sku_oats", "name": "Oats", "price": 120.0,
+        "sku_id": "sku_oats", "item_name": "Oats", "unit_price": 120.0,
     })
     assert add_resp.json()["success"] is True
 

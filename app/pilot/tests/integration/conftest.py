@@ -7,10 +7,16 @@ Design:
   - `swiggy_mcp` fixture (session-scoped) patches httpx.AsyncClient.post so
     every test in this package gets the same fake Swiggy without hitting the
     network. It dispatches by tool name, mirroring what the real MCP does.
-  - `db` fixture spins up a fresh in-memory SQLite database per test and tears
-    it down afterwards, giving each test a clean slate.
+  - `db` fixture spins up an isolated Postgres schema per test (against the
+    real postgres service) and tears it down afterwards, giving each test a
+    clean slate without a separate container.
   - `app_client` provides an httpx.AsyncClient wired to the FastAPI app so
     tests can drive the full HTTP stack (auth → onboard → basket → orders).
+  - `_reset_production_engine_pool` (autouse) disposes app.database.engine's
+    pool before every test — anything that bypasses the get_db() DI override
+    (background tasks, Celery task bodies called directly) still touches that
+    process-wide singleton, and pytest-asyncio's per-test event loops make
+    stale pooled connections a real, order-dependent failure mode otherwise.
 """
 
 import json
@@ -309,11 +315,127 @@ def swiggy_mcp():
 
 
 # ══════════════════════════════════════════════════════════════════════════════
-# In-memory DB per test (SQLite via aiosqlite)
+# Un-poison app.database's production singleton (autouse)
+# ══════════════════════════════════════════════════════════════════════════════
+
+@pytest.fixture(autouse=True)
+def mock_settings(monkeypatch):
+    """
+    Overrides (shadows, same fixture name) the root tests/conftest.py's
+    autouse `mock_settings`, which monkeypatches app.config.get_settings to
+    return a fake Settings with database_url pointing at "localhost".
+
+    That's fine for unit tests (everything is mocked anyway), but it silently
+    breaks integration tests: app.database's module-level `engine` is created
+    lazily, at whichever moment app.database is FIRST imported anywhere in
+    the whole pytest process — and nothing in this codebase imports it at
+    collection time (it's always a deferred `from app.database import ...`
+    inside a function body, the prevailing style here). If that first import
+    happens to fire while some unit test's mock_settings patch is active,
+    "localhost" gets baked into the engine permanently — real Postgres schema
+    isolation and this suite's own real-DB `db` fixture below both still
+    work fine (they never go through app.database's engine), but ANYTHING
+    that bypasses the get_db() DI override and opens a session directly via
+    app.database.AsyncSessionLocal (background tasks like process_signals,
+    Celery task bodies invoked directly in a test) fails with a bare
+    connection error that looks like a real infra problem, not what it
+    actually is: a poisoned module singleton from cross-test/cross-suite
+    import-order interference.
+
+    Unlike the root fixture, this doesn't fabricate a MagicMock settings
+    object or monkeypatch function references module-by-module (which only
+    reaches code that imported get_settings AFTER the patch was installed —
+    a whack-a-mole that broke again the moment providers/factory.py's own
+    `from app.config import get_settings` turned out to need the same
+    treatment as app.mcp.swiggy's). Instead: set the two env vars that
+    actually need overriding for this suite, then clear get_settings's
+    lru_cache. Every module gets the override this way regardless of how or
+    when it imported get_settings, because they all end up calling the same
+    underlying function, which now reads fresh from the (patched) env on its
+    next call from anywhere.
+
+      - PANTRYPILOT_DRY_RUN: real .env has this =true for local dev
+        convenience, which would silently skip the real checkout path these
+        tests intercept via the swiggy_mcp fixture and assert against
+        (e.g. a specific swiggy_order_id).
+      - SWIGGY_MCP_MODE: real .env has this =demo (set for the
+        SWIGGY_MCP_MODE=demo recording work) — DemoSwiggyMCPClient never
+        makes an HTTP call at all, so swiggy_mcp's transport-level mock
+        never gets a chance to apply.
+
+    database_url is deliberately left alone — the real value already points
+    at the `postgres` hostname the `db` fixture below assumes; it's only the
+    *unit* suite's MagicMock override (pointing at "localhost") that's the
+    problem, and that never applies here in the first place.
+    """
+    monkeypatch.setenv("PANTRYPILOT_DRY_RUN", "false")
+    monkeypatch.setenv("SWIGGY_MCP_MODE", "live")
+    from app.config import get_settings
+    get_settings.cache_clear()
+    yield
+    get_settings.cache_clear()
+
+
+@pytest.fixture
+def _test_schema():
+    """The per-test isolated schema name — a plain fixture (not the
+    connection to it) so both `db` and `_reset_production_engine_pool` can
+    share the same value without either owning the other's setup/teardown."""
+    import uuid
+    return f"test_{uuid.uuid4().hex[:12]}"
+
+
+@pytest_asyncio.fixture(autouse=True)
+async def _reset_production_engine_pool(_test_schema):
+    """
+    Two problems, one fixture:
+
+    1. Even with the URL fixed above, app.database.engine's pool is a
+       singleton shared across every test in this process, while
+       pytest-asyncio (asyncio_mode=auto, no explicit loop scope configured)
+       gives each test function its own event loop. asyncpg connections are
+       bound to the loop that created them, so a connection opened by one
+       test's pool checkout is invalid in the next test's loop. Disposing
+       before each test forces a fresh connection bound to that test's own
+       loop — same fix applied in tasks/nutrition.py for the equivalent
+       production issue.
+
+    2. Once connected to the right database, code that bypasses the get_db()
+       DI override (process_signals and anything else opening a session
+       directly via app.database.AsyncSessionLocal) still lands in the
+       default "public" schema, not the isolated per-test schema the `db`
+       fixture below creates — so a row inserted through the DI-injected
+       session (e.g. a household created via `db`) is invisible to a
+       foreign-key check run through the production engine's connection,
+       surfacing as a spurious "not present in table households" error that
+       has nothing to do with the actual insert being wrong. A `connect`
+       listener that sets search_path on every new connection this engine
+       opens keeps both paths pointed at the same schema for the duration
+       of the test.
+    """
+    from sqlalchemy import event
+    from app.database import engine
+    await engine.dispose()
+
+    def _set_search_path(dbapi_connection, connection_record):
+        cursor = dbapi_connection.cursor()
+        cursor.execute(f'SET search_path TO "{_test_schema}"')
+        cursor.close()
+
+    event.listen(engine.sync_engine, "connect", _set_search_path)
+    try:
+        yield
+    finally:
+        event.remove(engine.sync_engine, "connect", _set_search_path)
+        await engine.dispose()
+
+
+# ══════════════════════════════════════════════════════════════════════════════
+# Per-test DB (real Postgres, isolated schema per test)
 # ══════════════════════════════════════════════════════════════════════════════
 
 @pytest_asyncio.fixture
-async def db():
+async def db(_test_schema):
     """
     Each test gets a fresh PostgreSQL schema, runs all migrations, yields an
     AsyncSession, then drops the schema — giving complete isolation without
@@ -322,14 +444,12 @@ async def db():
     Requires the postgres service from docker-compose to be running, which it
     always is inside the pilot container (DATABASE_URL points at it).
     """
-    import uuid
     from sqlalchemy.ext.asyncio import create_async_engine, AsyncSession
     from sqlalchemy.orm import sessionmaker
     from sqlalchemy import text
     from app.models.db import Base
 
-    # Each test uses a unique schema so tests can run in parallel without clobbering each other.
-    schema = f"test_{uuid.uuid4().hex[:12]}"
+    schema = _test_schema
 
     # Connect to the app's postgres (same host, different schema)
     base_url = "postgresql+asyncpg://pantrypilot:pantrypilot@postgres:5432/pantrypilot"
@@ -444,6 +564,21 @@ async def create_household(db, swiggy_user_id: str = "swiggy_user_001") -> str:
 
     await db.commit()
     return str(hh.id)
+
+
+async def enable_nutrition_gaps(db, household_id: str) -> None:
+    """
+    create_household() deliberately leaves nutrition_gaps_enabled at its
+    column default (NULL/falsy) — test_nutrition_gaps_enabled_roundtrips_
+    through_settings specifically asserts that default. Tests that exercise
+    /v1/nutrition/{targets,weekly,gaps} need the flag on (see nutrition.py's
+    _require_gap_to_cart_enabled server-side gate) — call this explicitly
+    rather than changing the shared helper's default for everyone.
+    """
+    from app.models.db import Household
+    hh = await db.get(Household, household_id)
+    hh.nutrition_gaps_enabled = True
+    await db.commit()
 
 
 def set_session(client, household_id: str) -> None:

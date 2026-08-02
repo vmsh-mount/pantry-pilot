@@ -51,6 +51,7 @@ def mock_settings(monkeypatch):
     settings.gemini_api_key         = ""
     settings.gemini_model           = "gemini-2.0-flash"
     settings.mock_mcp_base_url      = "http://localhost:8001"
+    settings.swiggy_mcp_mode        = "live"
     settings.pantrypilot_dry_run     = False
     settings.whatsapp_enabled        = False
     settings.sentry_dsn             = ""
@@ -58,7 +59,23 @@ def mock_settings(monkeypatch):
 
     monkeypatch.setattr("app.config.get_settings", lambda: settings)
 
-    # Also patch the module-level calls in services that cache settings at import
+    # Also patch the module-level calls in services that cache settings at import.
+    #
+    # app.providers.factory.get_settings is on this list because get_mcp_provider()
+    # branches on settings.swiggy_mcp_mode (demo vs live) — before that branch
+    # existed, factory.py's own `get_settings` binding never mattered for test
+    # correctness, so this gap went unnoticed. Now it does: factory.py does
+    # `from app.config import get_settings` deferred, INSIDE the calling
+    # function's first invocation (pantry_service.bootstrap_from_history does
+    # the same, deferred-importing get_mcp_provider) — so whichever test
+    # happens to trigger that chain's first-ever import in the whole pytest
+    # process determines what `get_settings` stays bound to for every test
+    # after it, unit or integration. Without this patch, a unit test running
+    # after an integration test (which legitimately needs the real,
+    # env-based settings — see tests/integration/conftest.py's own
+    # mock_settings override) could silently inherit real settings instead
+    # of this fixture's mock, and get routed to DemoSwiggyMCPProvider instead
+    # of the SwiggyMCPClient the test actually patches.
     for module_path in [
         "app.mcp.swiggy.settings",
         "app.mcp.swiggy.get_settings",
@@ -67,6 +84,7 @@ def mock_settings(monkeypatch):
         "app.services.whatsapp_service.get_settings",
         "app.utils.crypto.get_settings",
         "app.agent.planning_graph.settings",
+        "app.providers.factory.get_settings",
     ]:
         try:
             # Use the settings object directly for module-level `settings = get_settings()` vars;

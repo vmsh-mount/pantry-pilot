@@ -21,7 +21,7 @@ from datetime import datetime, timezone
 
 import pytest
 
-from tests.integration.conftest import create_household, set_session
+from tests.integration.conftest import create_household, set_session, enable_nutrition_gaps
 
 
 async def _add_order_nutrition(db, household_id: str, calories: float, protein_g: float):
@@ -50,6 +50,7 @@ async def test_weekly_endpoint_does_not_500_with_multiple_orders(app_client, db)
     against real Postgres — a single order_nutrition row is enough to trigger
     it (the bug is about expression identity, not row count)."""
     household_id = await create_household(db)
+    await enable_nutrition_gaps(db, household_id)
     await _add_order_nutrition(db, household_id, calories=500, protein_g=30)
     await _add_order_nutrition(db, household_id, calories=600, protein_g=25)
 
@@ -69,6 +70,7 @@ async def test_weekly_endpoint_does_not_500_with_multiple_orders(app_client, db)
 @pytest.mark.asyncio
 async def test_weekly_endpoint_empty_history_returns_empty_weeks(app_client, db):
     household_id = await create_household(db)
+    await enable_nutrition_gaps(db, household_id)
     set_session(app_client, household_id)
     resp = await app_client.get("/v1/nutrition/weekly?weeks=1")
     body = resp.json()
