@@ -190,6 +190,83 @@ async def test_non_food_item_does_not_dilute_coverage(db):
     assert b12_gap["watch_reason"] == "no_source_in_window"
 
 
+# ── 2b. Coverage disclosure: insufficient_data still carries partial data ────
+# tasks/features/nutrition-gaps-coverage-disclosure.md
+
+@pytest.mark.asyncio
+async def test_insufficient_data_includes_partial_actual_and_unit(db):
+    """Coverage between 0 and 60% must still surface the computed partial
+    figure — not just the coverage fraction. 1 of 3 resolved items carries
+    a b12 value -> coverage = 1/3 (below the 0.6 threshold), actual = that
+    one item's value."""
+    from app.services.nutrition_gaps import compute_gaps
+
+    hh = await _create_household_with_address(db, diet_type="vegetarian")
+    items = [
+        _item("Fortified Cereal", "SKU1", calories=100, protein_g=3, fiber_g=2,
+              nutrients={"vitamin_b12_g": 0.8}),
+        _item("Milk", "SKU2", calories=60, protein_g=6, fiber_g=0, nutrients={}),
+        _item("Curd", "SKU3", calories=60, protein_g=7, fiber_g=0, nutrients={}),
+    ]
+    await _add_order_nutrition(db, hh.id, items)
+
+    gaps = await compute_gaps(db, hh)
+    b12_gap = next(g for g in gaps if g["nutrient"] == "b12")
+    assert b12_gap["status"] == "insufficient_data"
+    assert b12_gap["coverage"] == round(1 / 3, 2)
+    assert b12_gap["actual_weekly"] == 0.8
+    assert b12_gap["unit"] == "mcg"
+    # Recommendations are only ever attached when status == "short"
+    # (api/nutrition.py's gate) — this dict staying "insufficient_data"
+    # even with a real actual_weekly present is what protects that gate.
+    assert b12_gap["status"] != "short"
+
+
+@pytest.mark.asyncio
+async def test_zero_coverage_actual_weekly_is_none_not_zero(db):
+    """Coverage of exactly 0 (nothing resolved this nutrient at all) must
+    stay distinguishable from a real partial figure of 0.0 — the frontend
+    renders these two states differently."""
+    from app.services.nutrition_gaps import compute_gaps
+
+    hh = await _create_household_with_address(db, diet_type="vegetarian")
+    items = [
+        _item("Milk", "SKU1", calories=60, protein_g=6, fiber_g=0, nutrients={}),
+        _item("Curd", "SKU2", calories=60, protein_g=7, fiber_g=0, nutrients={}),
+    ]
+    await _add_order_nutrition(db, hh.id, items)
+
+    gaps = await compute_gaps(db, hh)
+    b12_gap = next(g for g in gaps if g["nutrient"] == "b12")
+    assert b12_gap["coverage"] == 0.0
+    assert b12_gap["actual_weekly"] is None
+
+
+@pytest.mark.asyncio
+async def test_target_based_insufficient_data_includes_partial_actual(db):
+    """Same disclosure fix applies to the target-based path (calories/
+    protein/fiber), a separate code block from the watch-list path."""
+    from app.services.nutrition_gaps import compute_gaps
+
+    hh = await _create_household_with_address(db)
+    items = [
+        _item("Milk", "SKU1", calories=60, protein_g=6, fiber_g=None),
+        _item("Unresolved Item", "SKU2", confidence="unresolved"),
+        _item("Another Unresolved", "SKU3", confidence="unresolved"),
+    ]
+    await _add_order_nutrition(db, hh.id, items)
+
+    gaps = await compute_gaps(db, hh)
+    fiber_gap = next(g for g in gaps if g["nutrient"] == "fiber")
+    assert fiber_gap["status"] == "insufficient_data"
+    assert fiber_gap["unit"] == "g"
+    # Only 1 resolved item (the other 2 are "unresolved" and excluded from
+    # the denominator entirely, per _weekly_actual_and_coverage), and it has
+    # no fiber value -> coverage 0/1 = 0.0 -> actual_weekly stays None.
+    assert fiber_gap["coverage"] == 0.0
+    assert fiber_gap["actual_weekly"] is None
+
+
 # ── 3. Recommendation pipeline: guardrails + dal/paneer recommended ──────────
 
 @pytest.mark.asyncio

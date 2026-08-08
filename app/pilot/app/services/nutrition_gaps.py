@@ -136,7 +136,17 @@ async def compute_gaps(db: AsyncSession, household: Household) -> list[dict]:
     for nutrient, (target_key, unit) in target_map.items():
         actual, coverage = _weekly_actual_and_coverage(items, nutrient)
         if coverage < COVERAGE_THRESHOLD:
-            gaps.append({"nutrient": nutrient, "status": "insufficient_data", "coverage": round(coverage, 2)})
+            gaps.append({
+                "nutrient": nutrient, "status": "insufficient_data",
+                "coverage": round(coverage, 2),
+                # None when truly zero signal exists (coverage == 0 —
+                # nothing resolved for this nutrient at all); a real
+                # partial figure otherwise. See
+                # tasks/features/nutrition-gaps-coverage-disclosure.md —
+                # disclose the partial data instead of hiding it.
+                "actual_weekly": round(actual, 1) if coverage > 0 else None,
+                "unit": unit,
+            })
             continue
         target = targets[target_key]
         short_by = target - actual
@@ -159,7 +169,12 @@ async def compute_gaps(db: AsyncSession, household: Household) -> list[dict]:
         for nutrient in _WATCH_NUTRIENTS:
             actual, coverage = _weekly_actual_and_coverage(items, nutrient)
             if coverage < COVERAGE_THRESHOLD:
-                gaps.append({"nutrient": nutrient, "status": "insufficient_data", "coverage": round(coverage, 2)})
+                gaps.append({
+                    "nutrient": nutrient, "status": "insufficient_data",
+                    "coverage": round(coverage, 2),
+                    "actual_weekly": round(actual, 1) if coverage > 0 else None,
+                    "unit": _UNITS[nutrient],
+                })
                 continue
             if actual <= 0:
                 gaps.append({

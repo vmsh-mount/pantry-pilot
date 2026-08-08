@@ -200,9 +200,19 @@ export default function GapsToCartPage() {
   }
 
   const shortGaps = gaps.filter((g) => g.status === "short" && g.recommendations && g.recommendations.length > 0)
+  // Page-level disclosure, not tied to any one card — a nutrient that
+  // couldn't be checked shouldn't just be absent with no stated reason.
+  // See tasks/features/nutrition-gaps-coverage-disclosure.md.
+  const uncheckedGaps = gaps.filter((g) => g.status === "insufficient_data")
 
   return (
     <PageShell hero={<PageHero title="Close your gaps" back />}>
+      {uncheckedGaps.length > 0 && (
+        <p className="text-[11px] text-gray-400 px-1 mb-3">
+          {uncheckedGaps.map((g) => NUTRIENT_LABEL[g.nutrient] ?? g.nutrient).join(", ")}
+          {" "}couldn&apos;t be checked yet — not enough of this week&apos;s orders resolved.
+        </p>
+      )}
       {shortGaps.length === 0 ? (
         <Card>
           <div className="p-6 text-center">

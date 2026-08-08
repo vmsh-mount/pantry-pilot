@@ -168,7 +168,14 @@ export function NutritionGapsCard({ week }: { week: WeekNutrition }) {
   const isLoadingGaps  = phase === "loading-gaps"
   const showGapSection = isLoadingGaps || (phase === "ready" && !hasNoUsableSignal)
 
-  const microGaps = gaps.filter((g) => WATCH_NUTRIENTS.includes(g.nutrient))
+  // status filter matters, not just nutrient name: the watch-list backend
+  // path can emit a CONFIRMED zero-intake b12/iron result (status "short",
+  // watch_reason "no_source_in_window") — a more confident state than
+  // "insufficient_data", already represented correctly by the summary line
+  // and fixableGaps below. Without this filter it would also land here and
+  // render as "no data", contradicting the summary line's "missing" on the
+  // same card. See tasks/features/nutrition-gaps-coverage-disclosure.md.
+  const microGaps = gaps.filter((g) => WATCH_NUTRIENTS.includes(g.nutrient) && g.status === "insufficient_data")
   const summary = needsAttention
     ? summaryLine(shortGaps)
     : summaryLine(gaps.filter((g) => g.status === "insufficient_data"))
@@ -262,16 +269,28 @@ export function NutritionGapsCard({ week }: { week: WeekNutrition }) {
           {microExpanded && (
             <div className="px-3.5 py-2.5" style={{ background: "#F7F8F5", borderBottom: "0.5px solid rgba(0,0,0,0.05)" }}>
               <div className="flex flex-wrap gap-1.5 mb-2">
-                {microGaps.map((g) => (
-                  <span
-                    key={g.nutrient}
-                    className="flex items-center gap-1.5 text-[11px] font-semibold px-2.5 py-1 rounded-full"
-                    style={{ background: "#F0F0EE", color: "#5A5A5F" }}
-                  >
-                    <span className="w-[5px] h-[5px] rounded-full flex-shrink-0" style={{ background: "#9CA3AF" }} />
-                    {NUTRIENT_LABEL[g.nutrient] ?? g.nutrient} — no data
-                  </span>
-                ))}
+                {microGaps.map((g) => {
+                  const label = NUTRIENT_LABEL[g.nutrient] ?? g.nutrient
+                  // actual_weekly is null only when coverage is genuinely
+                  // 0 (nothing resolved for this nutrient at all) — a real
+                  // partial figure otherwise. Every gap here is already
+                  // status === "insufficient_data" (see the microGaps
+                  // filter above), so this is purely zero-vs-partial, not
+                  // a confidence-state check.
+                  const hasPartialSignal = g.actual_weekly != null
+                  return (
+                    <span
+                      key={g.nutrient}
+                      className="flex items-center gap-1.5 text-[11px] font-semibold px-2.5 py-1 rounded-full"
+                      style={{ background: "#F0F0EE", color: "#5A5A5F" }}
+                    >
+                      <span className="w-[5px] h-[5px] rounded-full flex-shrink-0" style={{ background: "#9CA3AF" }} />
+                      {hasPartialSignal
+                        ? `${label} — ~${Math.round(g.actual_weekly!)}${g.unit ?? ""} (${Math.round((g.coverage ?? 0) * 100)}% checked)`
+                        : `${label} — no data`}
+                    </span>
+                  )
+                })}
               </div>
               <p className="text-[10.5px] text-[#8E8E93] leading-relaxed">
                 No numeric target for these yet — shown as watch-only until we can verify from your recent orders.
