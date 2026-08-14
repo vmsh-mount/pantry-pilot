@@ -9,34 +9,31 @@ Endpoints (all under /v1/quick):
   DELETE /basket/item/{item_id}   — remove item + write 'removed' signal
   GET    /addresses               — list delivery addresses for picker
   POST   /checkout                — place order, write 'accepted' signals, update pantry + model
+                                     (thin wrapper — see app/services/quick_checkout.py for
+                                     the actual logic, which the AI assistant's checkout_basket
+                                     tool also calls; tasks/features/ai-ordering-assistant.md §0)
 """
 
 from __future__ import annotations
 
-from datetime import datetime, timezone
 from typing import Optional
 
-from fastapi import APIRouter, BackgroundTasks, Request, Depends
+from fastapi import APIRouter, Request, Depends
 from pydantic import BaseModel, Field
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.database import get_db
-from app.models.db import (
-    Address, HouseholdPreferences, ItemSignal, Order, OrderItem,
-)
-from app.redis import get_redis
+from app.models.db import Address, ItemSignal
 from app.schemas.common import APIResponse
 from app.services import quick_basket as basket_svc
+from app.services import quick_checkout
 from app.services.basket_editing_service import BasketEditingService
 from app.utils.exceptions import TokenExpiredError, SwiggyMCPError
 from app.utils.logging import get_logger
 
 logger = get_logger(__name__)
 router = APIRouter(prefix="/quick", tags=["quick-order"])
-
-_CART_LOCK_TIMEOUT    = 300  # seconds
-_CART_LOCK_BLOCKING   = 10   # fail fast — don't make user wait
 
 
 # ── Auth helper ───────────────────────────────────────────────────────────────
@@ -45,33 +42,9 @@ def _household_id(request: Request) -> str | None:
     return request.session.get("household_id")
 
 
-async def _get_access_token(household_id: str, db: AsyncSession) -> str:
-    from app.services.auth_service import AuthService
-    return await AuthService(db).get_valid_token(household_id)
-
-
-async def _resolve_swiggy_address(
-    household_id: str,
-    db: AsyncSession,
-    override_swiggy_address_id: str | None = None,
-) -> str:
-    """Return the Swiggy address ID to use for this order."""
-    if override_swiggy_address_id:
-        return override_swiggy_address_id
-
-    prefs_result = await db.execute(
-        select(HouseholdPreferences).where(HouseholdPreferences.household_id == household_id)
-    )
-    prefs = prefs_result.scalar_one_or_none()
-    if prefs and prefs.preferred_address_id:
-        addr_result = await db.execute(
-            select(Address).where(Address.id == prefs.preferred_address_id)
-        )
-        addr = addr_result.scalar_one_or_none()
-        if addr:
-            return addr.swiggy_address_id
-
-    raise SwiggyMCPError("No delivery address configured.")
+# _get_access_token / _resolve_swiggy_address moved to app/services/quick_checkout.py —
+# they were checkout-only, and checkout itself now lives there too. See that
+# module's docstring / tasks/features/ai-ordering-assistant.md Design §0.
 
 
 # ── Signal helper ─────────────────────────────────────────────────────────────
@@ -341,163 +314,20 @@ class CheckoutRequest(BaseModel):
 async def checkout(
     request: Request,
     body: CheckoutRequest,
-    background_tasks: BackgroundTasks,
     db: AsyncSession = Depends(get_db),
 ):
+    """Thin wrapper — all logic lives in quick_checkout.checkout(), which the
+    AI assistant's checkout_basket tool also calls (Design §0, avoids two
+    copies of lock/cart-build/dry-run/MCP-call logic that must stay in sync)."""
     household_id = _household_id(request)
     if not household_id:
         return APIResponse.fail("NOT_AUTHENTICATED", "Not authenticated.")
 
-    items = await basket_svc.get_basket(household_id)
-    if not items:
-        return APIResponse.fail("EMPTY_BASKET", "Basket is empty.")
+    result = await quick_checkout.checkout(household_id, db, body.swiggy_address_id)
+    if not result["success"]:
+        return APIResponse.fail(result["code"], result["message"])
 
-    try:
-        access_token = await _get_access_token(household_id, db)
-    except TokenExpiredError:
-        return APIResponse.fail("TOKEN_EXPIRED", "Swiggy session expired.")
-
-    try:
-        swiggy_address_id = await _resolve_swiggy_address(
-            household_id, db, body.swiggy_address_id
-        )
-    except SwiggyMCPError as e:
-        return APIResponse.fail("NO_ADDRESS", str(e))
-
-    # Acquire cart lock — same key as Routines to prevent collision
-    redis = await get_redis()
-    lock_key = f"routine_cart_lock:{household_id}"
-    lock = redis.lock(lock_key, timeout=_CART_LOCK_TIMEOUT, blocking_timeout=_CART_LOCK_BLOCKING)
-    try:
-        acquired = await lock.acquire(blocking=True)
-    except Exception:
-        acquired = False
-    if not acquired:
-        return APIResponse.fail("CART_LOCKED", "Another order is in progress. Please try again shortly.")
-
-    try:
-        from app.config import get_settings
-        from app.providers.factory import get_mcp_provider
-
-        # Build cart payload — both spinId and skuId required by Swiggy MCP
-        cart_items = [
-            {"sku_id": i["sku_id"], "spin_id": i.get("spin_id") or "", "quantity": i["quantity"]}
-            for i in items
-            if i.get("sku_id")
-        ]
-        if not cart_items:
-            return APIResponse.fail("NO_SKUS", "No SKU IDs in basket — cannot place order.")
-
-        if get_settings().pantrypilot_dry_run:
-            import uuid as _uuid
-            fake_id = f"dry_run_{_uuid.uuid4().hex[:12]}"
-            logger.info("quick_order_dry_run", household_id=household_id, fake_order_id=fake_id)
-            from app.mcp.types import MCPCheckoutResult
-            order_result = MCPCheckoutResult(
-                order_id=fake_id, status="PLACED", grand_total=float(sum(i["unit_price"] * i["quantity"] for i in items)),
-                estimated_delivery="Dry run — no order placed",
-            )
-        else:
-            client = get_mcp_provider(access_token)
-            await client.clear_cart()
-            await client.update_cart(cart_items, swiggy_address_id)
-            order_result = await client.checkout(swiggy_address_id)
-
-    except SwiggyMCPError as e:
-        logger.error("quick_order_checkout_failed", household_id=household_id, error=str(e))
-        return APIResponse.fail("CHECKOUT_ERROR", str(e))
-    finally:
-        try:
-            await lock.release()
-        except Exception:
-            pass
-
-    # Normalise order result
-    def _o(obj, key, default=None):
-        return obj.get(key, default) if isinstance(obj, dict) else getattr(obj, key, default)
-
-    swiggy_order_id = _o(order_result, "order_id") or _o(order_result, "swiggy_order_id", "")
-    item_total   = float(sum(i["unit_price"] * i["quantity"] for i in items))
-    delivery_fee = float(_o(order_result, "delivery_fee", 0))
-    taxes        = float(_o(order_result, "taxes", 0))
-    # Prefer Swiggy's confirmed grand_total (captures promos/discounts applied at checkout).
-    # Fall back to local sum only when the checkout response omits it.
-    _gt = _o(order_result, "grand_total", None)
-    grand_total  = float(_gt) if _gt is not None else (item_total + delivery_fee + taxes)
-
-    now = datetime.now(timezone.utc)
-
-    # Persist Order
-    order = Order(
-        household_id=household_id,
-        loop_run_id=None,
-        swiggy_order_id=swiggy_order_id,
-        swiggy_address_id=swiggy_address_id,
-        item_total=item_total,
-        delivery_fee=delivery_fee,
-        taxes=taxes,
-        grand_total=grand_total,
-        status="placed",
-        source="quick_order",
-        placed_at=now,
-    )
-    db.add(order)
-    await db.flush()  # get order.id
-
-    for i in items:
-        db.add(OrderItem(
-            order_id=order.id,
-            household_id=household_id,
-            swiggy_sku_id=i.get("sku_id", ""),
-            product_name=i["item_name"],
-            brand=i.get("brand"),
-            category=i.get("category"),
-            quantity=i["quantity"],
-            unit=i.get("unit", "units"),
-            unit_price=i["unit_price"],
-            total_price=i["unit_price"] * i["quantity"],
-        ))
-
-    # Write accepted signals for all checkout items
-    for i in items:
-        db.add(ItemSignal(
-            household_id=household_id,
-            loop_run_id=None,
-            item_name=i["item_name"],
-            signal_type="accepted",
-            source="quick_order",
-            new_value={"quantity": i["quantity"], "brand": i.get("brand"), "sku_id": i.get("sku_id")},
-        ))
-
-    await db.commit()
-
-    # Clear basket now that order is placed
-    await basket_svc.clear_basket(household_id)
-
-    # Post-order async tasks
-    from app.tasks.pantry import update_pantry_post_order
-    from app.services.order_events import dispatch_post_order_tasks
-    update_pantry_post_order.delay(household_id, str(order.id))
-    dispatch_post_order_tasks(order.id)
-
-    background_tasks.add_task(_run_model_update, household_id)
-
-    logger.info(
-        "quick_order_placed",
-        household_id=household_id,
-        order_id=order.id,
-        swiggy_order_id=swiggy_order_id,
-        grand_total=grand_total,
-    )
-    return APIResponse.ok({
-        "order_id":        order.id,
-        "swiggy_order_id": swiggy_order_id,
-        "item_total":      item_total,
-        "delivery_fee":    delivery_fee,
-        "taxes":           taxes,
-        "grand_total":     grand_total,
-        "items":           items,
-    })
+    return APIResponse.ok({k: v for k, v in result.items() if k != "success"})
 
 
 @router.get("/orders/recent", response_model=APIResponse)
@@ -577,14 +407,3 @@ async def reorder(request: Request, order_id: str, db: AsyncSession = Depends(ge
         added.append(entry)
 
     return APIResponse.ok({"added": len(added), "items": added})
-
-
-async def _run_model_update(household_id: str) -> None:
-    from app.database import AsyncSessionLocal
-    from app.services.household_model_service import update_model
-    try:
-        async with AsyncSessionLocal() as db:
-            await update_model(household_id, loop_run_id=None, db=db)
-            await db.commit()
-    except Exception as e:
-        logger.warning("quick_order_model_update_failed", household_id=household_id, error=str(e))

@@ -97,22 +97,22 @@ async def get_order_nutrition(
     })
 
 
-@router.get("/weekly", response_model=APIResponse)
-async def get_weekly_nutrition(
-    request: Request,
-    weeks: int = Query(default=4, ge=1, le=12),
-    db: AsyncSession = Depends(get_db),
-):
-    household_id = _get_household_id(request)
-    if not household_id:
-        return APIResponse.fail("NOT_AUTHENTICATED", "Not authenticated.")
-
-    from app.models.db import Order, OrderNutrition, HouseholdMember
+async def get_weekly_nutrition_summary(db: AsyncSession, household_id: str, weeks: int = 4) -> dict:
+    """
+    Weekly nutrition trends (trailing N weeks) + personalised targets.
+    Extracted so both the REST route below and the AI assistant's
+    get_weekly_nutrition tool call the same logic instead of the route
+    duplicating a query the assistant would otherwise have to reimplement
+    (tasks/features/ai-ordering-assistant.md — same "orchestration layer,
+    no new backend logic" principle Design §0 applies to checkout).
+    Raises no household-not-found/gap-to-cart-disabled errors itself —
+    callers that need that gate (the REST route) check it before calling.
+    """
+    from app.models.db import Household, Order, OrderNutrition, HouseholdMember
     from app.utils.nutrition_targets import personalised_weekly_targets
 
-    hh, err = await _require_gap_to_cart_enabled(db, household_id)
-    if err:
-        return err
+    hh_result = await db.execute(select(Household).where(Household.id == household_id))
+    hh = hh_result.scalar_one()
 
     members = (await db.execute(
         select(HouseholdMember).where(HouseholdMember.household_id == household_id)
@@ -146,7 +146,7 @@ async def get_weekly_nutrition(
     )
     rows = result.all()
 
-    return APIResponse.ok({
+    return {
         "weeks": [
             {
                 "week_start":      row.week_start.isoformat() if row.week_start else None,
@@ -161,7 +161,24 @@ async def get_weekly_nutrition(
             for row in rows
         ],
         "weekly_targets": weekly_targets,
-    })
+    }
+
+
+@router.get("/weekly", response_model=APIResponse)
+async def get_weekly_nutrition(
+    request: Request,
+    weeks: int = Query(default=4, ge=1, le=12),
+    db: AsyncSession = Depends(get_db),
+):
+    household_id = _get_household_id(request)
+    if not household_id:
+        return APIResponse.fail("NOT_AUTHENTICATED", "Not authenticated.")
+
+    hh, err = await _require_gap_to_cart_enabled(db, household_id)
+    if err:
+        return err
+
+    return APIResponse.ok(await get_weekly_nutrition_summary(db, household_id, weeks))
 
 
 @router.get("/compliance", response_model=APIResponse)

@@ -430,6 +430,26 @@ async def _reset_production_engine_pool(_test_schema):
         await engine.dispose()
 
 
+@pytest.fixture(autouse=True)
+def _reset_redis_singleton():
+    """
+    app.redis._redis_client is a module-level singleton bound to whichever
+    event loop created it — same class of bug as _reset_production_engine_pool
+    above, for Redis instead of asyncpg. Each test gets its own event loop via
+    pytest-asyncio, so a connection pooled from a previous test's now-closed
+    loop raises "attached to a different loop" / "Event loop is closed" the
+    first time any test after the first one touches Redis (quick_basket,
+    nutrition_resolution's cache, routine locks, ...). Resetting before each
+    test forces a fresh client bound to that test's own loop. First added
+    locally to test_nutrition_non_food_gate.py; promoted here once a second,
+    unrelated test file (test_quick_checkout.py) hit the identical failure —
+    it's a structural gap in the shared fixture, not a per-file concern.
+    """
+    import app.redis as redis_module
+    redis_module._redis_client = None
+    yield
+
+
 # ══════════════════════════════════════════════════════════════════════════════
 # Per-test DB (real Postgres, isolated schema per test)
 # ══════════════════════════════════════════════════════════════════════════════

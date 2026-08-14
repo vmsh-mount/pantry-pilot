@@ -264,6 +264,34 @@ export interface PantryItemOut {
 
 export interface PantryCounts { total: number; low: number; depleted: number }
 
+// ── AI ordering assistant ────────────────────────────────────────────────────
+// tasks/features/ai-ordering-assistant.md
+
+export type AssistantTurnRole = "user" | "assistant" | "tool_result"
+
+export interface AssistantHistoryTurn {
+  id:         string
+  role:       AssistantTurnRole
+  content:    string
+  tool_calls: { id: string; name: string; input: Record<string, unknown> } | { tool_use_id: string } | null
+  created_at: string
+}
+
+export interface AssistantTextResponse {
+  type:    "text"
+  message: string
+}
+
+export interface AssistantProposalResponse {
+  type:          "proposal"
+  tool_call_id:  string
+  tool_name:     string
+  tool_input:    Record<string, unknown>
+  preview:       string
+}
+
+export type AssistantResponse = AssistantTextResponse | AssistantProposalResponse
+
 // ── API client ────────────────────────────────────────────────────────────────
 export const api = {
   auth: {
@@ -365,5 +393,12 @@ export const api = {
     update: (id: string, body: { estimated_qty_remaining: number }) =>
                                                                request<{ item: PantryItemOut }>(`/pantry/${id}`, { method: "PATCH", body: JSON.stringify(body) }),
     remove: (id: string)                                    => request<{ deleted: boolean }>(`/pantry/${id}`, { method: "DELETE" }),
+  },
+  assistant: {
+    history: () => request<AssistantHistoryTurn[]>("/assistant/history"),
+    send:    (message: string) =>
+               request<AssistantResponse>("/assistant/message", { method: "POST", body: JSON.stringify({ message }) }),
+    confirm: (toolCallId: string) =>
+               request<AssistantResponse>("/assistant/message", { method: "POST", body: JSON.stringify({ confirm_tool_call_id: toolCallId }) }),
   },
 }

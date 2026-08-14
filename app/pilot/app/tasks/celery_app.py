@@ -67,6 +67,7 @@ celery_app.conf.update(
         "app.tasks.routines.*":    {"queue": "planning"},
         "app.tasks.flow.*":        {"queue": "planning"},
         "app.tasks.nutrition.*":   {"queue": "nutrition"},
+        "app.tasks.household_model.*": {"queue": "planning"},
     },
     beat_schedule={
         "daily-token-expiry-check": {

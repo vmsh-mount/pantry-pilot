@@ -671,3 +671,37 @@ class NutrientFoodCandidate(Base):
         Index("idx_nfc_nutrient", "nutrient"),
         Index("idx_nfc_diet_tags", "diet_tags", postgresql_using="gin"),
     )
+
+
+# ─────────────────────────────────────────────
+# AI Ordering Assistant — conversation history
+# tasks/features/ai-ordering-assistant.md, Design §1
+# ─────────────────────────────────────────────
+class AssistantMessage(Base):
+    """
+    One turn of the in-app assistant chat. Persisted (not session-only) —
+    consistent with this codebase's existing bias toward auditable history
+    (LoopRunEdit, ItemSignal exist for the same reason on the Flow side).
+    Also gives the model real conversation context across page reloads, and
+    is the natural place to bound context-window growth later (truncate/
+    summarize older turns) without redesigning storage.
+
+    tool_calls: for an "assistant" turn that proposed a write action, the
+    tool name + arguments the model chose (not yet executed — see the
+    propose/confirm flow in Design §2). Null for plain text turns and for
+    "user"/"tool_result" turns.
+    """
+    __tablename__ = "assistant_messages"
+
+    id:            Mapped[str] = mapped_column(UUID(as_uuid=False), primary_key=True, default=gen_uuid)
+    household_id:  Mapped[str] = mapped_column(UUID(as_uuid=False), ForeignKey("households.id", ondelete="CASCADE"))
+
+    role:          Mapped[str] = mapped_column(String(20), nullable=False)  # "user" | "assistant" | "tool_result"
+    content:       Mapped[str] = mapped_column(Text, nullable=False)
+    tool_calls:    Mapped[list | None] = mapped_column(JSONB)
+
+    created_at:    Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+
+    __table_args__ = (
+        Index("idx_assistant_messages_household", "household_id", "created_at"),
+    )

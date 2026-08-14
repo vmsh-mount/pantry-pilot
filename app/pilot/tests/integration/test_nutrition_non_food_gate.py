@@ -15,18 +15,10 @@ from sqlalchemy import select
 from app.models.db import NutritionCache
 from app.services.nutrition_resolution import resolve_item
 
-
-@pytest.fixture(autouse=True)
-def _reset_redis_singleton():
-    # app.redis._redis_client is a module-level singleton bound to whichever
-    # event loop created it (same class of bug as the asyncpg engine issue
-    # documented in tasks/nutrition.py's resolve_order_nutrition). Each test
-    # here gets its own event loop via pytest-asyncio, so a connection
-    # pooled from a previous test's now-closed loop raises "attached to a
-    # different loop". Resetting forces a fresh client per test.
-    import app.redis as redis_module
-    redis_module._redis_client = None
-    yield
+# _reset_redis_singleton (the fix for the module-level Redis client being
+# bound to a stale event loop across tests) now lives as an autouse fixture
+# in tests/integration/conftest.py — promoted there once a second, unrelated
+# test file hit the identical failure. No longer needed locally here.
 
 
 @pytest.mark.asyncio
